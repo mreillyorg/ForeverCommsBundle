@@ -1,0 +1,19 @@
+## Interface: 16001
+## Title: Forever Guild Comms
+## Notes: Welcomes, guild greetings, translated and RP-accented messages, levels, crafting and LFG alerts, tabard reminders, and group requests.
+## Author: Michael Reilly
+## IconTexture: Interface\AddOns\ForeverGuildComms\Media\Icon
+## Version: 0.5.0-beta
+## SavedVariables: ForeverGuildCommsDB
+## SavedVariablesPerCharacter: ForeverGuildCommsCharDB
+## Dependencies: ForeverCommsVoice
+## OptionalDeps: Titan
+Core.lua
+VoiceBridge.lua
+Roster.lua
+Alerts.lua
+Tabard.lua
+UI.lua
+Options.lua
+TitanMenu.lua
+Broker.lua

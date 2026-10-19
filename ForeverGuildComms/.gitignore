@@ -1,0 +1,9 @@
+# Local BigWigs packager build files
+/.release/
+# Local archives generated during manual packaging
+/*.zip
+# Editor/temp files
+.DS_Store
+Thumbs.db
+*.bak
+*.swp

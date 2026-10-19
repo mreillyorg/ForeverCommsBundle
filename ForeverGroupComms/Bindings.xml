@@ -1,0 +1,11 @@
+<Bindings>
+    <Binding name="FGROUP_PANEL" header="FOREVERGROUPCOMMS">
+        ForeverGroupComms:Quick("panel")
+    </Binding>
+    <Binding name="FGROUP_ROLES" header="FOREVERGROUPCOMMS">
+        ForeverGroupComms:Quick("roles")
+    </Binding>
+    <Binding name="FGROUP_QUESTS" header="FOREVERGROUPCOMMS">
+        ForeverGroupComms:Quick("quest")
+    </Binding>
+</Bindings>

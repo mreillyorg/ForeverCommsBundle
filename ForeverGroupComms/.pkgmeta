@@ -1,0 +1,6 @@
+package-as: ForeverGroupComms
+ignore:
+  - .github
+  - .gitignore
+  - tests
+  - README.md

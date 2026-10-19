@@ -1,0 +1,6 @@
+package-as: ForeverCommsVoice
+ignore:
+  - .github
+  - install
+  - tests
+  - README.md

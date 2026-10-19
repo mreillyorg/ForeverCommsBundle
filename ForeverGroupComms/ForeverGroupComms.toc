@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: Forever Group Comms
+## Notes: Party, dungeon and raid greetings, coordination, roles, ready checks, target marks and quest sharing status.
+## Author: Michael Reilly
+## Version: 0.2.0-beta
+## SavedVariables: ForeverGroupCommsDB
+## Dependencies: ForeverCommsVoice
+## OptionalDeps: Titan
+Core.lua
+Roster.lua
+Quests.lua
+UI.lua
+Options.lua
+Broker.lua

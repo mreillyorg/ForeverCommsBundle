@@ -48,10 +48,27 @@ For *standalone* CurseForge-style source repositories, move the **contents** of 
 
 The packager omits tests, install scripts, and promotional project icon (but preserves `Media/Icon.tga`). It does not bundle ForeverCommsVoice into the Guild or Group standalone release: users must install ForeverCommsVoice separately, and any CurseForge project metadata must declare it as a dependency. Set any optional CurseForge/Wago/WoWInterface tokens and real project IDs yourself; none are bundled or presumed. WoW Forever's custom interface ID `16001` may not be recognized by third-party publishing providers, and should be tested before public upload.
 
+## Testing before a release
+
+Run the whole offline Lua suite with one command from the extracted suite root:
+
+```text
+python tools/run_tests.py          (or: run-tests.cmd on Windows)
+```
+
+It needs Python 3 and a Lua **5.1** interpreter — the dialect the WoW client embeds. The
+runner finds one from `--lua`, then `$LUA51`, then `lua5.1` / `luajit` / `texlua` / `lua`
+on PATH, then `%USERPROFILE%\tools\lua-5.1.5\lua5.1.exe` and `/usr/bin/lua5.1`. It
+rejects anything that does not report Lua 5.1 or LuaJIT, so a 5.3/5.4 install on PATH is
+skipped rather than used. Expect `PASSED: 13   FAILED: 0`.
+
+The root GitHub workflow runs the same command **before** packaging, so a failing harness
+stops the build before anything is built or published.
+
 ## Release checks
 
 1. Confirm that `.toc` versions match the intended release names (scripts read these automatically).
-2. Run the offline Lua tests with `texlua` in the respective addon directories, and package smoke tests in `tools/verify_package.py`.
+2. Run `python tools/run_tests.py` for addon behaviour, then `tools/verify_package.py` for the archives.
 3. Test individual installs and bundle installs on Windows, including backup/rollback, and the new addon icons with a full WoW restart.
 4. In-game verify GuildComms Settings > Restore Defaults leaves `/fcv` language and accents unchanged, and expressive terminal periods change to exclamation marks for built-in, accented guild messages.
 

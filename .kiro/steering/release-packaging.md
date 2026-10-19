@@ -48,20 +48,24 @@ Per package:
 
 ## Version bumps
 
-**Seven places move together per package.** The old "three places" rule is no longer
-sufficient:
+**Four places move together per package.** This was seven; the installer `.ps1` banner
+lines and the `INSTALL-README.txt` headings were deliberately stripped of version numbers
+so there is less to drift. Do not reintroduce a version string anywhere new — prefer a
+file that reads it from the TOC.
 
 1. the TOC `## Version`
 2. `A.version` / `V.version` in that package's `Core.lua`
-3. that package's `README.md` title line
-4. `install/Install-<Addon>.cmd` — the `title` line
-5. `install/Install-<Addon>.cmd` — the `echo Installing …` line
-6. `install/Install-<Addon>.ps1` — the banner `Write-Host` line
-7. `install/INSTALL-README.txt` — the heading
+3. that package's `README.md` title line, and the "Current release" banner line above it
+4. `install/Install-<Addon>.cmd` — the `title` line and the `echo Installing …` line
 
-Plus, for GuildComms only: `PACKAGING.md`, which states the current version and shows an
-example tag command. And if a release changes the dependency relationship, the consuming
-packages' "Requires ForeverCommsVoice x.y.z" README lines.
+Plus the root `PACKAGING.md` and root `README.md`, which list all three versions, and — if
+a release changes the dependency relationship — the consuming packages' "Requires
+ForeverCommsVoice x.y.z" README lines.
+
+`tools/verify_package.py` asserts that each TOC version appears in that package's README,
+so items 1 and 3 cannot silently diverge. The TOC-versus-`Core.lua` and installer `.cmd`
+checks are still manual. Both builders read the version from the TOC, so no archive name
+can be stale.
 
 Grep before claiming a bump is done:
 
@@ -129,9 +133,16 @@ Four installers: one combined at the repository root and one per package.
 - Keep the `.cmd` launchers using `-NoProfile -ExecutionPolicy Bypass` for that process
   only, and keep the manual-copy instructions in each `INSTALL-README.txt`.
 
-> **Known deviations:** neither per-package installer references `ForeverCommsVoice` at
-> all, and the combined installer copies whole folders recursively, so `tests/`,
-> `install/` and `.github/` land in `AddOns/`. Both are target-state violations.
+Both former deviations here are closed. `install/Install-ForeverComms.ps1` prepends
+`ForeverCommsVoice` to any selection naming a consumer and installs in dependency order,
+so a Voice-less install is unreachable rather than merely warned about; and it derives
+every file list from the TOC, so `tests/`, `install/` and `.github/` no longer reach
+`AddOns/`.
+
+One wart remains: the three `INSTALL-README.txt` files and the three installer shims are
+generated from one template, and the ForeverCommsVoice copies were not special-cased — they
+tell the user the library depends on itself. If you touch those files, fix the library's
+copy rather than propagating the template.
 
 ## Monorepo packaging
 
@@ -156,12 +167,35 @@ both assume things about the checkout root, so the layout rules are:
   deliberately uses Titan's own LibDataBroker copy.
 - The root `.gitignore` must ignore `.release/`, the packager's local output directory.
 
-> **Known deviations:** all three `package.yml` files sit in package subdirectories and the
-> root has no `.github/`, so **no tag currently triggers any packaging**. All three also
-> listen on an unprefixed `v*`. The three `.pkgmeta` files are positioned for a
-> single-addon repository root. The root `.gitignore` does not ignore `.release/`.
-> GuildComms' `PACKAGING.md` documents the old single-addon-at-root layout as a
-> requirement and lists four modules that moved into the library.
+### How this is actually implemented
+
+The rules above are met by replacing the external packager on the suite path rather than
+relocating three workflows:
+
+| Artifact | Role |
+| --- | --- |
+| `.github/workflows/package.yml` | The active suite workflow, at the repository root. Installs Lua 5.1, **runs all 13 harnesses**, builds, verifies, uploads artifacts, and attaches ZIPs to a Release on a tag |
+| `tools/run_tests.py` | The single harness runner. CI and local use the same one |
+| `tools/package.py` | Offline builder, Python standard library only. `--runtime` for addon-manager archives. **The builder CI runs** |
+| `tools/verify_package.py` | Packaging verification. Archive membership, dependency bundling, installer presence, TOC-versus-README version agreement |
+| `package.ps1` / `package.cmd` | Offline Windows builder, equivalent contract, no `--runtime` |
+| `<Addon>/.github/workflows/package.yml` | BigWigs, retained for the standalone-repository case only. Each carries a header comment saying so |
+
+Because one `v*` tag now releases the suite as a unit, the tag-prefixing scheme described
+above is **not** currently needed — per-addon versions live in the archive filenames. Keep
+the prefixing rule in mind only if the packages are ever split into separate repositories.
+
+Two things to be careful of when editing this layer:
+
+- **There are two builder implementations.** If you change what goes into an archive, change
+  both `tools/package.py` and `package.ps1`, then run `verify_package.py` against *each*
+  build. CI only exercises the Python one, while `package.cmd` — the entry point the
+  Windows documentation points at — runs the PowerShell one.
+- **Keep behavioural assertions in the Lua harnesses, not in `verify_package.py`.** An
+  earlier revision grepped Lua source from the verifier to prove two fixes were present,
+  which coupled release packaging to the text and indentation of two Lua functions. Now
+  that CI runs the harnesses before packaging, that belongs in `settings.lua` and
+  `integration.lua`.
 
 ## Manual ZIP vs packager ZIP
 
@@ -176,10 +210,11 @@ both assume things about the checkout root, so the layout rules are:
 
 Per package being released:
 
-1. **All 13 harnesses run and print `PASSED`** — not just the ones in the package you
-   changed. Eight GuildComms harnesses load the Voice source, and
+1. **`python tools/run_tests.py` reports `PASSED: 13   FAILED: 0`** — the whole suite, not
+   just the package you changed. Eight GuildComms harnesses load the Voice source, and
    `ForeverCommsVoice/tests/integration.lua` loads all three packages, so a library change
-   can break a consumer's suite. See `testing.md` for the run commands.
+   can break a consumer's suite. CI runs the same command before packaging, so a failure
+   here is a failure there. See `testing.md`.
 2. All seven version-string locations match, plus `PACKAGING.md` for GuildComms.
 3. Every shipped `.lua` file is in that package's TOC in the right load order, and
    `Bindings.xml` is **not**.

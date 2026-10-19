@@ -94,7 +94,7 @@ def main():
     if not args.runtime:
         for path in ('install', 'tools', '.github'):
             suite_files.update(source_files(ROOT / path))
-        for name in ('README.md', 'PACKAGING.md', 'package.cmd', 'package.ps1'):
+        for name in ('README.md', 'PACKAGING.md', 'package.cmd', 'package.ps1', 'run-tests.cmd'):
             f = ROOT / name
             if f.exists(): suite_files.add(f)
     build(output / f'ForeverComms-Bundle-{suite_version}{"-runtime" if args.runtime else ""}.zip', suite_files)

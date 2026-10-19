@@ -69,7 +69,7 @@ library, so ForeverCommsVoice's copies tell the user it depends on itself.
 | --- | --- | --- |
 | 1 | Move packaging to the repository root with a job per package and prefixed tags | **RESOLVED, by replacement.** A root `.github/workflows/package.yml` (30 lines) runs `tools/package.py` then `tools/verify_package.py`, uploads all four ZIPs as a workflow artifact, and on a tag attaches them to a GitHub Release with the built-in token. BigWigs is no longer on the suite path. The three nested workflows are retained, normalised to the same shape, and each now carries a header comment stating it is active **only** when that addon's contents are a standalone repository root. The tag-namespace problem dissolved: one `v*` tag now releases the suite, and per-addon versions live in the ZIP filenames |
 | 2 | Make the per-addon installers detect, warn about, and ideally install the dependency | **RESOLVED, beyond the recommendation.** `install/Install-ForeverComms.ps1` grew to 153 lines and takes an `-Addons` parameter; the three per-addon `.ps1` files are now 13-line shims that delegate to it. The shared installer prepends `ForeverCommsVoice` whenever a consumer is selected and reorders to canonical dependency order, so a Voice-less install cannot be produced. It also now derives the file list from each TOC, adds `Media/Icon.tga` only when `IconTexture` is declared and validates the path, adds `Bindings.xml` when present, stages and validates everything before touching the destination, backs up to `Interface/AddOnBackups` **outside** `AddOns`, and rolls back on failure. `Set-StrictMode -Version 2.0` is set |
-| 3 | Add a test job that runs all 13 harnesses and checks every version string | **PARTLY.** The version half is done and automated — `verify_package.py` asserts each TOC version appears in that package's README, and the builders read versions from the TOCs rather than from any hardcoded constant. The 13 Lua harnesses still run nowhere. Fifth consecutive pass as the top open item, though for the first time a CI job exists that could host them |
+| 3 | Add a test job that runs all 13 harnesses and checks every version string | **RESOLVED after this pass, in a follow-up change.** The version half was already done. The test half now exists: `tools/run_tests.py` is a single runner used by both CI and developers, and `.github/workflows/package.yml` installs Lua 5.1 and runs it **before** packaging, so a failing harness stops the build. Closes the recommendation that had been top of the list for five consecutive passes. See "Follow-up: test automation" below |
 | 4 | Fix the nine stale version strings, and bump GuildComms' README title and PACKAGING.md | **RESOLVED.** All three packages bumped to 0.1.1 / 0.2.1 / 0.5.1 and consistent across TOC, `Core.lua`, README title, a new README "Current release" banner line, and both installer `.cmd` lines. `ForeverGuildComms/PACKAGING.md` shrank from 91 lines to an 8-line pointer at the new root `PACKAGING.md`, which removed the stale module list. Remaining older version numbers in the GuildComms README are historical changelog headings and are correct as history |
 | 5 | Add `tests/syntax.lua` to Voice and GroupComms, deriving the list from the TOC | **Not done.** Still 13 harnesses; only GuildComms has a syntax check, so 13 of 22 modules have no compile guard |
 | 6 | Write a real root `README.md` | **RESOLVED.** 24 lines: a three-row package table with versions and purposes, a four-step install sequence that states Voice is installed first, a "Changes since the first shared-engine beta" list, a pointer to `PACKAGING.md`, and a closing note that an in-game Windows install check is still needed |
@@ -122,11 +122,49 @@ This section exists because the previous four passes could only read.
 | Version sweep across all packages and docs | Consistent at 0.1.1 / 0.2.1 / 0.5.1. Remaining older numbers are historical changelog headings |
 | `dist/` and `dist-runtime/` | Removed after verification |
 
-**Not verified**: the 13 Lua harnesses. No Lua interpreter is installed — `lua`, `lua5.1`,
-`luajit`, `texlua` and `lua54` are all absent from PATH. **None of the 13 is reported as
-passing**, including the two new regression tests, whose correctness is asserted from
-reading them. Nothing has been tested against a live Forever client, and `package.ps1`
-was not executed because the Python builder covers the same contract and is what CI runs.
+**Not verified at the time of this pass**: the 13 Lua harnesses, because no interpreter
+was on PATH. **This was resolved immediately afterwards** — see the follow-up section
+below. Nothing has been tested against a live Forever client.
+
+## Follow-up: test automation
+
+Recorded here because it closes this pass's top recommendation and invalidates the
+"nothing is verified behaviourally" conclusion above.
+
+A Lua 5.1.5 install was located at `C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe` —
+LuaBinaries vc8, with `lua5.1.dll` and `Microsoft.VC80.CRT\` correctly alongside it. It
+was already on the User PATH; it was invisible only because the agent shell inherited a
+stale environment, since a PATH change reaches only newly created processes.
+
+**The suite was then run for the first time in the project's history: 12 of 13 passed.**
+
+**The single failure was a latent defect in a harness, not in the install.**
+`tests/keybindings.lua:26` used `load(body, chunkname)`, which is Lua 5.2+ semantics; in
+5.1 `load` takes a *function* and the string form is `loadstring`. It was the only 5.2+
+construct in the suite. The implication is the significant part: **`keybindings.lua` had
+never executed on any pass.** Its assertions — that the bindings are opt-in, that the
+actions open the intended windows, and that **no keybinding path sends a guild message** —
+had been assumed since 0.4.1, not tested. Shipped code was unaffected; this was test-only.
+
+Fixed as `local compile = loadstring or load`, correct on 5.1, LuaJIT and 5.2+, matching
+the project's feature-detection idiom. **The suite is now 13 of 13.**
+
+Three changes followed:
+
+| Change | Detail |
+| --- | --- |
+| `tools/run_tests.py` | One runner for CI and developers. Discovers harnesses from each package's `tests/` directory rather than a hand-maintained list, puts `syntax.lua` first, runs each with its own package folder as cwd, and resolves an interpreter from `--lua`, `$LUA51`, PATH, then known installs. Rejects anything not reporting Lua 5.1 or LuaJIT, so a 5.3/5.4 install on PATH is skipped rather than silently used. An **explicitly requested** interpreter that is unusable is a hard error rather than being silently replaced |
+| `.github/workflows/package.yml` | Installs plain `lua5.1` — deliberately not LuaJIT, which is a superset — and runs the suite **before** building. Behaviour failures now stop a release |
+| `tools/verify_package.py` | The Lua source greps are gone. It no longer splits `panel.OnDefault` on text and indentation to prove a fix is present, because `settings.lua` and `integration.lua` assert that properly and CI runs them first. Bare `assert` replaced with an explicit `check()` so `python -O` cannot skip the checks, and a `__main__` guard added — closing new findings #4 and the smaller observations about it |
+
+Exit codes were verified deliberately, since a runner that silently passes is worse than
+none: 0 when all pass, 1 with the harness named when one fails (verified with a temporary
+failing harness, since removed), 2 and a diagnostic when no usable interpreter is found.
+
+`package.ps1` was also run this time and verified: it produces four archives with member
+counts identical to the Python builder (19 / 51 / 36 / 77), and `verify_package.py` passes
+against its output. That partially mitigates new finding #3 — the PowerShell path is no
+longer unverified, though CI still exercises only the Python one.
 
 ## Test Coverage
 
@@ -443,9 +481,9 @@ Ordered by value relative to effort. *(carried)* marks items from the previous l
 
 | # | Recommendation | Effort | Rationale |
 | --- | --- | --- | --- |
-| 1 | Add a step to the root workflow that runs all 13 Lua harnesses *(carried, was #3)* | Low | Fifth consecutive pass as the top item, and the only one of the original seven pre-commit items still open. The job now exists, Lua 5.1 is a one-line `apt-get` on the runner, the harnesses have no dependencies, and doing this would let recommendation 4 retire the source-text greps |
+| ~~1~~ | ~~Add a step to the root workflow that runs all 13 Lua harnesses~~ | Low | **DONE in the follow-up above.** Closes the item that had been top of the list for five consecutive passes, and the last of the fourth rerun's seven pre-commit items. It also retired recommendation 13's subject matter by letting the verifier drop its Lua source greps |
+| 1 | Add `tests/syntax.lua` to Voice and GroupComms *(carried, was #5)* | Low | **Now the top item.** 13 of 22 modules have no compile guard, and the runner would pick the new harnesses up automatically since it discovers them from the directory. Six lines each, no dependencies |
 | 2 | Fix the three ForeverCommsVoice installer texts | Trivial | Self-referential nonsense in the first file a user of the base dependency reads. New finding #1 |
-| 3 | Add `tests/syntax.lua` to Voice and GroupComms *(carried, was #5)* | Low | 13 of 22 modules have no compile guard. Six lines each |
 | 4 | Decide the Expressive scope question: either restrict the branch to guild, or document and test the group case | Low | New finding #2. Currently an undocumented behaviour change riding along with a documented restoration |
 | 5 | Make `package.cmd` prefer `tools/package.py` when Python is present, or run `verify_package.py` against a `package.ps1` build | Low | New finding #3. The documented Windows path is the unverified one |
 | 6 | Make `OnDefault` preserve `outgoingMode`, and use `fillDefaults` instead of a one-level copy *(carried, was #9 and #19)* | Trivial | The remaining half of the Restore Defaults finding. Still able to silently re-enable unattended public messaging |
@@ -455,7 +493,7 @@ Ordered by value relative to effort. *(carried)* marks items from the previous l
 | 10 | Test the `questSync` opt-out and the outbox bounds *(carried, was #13)* | Low | An opt-out that is never asserted can silently stop working |
 | 11 | Add `.luacheckrc` at the root *(carried, was #19)* | Low | 22 Lua files, plus it would flag the unused `A:SameGroup` |
 | 12 | Delete `V:VoiceText` and `V:ChooseMessageTemplate` plus its forwarder *(carried, was #15)* | Low | Now a pure cleanup: the Expressive logic it uniquely held has been restored to `Render` |
-| 13 | Give `verify_package.py` a `__main__` guard, replace bare `assert` with explicit raises, and comment the source-grep coupling | Low | New finding #4. It is now a load-bearing part of the release gate |
+| ~~13~~ | ~~Give `verify_package.py` a `__main__` guard, replace bare `assert` with explicit raises, and comment the source-grep coupling~~ | Low | **DONE in the follow-up above**, and better than asked: the source greps were deleted rather than commented, because CI now runs the harnesses that assert those facts properly |
 | 14 | Add harnesses for GroupComms `UI.lua` and `Options.lua` *(carried, was #18)* | Medium | 239 lines loaded by nothing, and `Broker.lua` changed this span without a test |
 | 15 | Assert the duplicated template tables match *(carried, was #17)* | Low | Both are load-bearing; one is guarded only implicitly |
 | 16 | Split `V:Render` into scope-specific resolvers *(carried, was #16)* | Medium | It grew again, and finding #2 is a direct consequence of one shared flair block serving two scopes |
@@ -478,11 +516,15 @@ It is also the first pass where I could verify rather than infer. The packaging 
 not taken on trust: the builder ran, the verifier passed, and I inspected the archives
 independently and confirmed the dependency bundling and the runtime/source split.
 
-The one new defect is cosmetic but conspicuous, and the standing weakness is now sharply
-defined. Packaging is verified in CI; behaviour is not. Thirteen dependency-free Lua
-harnesses, including the two written this span specifically to prevent these two bugs
-from returning, run only when someone remembers to run them — and nobody can, on this
-machine, because no interpreter is installed. Recommendation 1 has been the top item for
-five consecutive passes and is now the single highest-leverage change available: it would
-also let the release verifier stop grepping Lua source for proof that the fixes are
-still there.
+The one new defect is cosmetic but conspicuous. **The standing weakness is closed.** The
+follow-up change found an existing Lua 5.1.5 install, ran the suite for the first time in
+the project's history, fixed the one harness that a 5.2-ism had prevented from ever
+executing, and wired all 13 into CI ahead of packaging. Both regression tests written this
+span now actually run, and the release verifier no longer has to grep Lua source to prove
+the fixes are present.
+
+That leaves a materially different risk profile. Behaviour and packaging are both verified
+automatically; what remains untested is specific and enumerable rather than
+structural — two missing syntax harnesses, four uncovered modules, the GroupComms safety
+rails, and the peer-input rejection paths. The top recommendation is now the cheapest one
+on the list for the first time in six passes.

@@ -150,13 +150,24 @@ evaluated during Reverse Engineering.
   passed, and the archives were independently inspected: the GuildComms source ZIP carries
   17 `ForeverCommsVoice/` members and the runtime ZIP contains exactly the 21-file runtime
   set. Build output was removed afterwards.
-- **Still no Lua interpreter.** `lua`, `lua5.1`, `luajit`, `texlua` and `lua54` are all
-  absent, so **none of the 13 harnesses is reported as passing**, including the two
-  written this span. Nothing has been tested against a live Forever client.
-- **Top recommendation unchanged for a fifth consecutive pass**: no CI job runs the Lua
-  harnesses. It is now also the last of the fourth rerun's seven pre-commit items still
-  open, and the job slot exists — doing it would additionally let
-  `tools/verify_package.py` stop grepping Lua source for proof the fixes are present.
+- **TEST AUTOMATION CLOSED in a follow-up change after this pass.** A Lua 5.1.5 install
+  was located at `C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe` — already on the User
+  PATH, invisible only because the agent shell held a stale environment. The suite ran for
+  the first time in the project's history: **12 of 13 passed.** The single failure was a
+  latent harness defect, not an install problem: `tests/keybindings.lua` used
+  `load(string)`, which is Lua 5.2+ semantics, so **that harness had never executed on any
+  pass** — its assertion that no keybinding path sends a guild message had been assumed
+  since 0.4.1. Fixed as `loadstring or load`; the suite is now **13 of 13**. Added
+  `tools/run_tests.py` as the single runner for CI and developers, wired it into
+  `.github/workflows/package.yml` ahead of packaging so behaviour failures stop a release,
+  and deleted the Lua source greps from `tools/verify_package.py` since the harnesses now
+  assert those facts properly. Exit codes 0 / 1 / 2 were each verified deliberately.
+  This closes the recommendation that had been top of the list for five consecutive passes
+  and the last of the fourth rerun's seven pre-commit items.
+- **Top recommendation is now the cheapest item on the list** for the first time in six
+  passes: add `tests/syntax.lua` to Voice and GroupComms, six lines each, which the runner
+  will pick up automatically since it discovers harnesses from the directory.
+- Nothing has been tested against a live Forever client; all three packages remain beta.
 - **One new defect**: the three `INSTALL-README.txt` files and three installer shims were
   template-generated without special-casing the library, so ForeverCommsVoice's copies
   state that it depends on itself. User-facing text only; the install path is correct.

@@ -121,9 +121,11 @@ Restoring defaults is a local action on that package's own behavior settings. It
 Where a shared value genuinely must change, route it through `V:SetOption` so validation
 runs once and every open panel refreshes.
 
-> **Known deviation:** GuildComms' `panel.OnDefault` currently does both of the above and
-> also copies `A.defaults` only one level deep. Treat the rule as the target state and fix
-> the function rather than copying its approach.
+GuildComms' `panel.OnDefault` now complies for the shared profile — the voice reset was
+removed in 0.5.1 and `ForeverGuildComms/tests/settings.lua` asserts that GroupComms'
+rendered output is unchanged across a Restore Defaults. Two smaller deviations remain in
+that function: it still resets `outgoingMode` to `automatic`, and it still copies
+`A.defaults` only one level deep instead of reusing `fillDefaults`.
 
 ## Keeping multiple surfaces in sync
 

@@ -13,6 +13,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # The WoW client embeds Lua 5.1, so test against exactly that dialect.
+      # Not LuaJIT and not 5.3/5.4: both are supersets that would let a harness
+      # come to depend on something the client does not have.
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+          lua5.1 -v
+      # Behaviour first: a failing harness must stop the build before anything
+      # is packaged or published.
+      - name: Run all offline Lua harnesses
+        run: python tools/run_tests.py
       - name: Build all four source ZIPs without external packagers
         run: python tools/package.py --output dist
       - name: Verify archive contents and dependency packaging

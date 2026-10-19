@@ -27,8 +27,19 @@ The installed addon folders go under `_classic_beta_/Interface/AddOns`. SavedVar
 - GuildComms' Settings > Restore Defaults resets **only GuildComms preferences**. Shared voice preferences used by GroupComms are not silently overwritten.
 - Backup locations moved outside the AddOns folder; installer stages and validates all required runtime files before changes, and attempts rollback on failure.
 
+## Testing
+
+```text
+run-tests.cmd                 (Windows)
+python tools/run_tests.py     (any platform)
+```
+
+Runs all 13 offline Lua harnesses across the three addons and prints a pass/fail summary.
+Needs Python 3 and a Lua **5.1** interpreter; see [PACKAGING.md](PACKAGING.md) for how one
+is located. No WoW client required.
+
 ## Building a release
 
-Read [PACKAGING.md](PACKAGING.md). Local packaging **does not** require GitHub Actions. The root workflow is for a suite stored as one GitHub repository; nested addon workflows are for separate repositories.
+Read [PACKAGING.md](PACKAGING.md). Local packaging **does not** require GitHub Actions. The root workflow runs the test suite, then packages; it is for a suite stored as one GitHub repository, while nested addon workflows are for separate repositories.
 
 These changes were tested with offline simulations, but an in-game Windows install and addon-loading check are still needed.

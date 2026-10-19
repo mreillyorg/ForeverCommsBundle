@@ -9,39 +9,48 @@ description: How to run the thirteen offline Lua harnesses across the three Fore
 Verification is a two-layer process: **thirteen offline Lua harnesses** spread across three
 packages for logic, and a manual in-game pass for anything that needs a real client.
 
-**There is no test framework and no test automation in CI.** `assert` from the standard
-library is the entire mechanism: each harness dies on the first failure and prints a
-`PASSED: ...` summary otherwise. The three `.github/workflows/package.yml` files only
-*package* a release, and — because they sit in package subdirectories rather than at the
-repository root — they currently do not run at all. Running the harnesses is a manual
-step, so run them before tagging.
+**There is no test framework.** `assert` from the standard library is the entire
+mechanism: each harness dies on the first failure and prints a `PASSED: ...` summary
+otherwise.
+
+**The suite does run in CI.** `.github/workflows/package.yml` installs Lua 5.1 and runs
+`python tools/run_tests.py` **before** packaging, so a failing harness stops the build
+before anything is built or published. Behaviour is verified there; `tools/verify_package.py`
+covers packaging only and deliberately does **not** assert anything about addon behaviour.
 
 ## Run the suite
 
-Run each harness **from its own package root**. The GuildComms harnesses derive their base
-path from `arg[0]`, GroupComms' takes the root as `arg[1]` with a `.` default, and Voice's
-derives from `arg[0]` — but `ForeverGuildComms/tests/icon.lua` uses plain relative paths
-and *must* have the package root as the working directory.
+One command, from the suite root:
 
 ```powershell
-# ForeverCommsVoice  (1 harness) - cwd: ForeverCommsVoice
-lua5.1.exe tests\integration.lua
+python tools\run_tests.py          # or: run-tests.cmd
+```
 
-# ForeverGuildComms  (11 harnesses) - cwd: ForeverGuildComms
-lua5.1.exe tests\syntax.lua
-lua5.1.exe tests\smoke.lua
-lua5.1.exe tests\verify.lua
-lua5.1.exe tests\settings.lua
-lua5.1.exe tests\timing.lua
-lua5.1.exe tests\titanmenu.lua
-lua5.1.exe tests\voice.lua
-lua5.1.exe tests\variations.lua
-lua5.1.exe tests\tabard_dedup.lua
-lua5.1.exe tests\keybindings.lua
-lua5.1.exe tests\icon.lua
+`tools/run_tests.py` is the single runner — the same one CI invokes, so a green local run
+means a green CI run. It discovers harnesses from each package's `tests/` directory
+rather than from a hand-maintained list, puts `syntax.lua` first so a parse error fails
+fast, runs each with its own package folder as the working directory, prints a per-harness
+PASS/FAIL with captured output, and exits non-zero if any harness fails.
 
-# ForeverGroupComms  (1 harness) - cwd: ForeverGroupComms
-lua5.1.exe tests\smoke.lua
+Useful flags:
+
+```powershell
+python tools\run_tests.py --quiet                  # failures and summary only
+python tools\run_tests.py --lua C:\path\lua5.1.exe # pick an interpreter explicitly
+```
+
+The working-directory handling matters and is why you should prefer the runner over
+invoking harnesses by hand: the GuildComms harnesses derive their base path from `arg[0]`,
+GroupComms' takes the root as `arg[1]` with a `.` default, and
+`ForeverGuildComms/tests/icon.lua` uses plain relative paths for both the TOC **and** the
+shared installer at `../install/`, so it needs the package root as cwd *and* the sibling
+`install/` directory present.
+
+To run one harness by hand, `cd` into its package first:
+
+```powershell
+cd ForeverGuildComms
+C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe tests\verify.lua
 ```
 
 ### Harnesses cross package boundaries — run the whole suite
@@ -85,7 +94,7 @@ Thirteen files, none listed in a TOC and none shipped.
 | `voice.lua` | Voice x6, Guild `Core`, `VoiceBridge` | Language selection and translation through the bridge; race filtering (a filtered-out accent cannot be set); an incompatible accent resets to `auto` when the language changes; **a customized template overrides translation and preserves item links**; localized role and activity labels; unknown races fall back to `auto`/`none` only; invalid values are rejected; UTF-8 truncation never splits a multibyte character |
 | `variations.lua` | Voice x6, Guild `Core`, `VoiceBridge`, `UI` | Loops **every language** and every kind, drawing twice the bag size and asserting no repeat within a bank, no adjacent repeat, no unfilled placeholder, and that activity and level values survive. Then loops **all 29 accents** asserting each has variants for all four kinds — a missing entry is a failure, not a silent fallback. Then the non-consuming Settings preview, the custom-template override with a real hyperlink, the disabled setting, and the preview/send stability contract including that reopening the composer advances the wording |
 | `tabard_dedup.lua` | Guild `Core`, `Tabard` — **the only GuildComms harness needing no Voice** | Reproduces the original login-ordering race: asserts the scheduled delay is 1.2s, fires it, confirms it initialises `wasInCity` *without* prompting, then asserts `CheckTabard(true)` still prompts. Continues through per-stay deduplication, city exit with the tabard on, re-entry without it, and the reverse ordering. Second half covers the dedup cache: retention across a cooldown increase, the 60-second sweep throttle, full drainage, re-admission after expiry, disposal of malformed and future-dated values, and the 300-second idle ticker |
-| `keybindings.lua` | Guild `Core`, `Alerts`, plus the real `Bindings.xml` | Reads `Bindings.xml`, `load()`s each embedded handler, and executes the real binding code. Asserts the bindings are opt-in (**no `default=` attribute**), unique, and correctly categorised; that the actions open the intended windows; that the recipe rescan reports both outcomes; and that **no path sends a guild message**. Also covers the disabled-addon and pre-initialisation cases |
+| `keybindings.lua` | Guild `Core`, `Alerts`, plus the real `Bindings.xml` | Reads `Bindings.xml`, compiles each embedded handler with `loadstring or load`, and executes the real binding code. Asserts the bindings are opt-in (**no `default=` attribute**), unique, and correctly categorised; that the actions open the intended windows; that the recipe rescan reports both outcomes; and that **no path sends a guild message**. Also covers the disabled-addon and pre-initialisation cases. Until the `load`/`loadstring` fix this harness had never executed, so treat its assertions as newly earned rather than long-standing |
 | `icon.lua` | nothing; reads files as text. **Requires cwd = package root** | The icon path stays consistent across the TOC `## IconTexture`, `Broker.lua`, `Options.lua` and the installer, and both textures exist at a plausible size |
 
 ### ForeverGroupComms
@@ -122,9 +131,9 @@ covering GroupComms' `UI.lua` and `Options.lua`.
 
 ### Known untested paths, ranked
 
-1. Nothing in CI runs any of this, and the three packaging workflows cannot fire.
-2. No syntax harness for Voice or GroupComms.
-3. The four uncovered modules above.
+1. No syntax harness for Voice or GroupComms, so 13 of 22 modules have no compile guard.
+   Six lines each and no dependencies — the cheapest item on this list.
+2. The four uncovered modules above.
 4. **GroupComms' chat-safety rails**: the 2-second `A:Send` floor, the `groupSerial`
    rejection in `A:Approve`, the `CanManageGroup` gates on ready checks and target marks,
    and `A:Notify`'s dedup.
@@ -148,23 +157,71 @@ covering GroupComms' `UI.lua` and `Options.lua`.
 
 ## Interpreter
 
-Use **Lua 5.1**, the version the WoW client embeds. LuaJIT 2.1 works too but is a
-superset — it adds `ffi`, `bit`, `jit`, `table.new`, and `goto`, none of which exist in
-game — so never let test code depend on those. Do not use Lua 5.4 (available as
-`winget install DEVCOM.Lua`); its integer/float split and relocated `unpack` diverge from
-the client. Some harness comments say `texlua`, which also works.
+Use **Lua 5.1**, the version the WoW client embeds.
 
-Getting 5.1.5 on Windows: no package manager carries it, so take the
+### Where it is
+
+**Known-good local install on this machine:**
+
+```text
+C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe
+```
+
+LuaBinaries 5.1.5, a vc8 build. Keep `lua5.1.dll` and the bundled
+`Microsoft.VC80.CRT\` folder beside the executable — it will not start without them.
+`luac5.1.exe` is there too.
+
+**The binary is named `lua5.1.exe`, not `lua.exe`.** `Get-Command lua` will never find it.
+
+`tools/run_tests.py` resolves an interpreter in this order, so none of this usually needs
+thinking about:
+
+1. `--lua <path>`
+2. `$LUA51`
+3. `lua5.1`, `luajit`, `texlua`, then `lua` on PATH
+4. the known install path above, then `/usr/bin/lua5.1` for CI
+
+It then runs `-v` and rejects anything that does not report `Lua 5.1` or `LuaJIT`, so a
+5.3/5.4 install on PATH is skipped rather than silently used.
+
+The directory is on the **User** PATH on this machine. Note that a PATH change only
+reaches newly created processes, so an editor or agent session started beforehand will not
+see it until the application — not just the terminal panel — is restarted. The fallback in
+`run_tests.py` exists precisely so the suite works anyway.
+
+To pin a different interpreter without editing anything:
+
+```powershell
+[Environment]::SetEnvironmentVariable('LUA51','D:\lua\lua5.1.exe','User')
+```
+
+### Which dialects are acceptable
+
+LuaJIT 2.1 works but is a superset — it adds `ffi`, `bit`, `jit`, `table.new` and `goto`,
+none of which exist in game — so never let harness code depend on those. `run_tests.py`
+prints a warning when it selects LuaJIT. CI deliberately installs plain `lua5.1`.
+
+Do **not** target Lua 5.2+ (including the 5.4 from `winget install DEVCOM.Lua`). Beyond
+the integer/float split and relocated `unpack`, the trap that actually bit this project is
+`load`: in 5.1 `load` takes a **function** and the string form is `loadstring`, while 5.2+
+removed `loadstring` and moved the string form onto `load`. `tests/keybindings.lua` used
+`load(string)` and therefore could not run on the mandated interpreter at all — it is now
+`local compile = loadstring or load`, which is correct on 5.1, LuaJIT and 5.2+. Prefer
+that shape for anything that compiles a string.
+
+### Getting it on a fresh machine
+
+No package manager carries 5.1.5 on Windows. Take
 [LuaBinaries](https://luabinaries.sourceforge.net/) `lua-5.1.5_Win64_bin.zip` from the
-SourceForge *Tools Executables* folder for 5.1.5 and unzip it somewhere on PATH. Keep
-`lua5.1.dll` and the bundled `Microsoft.VC80.CRT\` folder next to `lua5.1.exe`; the
-executable is a vc8 build and will not start without them. The binary is named
-`lua5.1.exe`, not `lua.exe`.
+SourceForge *Tools Executables* folder, unzip it to `%USERPROFILE%\tools\lua-5.1.5`, and
+either add that directory to the User PATH or set `LUA51`. On Debian/Ubuntu,
+`apt-get install -y lua5.1` gives `/usr/bin/lua5.1`, which is what CI does.
 
-**No interpreter is currently installed on this machine** — `lua`, `lua5.1`, `luajit`,
-`texlua` and `lua54` are all absent from PATH. If no interpreter is available, **say so
-explicitly rather than reporting the suite as passing.** Reading a harness is not running
-it.
+### If no interpreter is available
+
+**Say so explicitly rather than reporting the suite as passing.** Reading a harness is not
+running it. `run_tests.py` exits with status 2 and lists what it tried, which is
+distinguishable from status 1 for a genuine harness failure.
 
 ## Adding tests
 
@@ -292,16 +349,21 @@ part of the deliverable, not an afterthought.
 
 ## Before tagging a release
 
-The tag triggers packaging, not testing. Do this first:
+The tag now triggers testing **and** packaging, in that order, so a failing harness stops
+the release. Still confirm locally first — it is faster than a round trip through Actions:
 
-1. **All thirteen harnesses run and print `PASSED`** — all of them, not just the package
-   being released, because the suite spans package boundaries.
-2. All seven version-string locations match for that package, plus `PACKAGING.md` for
-   GuildComms. See `release-packaging.md`.
-3. Every shipped `.lua` file is in its TOC in the right load order, and `Bindings.xml` is
+1. **`python tools\run_tests.py` reports `PASSED: 13   FAILED: 0`** — the whole suite, not
+   just the package being released, because the harnesses span package boundaries.
+2. **`python tools\package.py --output dist` then `python tools\verify_package.py dist`**
+   both exit 0. The verifier can be pointed at a `package.ps1` build too, and should be
+   whenever `package.ps1` changes, since CI only exercises the Python builder.
+3. All four version-string locations match for that package. `verify_package.py` asserts
+   the TOC version appears in the README; the TOC, `Core.lua` and installer `.cmd` are
+   still manual. See `release-packaging.md`.
+4. Every shipped `.lua` file is in its TOC in the right load order, and `Bindings.xml` is
    **not** (the client auto-loads it from the addon root).
-4. `.pkgmeta` still does not exclude `Bindings.xml` or `Media/Icon.tga`.
-5. `## Dependencies` and `## OptionalDeps` are still correct, and any change to the
+5. `.pkgmeta` still does not exclude `Bindings.xml` or `Media/Icon.tga`.
+6. `## Dependencies` and `## OptionalDeps` are still correct, and any change to the
    `V:Render` contract has been applied to all three packages.
-6. READMEs reflect the code, and the root `README.md` still describes the bundle.
-7. The in-game checklist has been walked, or the gaps are written down as limitations.
+7. READMEs reflect the code, and the root `README.md` still describes the bundle.
+8. The in-game checklist has been walked, or the gaps are written down as limitations.

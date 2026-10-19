@@ -68,5 +68,5 @@ foreach ($addon in $addons) {
     New-Archive ($addon + '-' + $versions[$addon] + '.zip') (Expand-Sources $folders)
 }
 $all = Expand-Sources ($addons + @('install','tools','.github'))
-foreach ($single in @('README.md','PACKAGING.md','package.ps1','package.cmd')) { $all += Join-Path $root $single }
+foreach ($single in @('README.md','PACKAGING.md','package.ps1','package.cmd','run-tests.cmd')) { $all += Join-Path $root $single }
 New-Archive ('ForeverComms-Bundle-' + $versions.ForeverGuildComms + '.zip') $all

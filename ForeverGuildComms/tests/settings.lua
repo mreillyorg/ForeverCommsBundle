@@ -88,4 +88,23 @@ radios[2].OnClick(radios[2])
 assert(A.db.outgoingMode == 'verify' and radios[2].checked and not radios[1].checked, "verify radio must switch mode")
 radios[1].OnClick(radios[1])
 assert(A.db.outgoingMode == 'automatic', "automatic radio must switch mode back")
-print('PASSED: saved timing migration, UI numeric edits, bounds/defaults, templates, radio modes')
+-- Regression: Guild Restore Defaults must not mutate the shared Voice profile.
+assert(V:SetOption("language","es"))
+assert(V:SetOption("raceFilter",false))
+assert(V:SetOption("accent","mexican"))
+assert(V:SetOption("accentStrength","expressive"))
+local shared = V:GetSettings()
+local G = {}
+assert(loadfile(base .. "../ForeverGroupComms/Core.lua"))("ForeverGroupComms", G)
+G.db = {enabled=true, useSharedVoice=true, randomMessages=false}
+local beforeGroupText = G:Render("greet")
+local oldGuild = A.db
+A.db.enabled = false
+panel.OnDefault()
+assert(A.db.enabled == A.defaults.enabled, "Guild settings were restored")
+assert(V:GetSettings() == shared and A.char.voice == shared, "shared profile object must stay stable")
+assert(G:Render("greet") == beforeGroupText, "GroupComms voice output changed after Guild defaults reset")
+assert(shared.language == "es" and shared.accent == "mexican" and shared.accentStrength == "expressive",
+    "Guild Restore Defaults must never reset Voice settings used by GroupComms")
+assert(A:CommsText("login",{name="Mira"},true):find("Mira",1,true),"guild still renders")
+print('PASSED: timing migration, UI resets, shared voice isolation, templates, radio modes')

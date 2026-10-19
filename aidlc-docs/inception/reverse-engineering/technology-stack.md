@@ -1,33 +1,36 @@
 # Technology Stack
 
-**Analysis date**: 2026-10-19T09:52:22Z
+**Analysis date**: 2026-10-19T11:30:00Z
+**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
 
 ## Programming Languages
 
 | Language | Version | Usage |
 | --- | --- | --- |
-| Lua | 5.1 — the dialect the WoW client embeds | All 22 shipped modules, 3,395 lines, plus all 13 offline harnesses, 995 lines. No LuaJIT extension is used anywhere: no `ffi`, `bit`, `jit`, `table.new` or `goto` |
+| Lua | 5.1 — the dialect the WoW client embeds | All 22 shipped modules, 3,388 lines, plus all 13 offline harnesses, 1,029 lines. No LuaJIT extension is used anywhere: no `ffi`, `bit`, `jit`, `table.new` or `goto` |
+| **Python** | **3.12 in CI; 3.x standard library only** | **New this span.** `tools/package.py` (97 lines) and `tools/verify_package.py` (52 lines). Zero third-party packages — `argparse`, `pathlib`, `re`, `sys`, `zipfile` |
+| PowerShell | 5.1+, Desktop edition | 5 scripts, 317 lines. `install/Install-ForeverComms.ps1` (153) is the one real installer; three 13-line per-addon shims delegate to it; `package.ps1` (72) is the offline Windows builder |
 | XML | WoW `Bindings.xml` schema | 2 files, 23 lines. Six opt-in keybindings whose handler bodies are one-line Lua calls into the addon globals. Auto-loaded from each addon root and deliberately absent from the TOCs |
-| TOC | WoW addon manifest | 3 files, 46 lines. Metadata plus the ordered module list |
-| PowerShell | 5.1+, Desktop edition | 4 installers, 940 lines. The three per-addon installers parse their own TOC and copy only declared files; the combined installer stages all three folders with backup and rollback |
-| Batch | cmd | 4 launchers, 105 lines. Each invokes PowerShell with `-NoProfile -ExecutionPolicy Bypass` for that process only |
-| YAML | GitHub Actions | 3 workflow files, 54 lines |
-| Markdown | — | 5 shipped or repository docs: three addon READMEs, GuildComms `PACKAGING.md`, and a 2-line root `README.md` |
+| TOC | WoW addon manifest | 3 files, 48 lines. Metadata plus the ordered module list. All three now declare `## IconTexture:` |
+| Batch | cmd | 5 launchers, 136 lines. Each invokes PowerShell with `-NoProfile -ExecutionPolicy Bypass` for that process only |
+| YAML | GitHub Actions | 4 workflow files, 87 lines — one active at the repository root, three retained per package for the standalone case |
+| Markdown | — | 7 docs: three addon READMEs, root `README.md`, root `PACKAGING.md`, the 8-line `ForeverGuildComms/PACKAGING.md` pointer, plus three `INSTALL-README.txt` |
 
 ## Frameworks
 
-**None.** There is no application framework, no UI framework, no test framework, no
-dependency injection container and no module loader. Specifically:
+**None.** No application framework, no UI framework, no test framework, no dependency
+injection container, no module loader, and — as of this span — **no external packager**.
 
 | Would-be framework | What is used instead |
 | --- | --- |
 | Addon framework such as Ace3 | The addon vararg plus one shared table per package. `local _, A = ...` |
-| Library distribution such as LibStub-embedded libs | A plain global, `_G.ForeverCommsVoice`, declared as a TOC `## Dependencies:` entry |
-| UI framework | Direct `CreateFrame` calls against Blizzard templates, with file-local `Label`/`Button`/`Check` constructors and a list of refresh closures |
-| Test framework | `assert` from the standard library. Each harness dies on the first failure and prints a `PASSED: ...` line otherwise |
+| Library distribution such as LibStub-embedded libs | A plain global, `_G.ForeverCommsVoice`, declared as a TOC `## Dependencies:` entry and physically bundled into each consumer's release archive |
+| UI framework | Direct `CreateFrame` calls against Blizzard templates, with file-local constructors and a list of refresh closures |
+| Test framework | `assert` from the standard library. Each harness dies on the first failure and prints a `PASSED: ...` line otherwise. `verify_package.py` likewise uses bare `assert` |
+| Build / release framework | Two hand-written offline builders. BigWigsMods/packager is retained only for the standalone-repository path |
 | Scheduler | `C_Timer.After` and `C_Timer.NewTicker`, always paired with a boolean latch or a serial counter. No `OnUpdate` script anywhere |
 | Serialization library | One hand-rolled pipe-delimited format in `ForeverGroupComms/Quests.lua` |
-| Localization framework | Hand-curated offline tables in `ForeverCommsVoice`. There is no `AceLocale`, no `.lua` locale files and no runtime translation service |
+| Localization framework | Hand-curated offline tables in `ForeverCommsVoice`. No `AceLocale`, no locale files, no runtime translation service |
 
 ## Runtime platform
 
@@ -37,95 +40,106 @@ dependency injection container and no module loader. Specifically:
 | Interface version | `16001`, identical in all three TOCs |
 | Client folder | `_classic_beta_` |
 | Install target | `_classic_beta_\Interface\AddOns\<AddonName>` |
-| Persistence | Client-managed SavedVariables: `ForeverCommsVoiceCharDB`, `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB`, `ForeverGroupCommsDB` |
+| Backup target | `_classic_beta_\Interface\AddOnBackups\` — deliberately outside `AddOns` so a backup cannot load as a stray addon |
+| Persistence | Client-managed SavedVariables: `ForeverCommsVoiceCharDB`, `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB`, `ForeverGroupCommsDB`. Never read, written or copied by any installer or builder |
 | Transport | `SendChatMessage` for guild and group chat; `C_ChatInfo.SendAddonMessage` with prefix `ForeverGrpComms` for GroupComms quest sync |
 
 ### Client APIs consumed
 
-| Area | APIs |
-| --- | --- |
-| Identity | `UnitGUID`, `UnitName`, `GetUnitName`, `UnitFullName`, `UnitClass`, `UnitRace`, `UnitLevel`, `UnitExists`, `UnitCanAttack` |
-| Guild | `IsInGuild`, `GetGuildInfo`, `GetNumGuildMembers`, `GetGuildRosterInfo`, `C_GuildInfo.GuildRoster`, `ERR_GUILD_JOIN_S` |
-| Group | `IsInGroup`, `IsInRaid`, `GetNumGroupMembers`, `GetNumSubgroupMembers`, `UnitGroupRolesAssigned`, `UnitIsGroupLeader`, `UnitIsGroupAssistant`, `LE_PARTY_CATEGORY_INSTANCE` |
-| Group actions | `C_PartyInfo.DoReadyCheck` with a `DoReadyCheck` fallback, `SetRaidTarget` with a `SetRaidTargetIcon` fallback, `InCombatLockdown` |
-| Quests | `C_QuestLog.GetNumQuestLogEntries`, `GetInfo`, `IsQuestFlaggedCompleted`, `IsPushableQuest`, `SetSelectedQuest`, `GetSelectedQuest`, `GetLogIndexForQuestID`, `GetTitleForQuestID`; legacy `GetNumQuestLogEntries`, `GetQuestLogTitle`, `SelectQuestLogEntry`; `QuestLogPushQuest` |
-| Addon comms | `C_ChatInfo.RegisterAddonMessagePrefix`, `C_ChatInfo.SendAddonMessage` |
-| Trade skills | `C_TradeSkillUI.GetAllRecipeIDs`, `GetRecipeInfo`, `GetRecipeItemLink`, `GetProfessionChildSkillLineID`, `GetProfessionInfoBySkillLineID` |
-| Zone and inventory | `C_Map.GetBestMapForUnit`, `GetRealZoneText`, `GetInventoryItemID` |
-| UI | `CreateFrame`, `BasicFrameTemplateWithInset`, `UIPanelButtonTemplate`, `UICheckButtonTemplate`, `UIRadioButtonTemplate`, `InputBoxTemplate`, `UIPanelScrollFrameTemplate`, `StaticPopupDialogs`, `StaticPopup_Show`, `ToggleCharacter`, `ChatFrame_OpenChat`, `DEFAULT_CHAT_FRAME` |
-| Settings | `Settings.RegisterCanvasLayoutCategory`, `Settings.RegisterAddOnCategory`, `Settings.OpenToCategory`, with `InterfaceOptions_AddCategory` and `InterfaceOptionsFrame_OpenToCategory` fallbacks |
-| Menus | `MenuUtil.CreateContextMenu` and the node API `CreateTitle`/`CreateButton`/`CreateCheckbox`/`CreateRadio`/`CreateDivider` |
-| Misc | `GetTime`, `C_Timer.After`, `C_Timer.NewTicker`, `PlaySound`, `SOUNDKIT.TELL_MESSAGE`, `IsShiftKeyDown`, `wipe`, `date`, `LibStub` |
-
-Every one of these is feature-detected at the call site, because the Forever client is a
-beta that may add or omit APIs.
+Unchanged this span. Identity, guild, group, group actions, quests, addon comms, trade
+skills, zone and inventory, UI, Settings, menus and timers — every call feature-detected
+at the call site, with `pcall` around anything protected that can error. See
+`api-documentation.md` for the full list.
 
 ## Infrastructure
 
-**None.** No cloud resources, no containers, no databases, no queues, no load balancers,
-no VPC. The only persistence is the client's own SavedVariables files and the only
-network traffic is the game client's own protocol.
+**None.** No cloud resources, no containers, no databases, no queues. The only persistence
+is the client's own SavedVariables files and the only network traffic is the game client's
+own protocol.
 
 ## Build Tools
 
 | Tool | Version | Purpose |
 | --- | --- | --- |
-| None for compilation | — | Lua is interpreted by the client. There is no build step at all |
-| BigWigsMods/packager | `@v2` action | Produces a distributable ZIP on a `v*` tag, driven by `.pkgmeta`. Recognises the Forever game type from `## Interface: 16001` without a `-g` override |
-| GitHub Actions | `actions/checkout@v4` with `fetch-depth: 0` | Hosts the packager. Three workflow files exist, one per package subdirectory |
-| Git | — | `.gitattributes` pins `eol=lf` repository-wide so a Windows clone with `core.autocrlf=true` does not churn the sources |
+| None for compilation | — | Lua is interpreted by the client. There is still no compile step for the addons |
+| **Python 3** | 3.12 in CI, any 3.x locally | **The primary release builder.** `tools/package.py --output dist` produces four archives; `--runtime` produces reduced addon-manager archives. Standard library only |
+| **PowerShell 5.1** | Desktop | **The documented Windows release builder.** `package.cmd` → `package.ps1`, using `System.IO.Compression`. Equivalent contract, no `--runtime` mode |
+| GitHub Actions | `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, `gh` CLI | Hosts the suite build. Uses only the built-in `GITHUB_TOKEN` with `contents: write` |
+| BigWigsMods/packager | `@v2` action | **Retained only for the standalone-repository path.** Not on the suite release path |
+| Git | — | `.gitattributes` pins `eol=lf` repository-wide |
 
-**Current state of the build toolchain**: the three workflows and three `.pkgmeta` files
-are all positioned for a repository whose root *is* an addon folder, which was true
-before this restructure and is not true now. GitHub Actions reads workflows only from
-`.github/workflows` at the checkout root, and this repository root has no `.github`
-directory, so none of the three will run on a tag push. See
-`code-quality-assessment.md`.
+### What the builders validate before producing an archive
+
+This is new and is the reason packaging is now a quality gate rather than a zip step.
+Both builders refuse to build on any of:
+
+- a missing TOC, or a TOC with no `## Version:` line
+- a TOC entry not matching `^[A-Za-z0-9_-]+\.(lua|xml)$` — no paths, no traversal
+- a TOC entry naming a file that does not exist, or a duplicate entry
+- an `## IconTexture:` value other than that package's expected
+  `Interface\AddOns\<Addon>\Media\Icon`
+- a missing `Media/Icon.tga` or `Media/ProjectIcon.png`
+- a consumer package missing `## Dependencies: ForeverCommsVoice`
+- an archive member with a leading `/` or a `..` segment
+- a source path outside the repository root (PowerShell), or a symlink (Python)
+
+`tools/verify_package.py` then re-opens every produced archive and asserts membership,
+dependency bundling, installer presence, and — for the suite archive — that the workflow
+is at the repository root. It additionally asserts each TOC version appears in that
+package's README, and greps the Lua source to confirm this span's two functional fixes are
+present.
 
 ## Testing Tools
 
 | Tool | Version | Purpose |
 | --- | --- | --- |
 | Lua `assert` | stdlib | The entire assertion mechanism across all 13 harnesses |
-| Lua 5.1 interpreter | 5.1.5 recommended | How the harnesses are meant to be run. `texlua` appears in the GroupComms and Voice harness comments; `lua5.1.exe` in the GuildComms steering |
-| Synthetic widget layer | hand-written per harness | A metatable whose `__index` returns real implementations for the handful of widget methods a test needs and a no-op for the rest, with `CreateFrame` recording each widget so the test can find it by template or label. Established by `settings.lua`, extended by `titanmenu.lua` to the MenuUtil node API |
-| Stub client API | hand-written per harness | Each harness defines only the globals its path touches: `GetTime`, `C_Timer.After` captured into a list, `SendChatMessage` recorded into a traffic log, `UnitRace` made reassignable, and so on |
+| Lua 5.1 interpreter | 5.1.5 recommended | How the harnesses are meant to be run. `texlua` appears in some harness comments; `lua5.1.exe` in the steering |
+| Python `assert` | stdlib | `tools/verify_package.py`. Note bare `assert` means `python -O` would skip every check |
+| Synthetic widget layer | hand-written per harness | A metatable whose `__index` returns real implementations for the widget methods a test needs and a no-op for the rest, with `CreateFrame` recording each widget so the test can find it by template or label. Established by `settings.lua`, extended by `titanmenu.lua` to the `MenuUtil` node API |
+| Stub client API | hand-written per harness | Each harness defines only the globals its path touches: `GetTime`, `C_Timer.After` captured into a list, `SendChatMessage` recorded into a traffic log, `UnitRace` made reassignable |
 
-**No interpreter is installed on this machine.** `lua`, `lua5.1`, `luajit`, `texlua` and
-`lua54` were all probed and none is on PATH. No harness was executed during this pass and
-none of the 13 is reported as passing. Reading a harness is not running it.
+### What was and was not executed in this pass
+
+| Layer | Interpreter present | Executed | Result |
+| --- | --- | --- | --- |
+| Python build and verify | **Yes** | **Yes** | `tools/package.py` exit 0, four archives; `tools/verify_package.py` exit 0, five PASS groups; `--runtime` exit 0. Archives independently inspected |
+| PowerShell build | Yes | No | The Python builder covers the same contract and is what CI runs |
+| Lua harnesses | **No** | **No** | `lua`, `lua5.1`, `luajit`, `texlua` and `lua54` are all absent from PATH. **None of the 13 is reported as passing**, including the two regression tests added this span |
+| Live client | n/a | No | Nothing has been tested against a live Forever client |
 
 ### Harness inventory
 
 | Package | Harness | Loads |
 | --- | --- | --- |
-| Voice | `integration.lua` | **All three addons.** Voice's six data/logic modules, then GroupComms `Core.lua`, then GuildComms `Core.lua` and `VoiceBridge.lua` |
-| Guild | `syntax.lua` | All 9 GuildComms modules, compiled only, none executed |
+| Voice | `integration.lua` | **All three packages.** Voice's six data/logic modules, then GroupComms `Core.lua`, then GuildComms `Core.lua` and `VoiceBridge.lua` |
+| Guild | `syntax.lua` | All 9 GuildComms modules, compiled only |
 | Guild | `smoke.lua` | Voice x6, then Guild Core, VoiceBridge, Roster, Alerts |
 | Guild | `verify.lua` | Voice x6, then Guild Core, VoiceBridge |
-| Guild | `settings.lua` | Guild Core, Voice x6, VoiceBridge, Guild Options |
+| Guild | `settings.lua` | Guild Core, Voice x6, VoiceBridge, Guild Options, **and GroupComms Core** |
 | Guild | `timing.lua` | Guild Core, Voice x6, VoiceBridge |
 | Guild | `titanmenu.lua` | Guild Core, Voice x6, VoiceBridge, Options, TitanMenu, Broker |
 | Guild | `voice.lua` | Voice x6, then Guild Core, VoiceBridge |
 | Guild | `variations.lua` | Voice x6, then Guild Core, VoiceBridge, UI |
-| Guild | `tabard_dedup.lua` | Guild Core, Tabard. The only GuildComms harness that needs no Voice |
-| Guild | `keybindings.lua` | Guild Core, Alerts, plus the real `Bindings.xml` parsed and executed |
-| Guild | `icon.lua` | No modules; reads the TOC, Broker, Options and installer as text |
-| Group | `smoke.lua` | GroupComms Core, Roster, Quests. Does **not** load Voice |
+| Guild | `tabard_dedup.lua` | Guild Core, Tabard — the only GuildComms harness needing no Voice |
+| Guild | `keybindings.lua` | Guild Core, Alerts, plus the real `Bindings.xml` |
+| Guild | `icon.lua` | No modules; reads the TOC, Broker, Options and **the shared installer at `../install/`** as text. Requires both the package root as cwd and the sibling `install/` directory |
+| Group | `smoke.lua` | GroupComms Core, Roster, Quests. Does not load Voice |
 
-Eight GuildComms harnesses resolve the sibling library by relative path with an
-environment override: `os.getenv("FOREVER_VOICE_PATH")` or `../ForeverCommsVoice/`. They
-therefore require the bundle checkout layout and will fail if a package is extracted and
-tested in isolation.
+Eight GuildComms harnesses resolve the library by `os.getenv("FOREVER_VOICE_PATH")` or
+`../ForeverCommsVoice/`. `settings.lua` additionally reaches `../ForeverGroupComms/`, and
+`icon.lua` reaches `../install/` — neither with an override. The suite therefore requires
+the bundle checkout layout more strongly than before.
 
 ## Toolchain gaps
 
 | Capability | Status |
 | --- | --- |
 | Compiler / type checker | Not applicable to Lua 5.1; none used |
-| Linter | None configured. No `.luacheckrc`, no `selene.toml`, no `stylua.toml` |
+| Linter | None configured for any language. No `.luacheckrc`, `selene.toml`, `stylua.toml`, and nothing for the 149 lines of new Python or 317 of PowerShell |
 | Formatter | None. Style is maintained by convention and documented in `.kiro/steering/lua-style.md` |
 | Code coverage | None |
-| Dependency scanning | Not applicable; zero third-party packages are vendored |
-| CI test execution | None. The three workflows package on a tag and run no tests. This has been the top recommendation for four consecutive passes |
-| Version consistency check | None. Nine version strings across the three packages are currently stale |
+| Dependency scanning | Not applicable; zero third-party packages are vendored or installed |
+| **CI build and packaging verification** | **Present as of this span.** Builds four archives and runs 5 verification groups on `workflow_dispatch` or a `v*` tag |
+| **CI test execution** | **Still absent.** No job runs any of the 13 Lua harnesses. Fifth consecutive pass as the top recommendation, though the job slot now exists |
+| Version consistency check | **Present.** The builders read versions from the TOCs, and `verify_package.py` asserts each appears in its README |

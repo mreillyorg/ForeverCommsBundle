@@ -14,6 +14,10 @@ function V:BuildOptions()
     local f = CreateFrame("Frame")
     f.name = "Forever Comms Voice"
     f:SetSize(560,430)
+    local projectIcon = f:CreateTexture(nil, "ARTWORK")
+    projectIcon:SetSize(40, 40)
+    projectIcon:SetPoint("TOPRIGHT", -18, -16)
+    projectIcon:SetTexture("Interface\\AddOns\\ForeverCommsVoice\\Media\\Icon")
     label(f,"Forever Comms Voice",-18,"GameFontNormalLarge")
     label(f,"Shared per-character language and speaking style for GuildComms and GroupComms.",-52,"GameFontHighlightSmall")
     local y = -96

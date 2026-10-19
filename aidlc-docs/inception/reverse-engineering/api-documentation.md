@@ -1,6 +1,7 @@
 # API Documentation
 
-**Analysis date**: 2026-10-19T09:52:22Z
+**Analysis date**: 2026-10-19T11:30:00Z
+**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
 
 ## REST APIs
 
@@ -19,7 +20,7 @@ addon.
 | `V:Render` | `(scope, kind, vars, options) -> string` | **The primary entry point.** Returns final, interpolated, byte-clamped text. `scope` is `"guild"` or `"group"`; `kind` is a key within that catalog. `options.custom` is a consuming addon's user-authored template and, when it differs from the English base, is used verbatim with no translation or accent. `options.random = false` disables variation; `options.preview = true` renders without consuming a shuffle-bag draw. `options.fallback` is used when the scope or kind is unknown |
 | `V:GetSettings` | `() -> table` | Lazily creates and normalizes `ForeverCommsVoiceCharDB.voice`, caches it on `V.char.voice`, returns it |
 | `V:MigrateLegacy` | `(legacy) -> table` | One-time adoption of a consuming addon's old per-character voice table, latched by `ForeverCommsVoiceCharDB.migratedFromGuild`. Re-validates the accent afterwards and falls back to `"auto"` |
-| `V:SetOption` | `(key, value) -> boolean` | Validates, writes, re-validates the accent when language or race filter changes, then refreshes its own panel and probes `_G.ForeverGuildComms` for `RefreshOptions` and `UpdateRequestPreview` |
+| `V:SetOption` | `(key, value) -> boolean` | Validates, writes, re-validates the accent when language or race filter changes, then refreshes its own panel and probes `_G.ForeverGuildComms` for `RefreshOptions` and `UpdateRequestPreview`. **As of 0.1.1 this is the only sanctioned writer of the shared profile** — GuildComms' `A:SetVoiceOption` delegates here. The back-probe is consequently load-bearing rather than a convenience |
 | `V:ValidateOption` | `(key, value) -> boolean` | Pure validation against `voiceDefaults`, `languageByID` and the accent list |
 | `V:RegisterCatalog` | `(scope, catalog) -> boolean` | Registers a language-keyed template table under a scope name. Called twice by `GroupPhrases.lua` |
 | `V:GetAvailableAccents` | `() -> array` | `{{id, label}, ...}` beginning with `auto` and `none`, filtered by the selected language and optionally by race |
@@ -75,7 +76,7 @@ changes what the player types. Delivery timing belongs entirely to the consumer.
 | `A:RefreshOptions` | `()` | Invoke the Settings panel's refresh closure list |
 | `A:SetOption` | `(key, value) -> boolean` | The single settings writer for Settings and the Titan menu. Validates by key class; templates are deliberately rejected here |
 | `A:VoiceOptionLabel` | `(key, id) -> string` | Display label for a voice value |
-| `A:SetVoiceOption` | `(key, value) -> boolean` | Validate and write a shared voice value, re-validate the accent, refresh both panels and the help preview |
+| `A:SetVoiceOption` | `(key, value) -> boolean` | **Rewritten in 0.5.1 as a 7-line delegation to `V:SetOption`**, then `UpdateBroker`. Returns `false` if the library or its `SetOption` is missing. The former 27-line duplicate validator and the direct mutation of `self.char.voice` are deleted |
 | `A:VoiceChoices` | `(key) -> array` | Choice list for a voice cycler |
 | `A:RunQuickAction` | `(action)` | `alerts`, `help`, `rescan`. None of them sends guild chat |
 | `A:OpenSettings` | `(section)` | Open the panel, optionally deferring a scroll to the messages or languages anchor |

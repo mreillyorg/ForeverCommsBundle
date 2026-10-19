@@ -1,6 +1,6 @@
 local ADDON, A = ...
 _G.ForeverGroupComms = A
-A.name, A.version = ADDON, "0.2.0-beta"
+A.name, A.version = ADDON, "0.2.1-beta"
 BINDING_HEADER_FOREVERGROUPCOMMS = "Forever Group Comms"
 BINDING_NAME_FGROUP_PANEL = "Open Group Comms"
 BINDING_NAME_FGROUP_ROLES = "Review group roles"

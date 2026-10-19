@@ -1,17 +1,24 @@
 # Code Structure
 
-**Analysis date**: 2026-10-19T09:52:22Z
+**Analysis date**: 2026-10-19T11:30:00Z
+**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
 
 ## Build System
 
-- **Type**: None. There is no compile, transpile, bundle or dependency-resolution step.
-  Lua 5.1 source is loaded directly by the WoW client in TOC order.
+- **Type for the addons**: none. There is no compile, transpile or bundle step. Lua 5.1
+  source is loaded directly by the WoW client in TOC order.
+- **Type for releases**: two equivalent hand-written offline builders, new this span. No
+  external packager on the suite path, no network, no secrets, no third-party package.
 - **Configuration**:
   | File | Role |
   | --- | --- |
-  | `<Addon>/<Addon>.toc` | The only manifest the client reads: metadata plus an ordered file list |
-  | `<Addon>/.pkgmeta` | BigWigsMods/packager exclusions, one per package |
-  | `<Addon>/.github/workflows/package.yml` | Tag-triggered packaging, one per package |
+  | `<Addon>/<Addon>.toc` | The only manifest the client reads: metadata plus an ordered file list. All three now declare `## IconTexture:` |
+  | `tools/package.py` | Primary builder, 97 lines, Python standard library only. `--runtime` for reduced archives |
+  | `tools/verify_package.py` | Archive and source-fact verifier, 52 lines |
+  | `package.ps1` / `package.cmd` | Windows builder, 72 + 11 lines, `System.IO.Compression` |
+  | `.github/workflows/package.yml` | **Active suite workflow** at the repository root |
+  | `<Addon>/.pkgmeta` | BigWigsMods exclusions, used only in the standalone-repository case. Now also exclude `Media/ProjectIcon.png` |
+  | `<Addon>/.github/workflows/package.yml` | Retained for the standalone case only; each carries a header comment saying so |
   | `.gitattributes` | Repository-wide `eol=lf` normalization |
   | `.gitignore` | Generic Lua ignore list at the root; a packager-specific one inside GuildComms |
 
@@ -19,19 +26,29 @@
 
 ```text
 ForeverCommsBundle-Development/
-  .gitattributes              repo-wide LF policy (header still says "Forever Guild Comms")
-  .gitignore                  generic Lua ignores; does NOT ignore .release/
+  .gitattributes              repo-wide LF policy
+  .gitignore                  generic Lua ignores; *.zip covers dist/ output
   LICENSE
-  README.md                   2 lines
+  README.md                   24 lines: package table, install order, change list
+  PACKAGING.md                38 lines: suite release guide
+  package.cmd  package.ps1    offline Windows builder
+  .github/workflows/
+    package.yml               ACTIVE suite workflow
+  tools/
+    package.py                offline cross-platform builder (CI runs this)
+    verify_package.py         archive + source-fact verifier
   install/
-    Install-ForeverComms.cmd  combined three-addon installer
-    Install-ForeverComms.ps1
-  ForeverCommsVoice/          library addon, 7 modules
+    Install-ForeverComms.cmd  the one real installer
+    Install-ForeverComms.ps1  -Addons selection, dependency prepending, rollback
+  ForeverCommsVoice/          library addon, 7 modules + Media/
   ForeverGuildComms/          guild addon, 9 modules + Bindings.xml + Media/
-  ForeverGroupComms/          group addon, 6 modules + Bindings.xml
+  ForeverGroupComms/          group addon, 6 modules + Bindings.xml + Media/
   aidlc-docs/                 documentation only, never loaded
   .kiro/                      steering and AI-DLC rule details
 ```
+
+All three packages now carry `Media/Icon.tga` (64 KB, three distinct images confirmed by
+hash) and `Media/ProjectIcon.png` (192 / 213 / 481 KB).
 
 ## Key Modules
 
@@ -60,7 +77,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 
 ### Existing Files Inventory
 
-#### ForeverCommsVoice 0.1.0-beta — 7 shipped modules, 860 lines, 18 methods
+#### ForeverCommsVoice 0.1.1-beta — 7 shipped modules, 872 lines, 18 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -78,7 +95,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 | `.github/workflows/package.yml` | 18 | — | `v*` tag, BigWigsMods/packager@v2 |
 | `install/*` | 316 | — | `.cmd` launcher, TOC-parsing PowerShell installer, 2-line README |
 
-#### ForeverGuildComms 0.5.0-beta — 9 shipped modules, 1,557 lines, 64 methods
+#### ForeverGuildComms 0.5.1-beta — 9 shipped modules, 1,534 lines, 64 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -99,7 +116,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 | `README.md` | 133 | — | User documentation. Title still reads 0.4.3-beta |
 | `PACKAGING.md` | 91 | — | Release guide. Still states 0.4.3-beta and lists four modules that no longer exist here |
 
-#### ForeverGroupComms 0.2.0-beta — 6 shipped modules, 978 lines, 47 methods
+#### ForeverGroupComms 0.2.1-beta — 6 shipped modules, 982 lines, 47 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -119,13 +136,29 @@ namespace through the global `_G.ForeverCommsVoice`.
 | Metric | Voice | Guild | Group | Bundle |
 | --- | --- | --- | --- | --- |
 | Shipped Lua modules | 7 | 9 | 6 | **22** |
-| Shipped Lua lines | 860 | 1,557 | 978 | **3,395** |
+| Shipped Lua lines | 872 | 1,534 | 982 | **3,388** |
 | Public methods | 18 | 64 | 47 | **129** |
 | Registered events | 1 | 14 | 10 | **25** |
 | Event dispatchers | 1 | 1 | 1 | **3** |
 | Offline harnesses | 1 | 11 | 1 | **13** |
-| Harness lines | 64 | 826 | 105 | **995** |
+| Harness lines | 79 | 845 | 105 | **1,029** |
 | SavedVariables tables | 1 | 2 | 1 | **4** |
+| `Media/Icon.tga` | 1 | 1 | 1 | **3** |
+
+### Non-package tooling
+
+| File | Lines | Language |
+| --- | --- | --- |
+| `tools/package.py` | 97 | Python |
+| `tools/verify_package.py` | 52 | Python |
+| `package.ps1` | 72 | PowerShell |
+| `package.cmd` | 11 | Batch |
+| `.github/workflows/package.yml` | 30 | YAML |
+| `install/Install-ForeverComms.ps1` | 153 | PowerShell |
+| `install/Install-ForeverComms.cmd` | 12 | Batch |
+| `<Addon>/install/Install-<Addon>.ps1` x3 | 13 each | PowerShell |
+| `PACKAGING.md` | 38 | Markdown |
+| `README.md` | 24 | Markdown |
 
 ## Design Patterns
 
@@ -213,6 +246,40 @@ namespace through the global `_G.ForeverCommsVoice`.
   (3600s), sweeping at most once per minute on activity plus a 300-second idle ticker.
   GroupComms retains notification keys for 1200s and packet-reassembly state for 60s,
   both swept at most once per minute.
+
+### Single-writer delegation across the package boundary
+- **Location**: `A:SetVoiceOption` in GuildComms `Core.lua`, new shape this span.
+- **Purpose**: `A.char.voice` and `ForeverCommsVoiceCharDB.voice` are the same table object
+  at runtime, so two independently implemented validators could diverge and either addon
+  could mutate the other's live settings.
+- **Implementation**: the method shrank from 27 lines of validation and direct mutation to
+  a 7-line delegation to `V:SetOption`, with a comment stating that the library owns
+  validation, mutation and dependent UI refresh. The library's own back-probe into
+  `_G.ForeverGuildComms` is what keeps the consumer's panel current, which makes that
+  previously-optional probe load-bearing.
+- **Corollary**: `panel.OnDefault` no longer resets the shared values at all, because
+  Restore Defaults is scoped to the addon whose panel it is.
+
+### Validation inside the build, not beside it
+- **Location**: `manifest()` in `tools/package.py`, the per-addon loop in `package.ps1`,
+  and `Get-RuntimeFiles` in `install/Install-ForeverComms.ps1`.
+- **Purpose**: a malformed release should fail to build rather than ship.
+- **Implementation**: all three derive their file list from the TOC and refuse an entry
+  that is not `^[A-Za-z0-9_-]+\.(lua|xml)$`, a missing file, a duplicate entry, a wrong
+  `IconTexture` path, a missing icon or project icon, a consumer without
+  `## Dependencies: ForeverCommsVoice`, and any archive member containing `..` or a
+  leading `/`. The Python builder additionally skips symlinks; the PowerShell builder
+  rejects any source path outside the repository root.
+
+### Dependency satisfied by construction
+- **Location**: `tools/package.py` `main()`, `package.ps1`'s archive loop, and the
+  `-Addons` handling in `install/Install-ForeverComms.ps1`.
+- **Purpose**: make a dependency-less installation unreachable rather than merely warned
+  about.
+- **Implementation**: each consumer's release archive contains a complete
+  `ForeverCommsVoice/` tree, and the installer prepends `ForeverCommsVoice` to any
+  selection naming a consumer, then reorders to canonical dependency order. The three
+  per-addon installers are 13-line shims, so there is one code path to get right.
 
 ### UTF-8-safe byte clamp, implemented three times
 - **Location**: `V:Format` in Voice Core.lua, `A:ChatLimit` in GuildComms Core.lua,

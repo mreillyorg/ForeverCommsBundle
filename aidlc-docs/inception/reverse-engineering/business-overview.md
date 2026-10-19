@@ -1,8 +1,11 @@
 # Business Overview
 
-**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.1.0-beta,
-ForeverGroupComms 0.2.0-beta, ForeverGuildComms 0.5.0-beta.
-**Analysis date**: 2026-10-19T09:52:22Z (fifth reverse-engineering pass, first multi-package pass)
+**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.1.1-beta,
+ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta.
+**Analysis date**: 2026-10-19T11:30:00Z (sixth reverse-engineering pass, second multi-package pass)
+**Change in this span**: a remediation release. No new business transaction was added; the
+packaging and install path was rebuilt, two functional defects were fixed, and the shared
+voice profile gained a single writer. See `code-quality-assessment.md`.
 
 ## Business Context Diagram
 
@@ -78,7 +81,7 @@ and LibDataBroker are detected at runtime and are optional for both behaviour ad
   | V3 | Render a scoped message | Pick the catalog for scope `guild` or `group`, honour a consuming addon's custom template verbatim, apply language, apply accent, optionally vary, then interpolate and byte-clamp |
   | V4 | Select a non-repeating variant | Shuffle-bag selection per scope/kind/language/accent signature, exhausting every wording before reshuffling and avoiding a cross-bag immediate repeat |
   | V5 | Offer compatible accents | Filter the 29 accents by the selected language and, optionally, by the character's race |
-  | V6 | Administer shared voice settings | `/fcv` and a Settings canvas panel; writes propagate to GuildComms' panel and help-request preview |
+  | V6 | Administer shared voice settings | `/fcv` and a Settings canvas panel; writes propagate to GuildComms' panel and help-request preview. **As of 0.1.1 this is the sole writer of the shared profile** — GuildComms' `A:SetVoiceOption` delegates here rather than validating and mutating the table itself |
 
   **ForeverGuildComms (guild social)**
   | # | Transaction | Description |
@@ -187,10 +190,18 @@ These are deliberate and are still enforced in code:
   `LibStub("LibDataBroker-1.1", true)` in both behaviour addons.
 - Alerts and notifications are private.
 
-**One constraint has changed scope.** The documented non-goal "no addon-to-addon comms"
-belongs to GuildComms, and GuildComms still has none. GroupComms is a new product that
+**One constraint changed scope, and the steering now says so.** The documented non-goal
+"no addon-to-addon comms" belongs to GuildComms, and GuildComms still has none. GroupComms
 introduces an opt-in quest-sync protocol as a headline feature, gated behind the
 `questSync` setting, restricted to active quest IDs with no titles or progress, and
-answering completion queries only for IDs a peer already disclosed. The project's
-steering still states the non-goal unscoped, which now reads as a contradiction; see
-`code-quality-assessment.md`.
+answering completion queries only for IDs a peer already disclosed. `.kiro/steering/product.md`
+was rewritten in commit `76ca527` to scope the non-goal to GuildComms and record the
+protocol's disclosure limits as product constraints in their own right, so the previously
+reported contradiction is closed.
+
+**One constraint was clarified rather than changed.** "No hard library dependencies" means
+no hard *third-party* dependency. LibDataBroker remains probed at runtime with
+`LibStub(..., true)` and both applications work fully without it; nothing is vendored.
+`ForeverCommsVoice` is a hard dependency and is first-party. As of this span the install
+path enforces the relationship instead of merely declaring it: every individual source
+archive bundles the library, and the installer prepends it to any consumer-only selection.

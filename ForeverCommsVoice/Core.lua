@@ -1,6 +1,6 @@
 local ADDON, V = ...
 _G.ForeverCommsVoice = V
-V.name, V.version = ADDON, "0.1.0-beta"
+V.name, V.version = ADDON, "0.1.1-beta"
 V.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 V.defaults = {templates={
     login="Welcome back, {name}!",
@@ -172,7 +172,15 @@ function V:Render(scope, kind, vars, options)
             if not hasCuratedGroupAccent and template:sub(1,#accent.flair) ~= accent.flair then
                 template = accent.flair .. template
             end
-            if voice.accentStrength == "expressive" and template:sub(-1)=="!" then template=template.."!" end
+            if voice.accentStrength == "expressive" then
+                -- Match legacy GuildComms: amplify terminal !, convert terminal .
+                -- BEFORE placeholder substitution so player/quest names are unchanged.
+                if template:sub(-1) == "!" then
+                    template = template .. "!"
+                elseif template:sub(-1) == "." then
+                    template = template:sub(1, -2) .. "!"
+                end
+            end
         end
     end
     return self:Format(template, vars)

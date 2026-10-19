@@ -2,7 +2,8 @@
 ## Title: Forever Group Comms
 ## Notes: Party, dungeon and raid greetings, coordination, roles, ready checks, target marks and quest sharing status.
 ## Author: Michael Reilly
-## Version: 0.2.0-beta
+## IconTexture: Interface\AddOns\ForeverGroupComms\Media\Icon
+## Version: 0.2.1-beta
 ## SavedVariables: ForeverGroupCommsDB
 ## Dependencies: ForeverCommsVoice
 ## OptionalDeps: Titan

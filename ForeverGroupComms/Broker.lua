@@ -4,7 +4,7 @@ function A:TryBroker()
     local lib = LibStub and LibStub("LibDataBroker-1.1", true)
     if not lib then return end
     self.broker = lib:NewDataObject("ForeverGroupComms", {
-        type="data source", label="Group Comms", text="Group Comms", icon="Interface\\Icons\\INV_Misc_QuestionMark",
+        type="data source", label="Group Comms", text="Group Comms", icon="Interface\\AddOns\\ForeverGroupComms\\Media\\Icon",
         OnClick=function(_, button)
             if button == "RightButton" then A:OpenSettings()
             elseif IsShiftKeyDown and IsShiftKeyDown() then A:ShowQuests()

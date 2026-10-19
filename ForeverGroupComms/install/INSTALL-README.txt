@@ -1,18 +1,21 @@
-FOREVER GROUP COMMS 0.1.0-beta - WINDOWS INSTALLER
+FOREVERGROUPCOMMS - WINDOWS INSTALLER
 
-1. Extract the ZIP using "Extract All".
-2. Open the ForeverGroupComms\install folder.
-3. Double-click Install-ForeverGroupComms.cmd.
-4. Choose your WoW Forever _classic_beta_ game folder if prompted.
-5. Use /reload in game and type /fgp.
+This addon uses ForeverCommsVoice for shared translations and accents.
+The individual downloadable ZIP includes ForeverCommsVoice as a sibling addon.
 
-The installer copies the TOC, loadable Lua files and Bindings.xml into
-Interface\AddOns\ForeverGroupComms. It backs up replaced files under
-Interface\AddOnBackups and leaves other addons and SavedVariables alone.
+1. Extract ALL files from the ZIP. Do not run installers inside the ZIP.
+2. Open ForeverGroupComms\install.
+3. Run Install-ForeverGroupComms.cmd.
+4. Select your WoW Forever client folder if prompted.
+5. The installer installs/updates ForeverCommsVoice first, then ForeverGroupComms.
+6. Restart WoW (required for new addon list icons) and set up /fcv.
 
-The CMD file runs PowerShell for this process only, without changing the
-machine's permanent execution policy. In managed environments that disallow
-such execution, use manual installation instead.
+Backups are stored in Interface\AddOnBackups, outside AddOns.
+SavedVariables are never overwritten. If a source is missing, installation
+refuses to modify existing addon directories.
 
-MANUAL: Copy the entire ForeverGroupComms folder to your WoW Forever
-_classic_beta_\Interface\AddOns folder. Restart or /reload.
+Manual install: copy BOTH ForeverCommsVoice and ForeverGroupComms folders into
+_classic_beta_\Interface\AddOns. The copied folders must contain
+the TOC, Lua and Media/Icon.tga, not another nested addon folder.
+
+For the three-addon package, run install\Install-ForeverComms.cmd.

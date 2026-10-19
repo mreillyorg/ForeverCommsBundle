@@ -8,7 +8,7 @@ end
 local toc = readFile("ForeverGuildComms.toc")
 local broker = readFile("Broker.lua")
 local options = readFile("Options.lua")
-local installer = readFile("install/Install-ForeverGuildComms.ps1")
+local installer = readFile("../install/Install-ForeverComms.ps1")
 assert(toc:find("## IconTexture: Interface\\AddOns\\ForeverGuildComms\\Media\\Icon", 1, true))
 assert(broker:find("Interface\\\\AddOns\\\\ForeverGuildComms\\\\Media\\\\Icon", 1, true))
 assert(options:find("addonIcon:SetTexture", 1, true))

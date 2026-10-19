@@ -273,11 +273,12 @@ function A:BuildOptions()
                 for sub, v in pairs(value) do A.db[k][sub] = v end
             else A.db[k] = value end
         end
-        for key, value in pairs(A.voiceDefaults) do A.char.voice[key] = value end
+        -- Restore Defaults belongs to GuildComms, NOT ForeverCommsVoice.
+        -- A.char.voice points to the shared per-character profile also used by
+        -- GroupComms; altering it here would silently change another addon.
         panel.OnRefresh()
         if A.UpdateRequestPreview then A:UpdateRequestPreview() end
         if A.UpdateBroker then A:UpdateBroker() end
-        if A.UpdateRequestPreview then A:UpdateRequestPreview() end
     end
     self.optionsPanel = panel
     self.optionsScroll = scroll

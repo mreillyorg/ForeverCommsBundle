@@ -1,38 +1,20 @@
 # Component Inventory
 
-**Analysis date**: 2026-10-19T09:52:22Z
-
-This is the project's first genuinely multi-package pass. Earlier passes recorded one
-application package; the workspace now holds three distributable addon packages inside
-one Git repository.
+**Analysis date**: 2026-10-19T11:30:00Z
+**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
 
 ## Application Packages
 
 | Package | Version | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| `ForeverGuildComms` | 0.5.0-beta | 9 | 1,557 | 64 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-verify delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
-| `ForeverGroupComms` | 0.2.0-beta | 6 | 978 | 47 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks and a private response tally, target marking, bidirectional quest-log comparison over an opt-in addon protocol, manual quest sharing |
-
-## Infrastructure Packages
-
-None. There is no CDK, Terraform, CloudFormation or container definition anywhere in the
-repository. "Deployment" is a file copy into the client's `AddOns` directory.
-
-The closest equivalents are packaging and install tooling, which live inside the
-application packages rather than as separate packages:
-
-| Artifact | Location | Purpose |
-| --- | --- | --- |
-| `package.yml` x3 | `<Addon>/.github/workflows/` | BigWigsMods/packager on a `v*` tag. **Currently inert** — GitHub Actions only reads workflows from the repository root |
-| `.pkgmeta` x3 | `<Addon>/` | Packager exclusion lists. Also positioned for a per-addon repository root rather than this monorepo root |
-| `Install-ForeverComms.{cmd,ps1}` | `install/` | Combined installer for all three addons, with staging, backup and rollback |
-| `Install-Forever<Name>.{cmd,ps1}` x3 | `<Addon>/install/` | Per-addon installers that parse their own TOC and copy only loadable files, `Bindings.xml`, and for GuildComms `Media\Icon.tga` |
+| `ForeverGuildComms` | 0.5.1-beta | 9 | 1,534 | 64 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-verify delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
+| `ForeverGroupComms` | 0.2.1-beta | 6 | 982 | 47 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks and a private response tally, target marking, bidirectional quest-log comparison over an opt-in addon protocol, manual quest sharing |
 
 ## Shared Packages
 
 | Package | Version | Type | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ForeverCommsVoice` | 0.1.0-beta | Library / Models | 7 | 860 | 18 | The only shared package. Owns the per-character voice profile, 8 curated languages, 29 accent phrasebooks, the race-to-accent map, the guild and group phrase catalogs, the locale and accent variant banks, the shuffle bags, and the `Render` pipeline. Declared as a hard `## Dependencies:` entry by both behaviour addons |
+| `ForeverCommsVoice` | 0.1.1-beta | Library / Models | 7 | 872 | 18 | The only shared package. Owns the per-character voice profile and is now its **sole writer**, plus 8 curated languages, 29 accent phrasebooks, the race-to-accent map, the guild and group phrase catalogs, the variant banks, the shuffle bags, and the `Render` pipeline. Declared as a hard `## Dependencies:` entry by both behaviour addons |
 
 Content owned by the shared package:
 
@@ -45,26 +27,52 @@ Content owned by the shared package:
 | Registered catalog scopes | 2 — guild, group |
 | Role and activity label sets | 8 languages each |
 
+## Infrastructure Packages
+
+None. No CDK, Terraform, CloudFormation or container definition. "Deployment" is a file
+copy into the client's `AddOns` directory.
+
+Build and install tooling, rebuilt this span, now lives partly at the repository root
+rather than entirely inside the packages:
+
+| Artifact | Lines | Location | Purpose |
+| --- | --- | --- | --- |
+| `package.yml` | 30 | `.github/workflows/` | **Active suite workflow.** Runs the Python builder and verifier on `workflow_dispatch` or a `v*` tag, uploads four ZIPs, attaches them to a Release on a tag |
+| `package.py` | 97 | `tools/` | Offline cross-platform builder, standard library only. `--runtime` mode for reduced archives. The builder CI runs |
+| `verify_package.py` | 52 | `tools/` | Archive and source-fact verification. Asserts TOC/README version agreement, archive membership, dependency bundling, and this span's two Lua fixes |
+| `package.ps1` + `package.cmd` | 72 + 11 | repository root | Offline Windows builder, equivalent contract. No `--runtime` mode. The documented Windows entry point |
+| `PACKAGING.md` | 38 | repository root | Suite packaging and release guide. Distinguishes the one-repository layout from three standalone repositories |
+| `Install-ForeverComms.ps1` + `.cmd` | 153 + 12 | `install/` | The one real installer. `-Addons` selection, dependency prepending, TOC-derived file lists, staging, backup outside `AddOns`, rollback |
+| `Install-<Addon>.ps1` x3 | 13 each | `<Addon>/install/` | Shims that delegate to the shared installer with their own name |
+| `Install-<Addon>.cmd` x3 | 31 each | `<Addon>/install/` | Launchers. The only remaining per-package version strings besides the TOC, `Core.lua` and README |
+| `INSTALL-README.txt` x3 | 14-16 | `<Addon>/install/` | Manual instructions. **The ForeverCommsVoice copy is template-generated and self-referential** — see `code-quality-assessment.md` new finding #1 |
+| `package.yml` x3 | 19 each | `<Addon>/.github/workflows/` | BigWigsMods/packager, retained for the standalone-repository case. Each now carries a header comment stating it is active only then |
+| `.pkgmeta` x3 | 7 each | `<Addon>/` | Packager exclusions, now also excluding `Media/ProjectIcon.png` |
+| `PACKAGING.md` | 8 | `ForeverGuildComms/` | Reduced from 91 lines to a pointer at the root guide |
+
 ## Test Packages
 
-No separate test packages. Each application and shared package carries its own
-`tests/` directory, none of which is listed in a TOC or shipped by the packager.
+No separate test packages. Each package carries its own `tests/` directory, none listed in
+a TOC and none shipped in a `--runtime` archive.
 
 | Location | Harnesses | Lines | Type | Notes |
 | --- | --- | --- | --- | --- |
-| `ForeverGuildComms/tests/` | 11 | 826 | Unit / integration | `syntax`, `smoke`, `verify`, `settings`, `timing`, `titanmenu`, `voice`, `keybindings`, `icon`, `tabard_dedup`, `variations`. Eight of the eleven now load the sibling `ForeverCommsVoice` folder, so they are cross-package integration tests |
-| `ForeverGroupComms/tests/` | 1 | 105 | Integration | `smoke` — roster, roles, level suggestions, quick actions, the full Q/R round trip, sharing, and staleness. Loads Core, Roster and Quests; stubs out UI, Options and Broker |
-| `ForeverCommsVoice/tests/` | 1 | 64 | Cross-package integration | `integration` — the only harness that loads **all three** addons and drives both rendering paths against one shared profile |
+| `ForeverGuildComms/tests/` | 11 | 845 | Unit / integration | `syntax`, `smoke`, `verify`, `settings`, `timing`, `titanmenu`, `voice`, `keybindings`, `icon`, `tabard_dedup`, `variations`. Eight load the sibling `ForeverCommsVoice` folder; `settings.lua` now also loads `ForeverGroupComms/Core.lua`, and `icon.lua` now reads the shared installer at `../install/` |
+| `ForeverGroupComms/tests/` | 1 | 105 | Integration | `smoke` — roster, roles, level suggestions, quick actions, the full Q/R round trip, sharing, and staleness. Loads Core, Roster and Quests; stubs UI, Options and Broker |
+| `ForeverCommsVoice/tests/` | 1 | 79 | Cross-package integration | `integration` — the only harness that loads **all three** packages. Gained the Expressive punctuation regression block this span |
+
+**No syntax harness exists for Voice or GroupComms**, so 13 of 22 modules have no compile
+guard.
 
 ## Documentation and tooling (non-shipped)
 
 | Location | Purpose |
 | --- | --- |
-| `aidlc-docs/` | AI-DLC state, audit log and these reverse-engineering artifacts. Documentation only; never loaded |
-| `.kiro/steering/` | 8 steering files. All eight are written for the single-addon project and predate the restructure |
+| `aidlc-docs/` | AI-DLC state, audit log and these artifacts. Documentation only |
+| `.kiro/steering/` | 9 files: 8 addon-specific, rewritten for the bundle in commit `76ca527`, plus the AI-DLC `core-workflow.md`. Three "Known deviation" blocks in them are now stale because this span closed the deviations |
 | `.kiro/aws-aidlc-rule-details/` | AI-DLC rule detail files |
-| `README.md` (root) | 2 lines. There is no bundle-level documentation |
-| `LICENSE` | 17 lines, repository root; not duplicated into the packages |
+| `README.md` (root) | 24 lines. Package table, install order, change list, packaging pointer |
+| `LICENSE` | Repository root; not duplicated into the packages |
 
 ## Total Count
 
@@ -76,49 +84,60 @@ No separate test packages. Each application and shared package carries its own
 
 ### Aggregate
 
-| Metric | Value |
-| --- | --- |
-| Shipped Lua modules | 22 |
-| Shipped Lua lines | 3,395 |
-| Public methods | 129 |
-| Registered events | 25 across 3 dispatchers |
-| Shipped non-Lua runtime files | 3 TOCs, 2 `Bindings.xml`, 1 `Media/Icon.tga` |
-| SavedVariables tables | 4 |
-| Offline harnesses | 13, 995 lines, 29% of shipped Lua |
-| Slash command roots | 3, six aliases total |
-| Keybindings | 6, none bound by default |
-| Hard inter-package dependency edges | 2, both pointing at ForeverCommsVoice |
-| Optional runtime dependencies | LibDataBroker-1.1, Blizzard MenuUtil |
-| Embedded third-party libraries | 0 |
+| Metric | Value | Change this span |
+| --- | --- | --- |
+| Shipped Lua modules | 22 | — |
+| Shipped Lua lines | 3,388 | -7 |
+| Public methods | 129 | — |
+| Registered events | 25 across 3 dispatchers | — |
+| Shipped non-Lua runtime files | 3 TOCs, 2 `Bindings.xml`, **3** `Media/Icon.tga` | +2 icons |
+| Promotional assets | 3 `Media/ProjectIcon.png` | +2 |
+| TOCs declaring `IconTexture` | 3 | +2 |
+| SavedVariables tables | 4 | — |
+| Offline harnesses | 13, 1,029 lines, 30% of shipped Lua | +34 lines, +1pp |
+| Modules no harness loads | 4 | — |
+| Slash command roots | 3, six aliases | — |
+| Keybindings | 6, none bound by default | — |
+| Hard inter-package dependency edges | 2, both to ForeverCommsVoice | — |
+| Release builders | 2 equivalent, 1 verified by CI | +2 |
+| Active CI workflows | 1 at the repository root | +1 |
+| Installers | 1 real + 3 shims | restructured |
+| Embedded third-party libraries | 0 | — |
 
 ## Package relationships
 
 ```mermaid
 flowchart BT
-    Voice["ForeverCommsVoice 0.1.0-beta<br/>SHARED LIBRARY"]
-    Guild["ForeverGuildComms 0.5.0-beta<br/>APPLICATION"]
-    Group["ForeverGroupComms 0.2.0-beta<br/>APPLICATION"]
-    Guild -->|"hard: TOC Dependencies + error on load"| Voice
-    Group -->|"hard: TOC Dependencies, soft at runtime"| Voice
+    Voice["ForeverCommsVoice 0.1.1-beta<br/>SHARED LIBRARY<br/>sole writer of the voice profile"]
+    Guild["ForeverGuildComms 0.5.1-beta<br/>APPLICATION"]
+    Group["ForeverGroupComms 0.2.1-beta<br/>APPLICATION"]
+    Guild -->|"hard: TOC + error on load<br/>bundled in its archive"| Voice
+    Group -->|"hard: TOC, soft in code<br/>bundled in its archive"| Voice
 ```
 
 **Text alternative**: Both application packages depend on the shared library and the
-library depends on neither of them. GuildComms' dependency is hard in both senses: the
-TOC declares it and `VoiceBridge.lua` raises an error if the global is missing.
-GroupComms declares the same TOC dependency but its runtime code tolerates the library's
-absence by falling back to a built-in English phrase table. There is no dependency
-between the two application packages.
+library depends on neither. GuildComms' dependency is hard in both senses: the TOC
+declares it and `VoiceBridge.lua` raises an error if the global is missing. GroupComms
+declares the same TOC dependency but tolerates absence at runtime by falling back to a
+built-in English phrase table, which is also its documented `useSharedVoice` opt-out. As
+of this span, both consumers' release archives physically contain the library and their
+installers install it first, so the dependency is satisfied by construction rather than by
+instruction. There is no dependency between the two application packages.
 
 ## Observations relevant to planning
 
-1. **Nothing is committed yet.** The repository has a single `Initial commit` and the only
-   staged file is `.gitattributes`. All three packages, the combined installer,
-   `aidlc-docs/` and `.kiro/` are untracked. This pass runs before the first real commit,
-   as requested.
-2. **Three versions, one tag namespace.** Each package carries an independent version and
-   each ships a workflow listening on `v*`. A monorepo cannot express three product
-   versions in one unprefixed tag namespace; a prefixing scheme such as
-   `voice/v0.1.0-beta` plus root-level workflows would be needed.
-3. **Harness distribution is now very uneven.** GuildComms carries 11 of 13 harnesses and
-   83% of the test lines. Three of GroupComms' six modules and one of Voice's seven have
-   no harness that loads them, and neither new package has a syntax-only harness.
+1. **The first real commit landed** as `76ca527`, containing the bundle as analysed by the
+   previous pass. This span's work is uncommitted at time of analysis.
+2. **Versioning is now internally consistent and partly enforced.** Three patch bumps
+   (0.1.0→0.1.1, 0.2.0→0.2.1, 0.5.0→0.5.1); the builders read versions from the TOCs, and
+   `verify_package.py` asserts each appears in its README. Per-package drift surface fell
+   from seven locations to four — TOC, `Core.lua`, README, and two lines in the installer
+   `.cmd`.
+3. **One tag now releases the suite.** The bundle archive takes GuildComms' version by
+   design, documented in `PACKAGING.md`. A Voice-only release would still be named for
+   GuildComms' unchanged version.
+4. **Harness distribution is still very uneven**: GuildComms carries 11 of 13 harnesses
+   and 82% of the test lines, and three of GroupComms' six modules plus one of Voice's
+   seven are loaded by nothing.
+5. **Two packager implementations exist** and only the Python one is exercised by CI,
+   while the PowerShell one is what the Windows documentation tells users to run.

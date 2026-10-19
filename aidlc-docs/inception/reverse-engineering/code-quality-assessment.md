@@ -1,425 +1,353 @@
 # Code Quality Assessment
 
-**Analysis target**: `ForeverCommsBundle` — ForeverCommsVoice 0.1.0-beta,
-ForeverGroupComms 0.2.0-beta, ForeverGuildComms 0.5.0-beta
-**Supersedes**: the single-package 0.4.3-beta pass of 2026-10-19T03:20:00Z
-**Analysis date**: 2026-10-19T09:52:22Z
+**Analysis target**: `ForeverCommsBundle` — ForeverCommsVoice 0.1.1-beta,
+ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Supersedes**: the 0.5.0/0.2.0/0.1.0 pass of 2026-10-19T09:52:22Z (commit `76ca527`)
+**Analysis date**: 2026-10-19T11:30:00Z
 
 ## Summary
 
-This is the largest structural change in the project's history and the first one that is
-not primarily about adding behaviour. 465 lines of language, accent, race and variant data
-left ForeverGuildComms for a new shared addon, GuildComms picked up a 26-line adapter in
-their place, and a second 978-line application addon arrived that reuses the extracted
-library. Shipped Lua across the workspace went from 2,022 lines in one package to 3,395
-across three.
+This is a remediation release and a strong one. The previous pass found that the library
+extraction itself was well executed while everything around it — packaging, installers,
+version strings, documentation — had been left at the old single-addon layout. This span
+addressed that, and did it with more rigour than the recommendations asked for.
 
-**The extraction itself is well executed.** The library is genuinely independent: it
-registers no chat or combat events, never sends anything, and owns the shared profile
-behind a small API. `VoiceBridge.lua` is the right shape for the job — by aliasing the
-old field names onto `A`, it let `Options.lua` and `TitanMenu.lua` through unmodified,
-which is why a change of this size shows up as a 26-line new file rather than a diff
-across nine. The two consumers made deliberately *opposite* dependency choices and both
-are defensible: GuildComms hard-fails because its whole message layer is delegated;
-GroupComms keeps an English fallback because that same fallback is the user-facing
-`useSharedVoice` opt-out.
+**Seven of the previous pass's seven pre-commit and correctness items are resolved or
+substantially resolved, and three of them were solved better than recommended:**
 
-**The weak points are all at the seams, not in the code.** Three concerns dominate:
+- Packaging was not relocated; it was **replaced**. A self-contained Python builder
+  (`tools/package.py`) and a PowerShell equivalent (`package.ps1`) now produce four
+  archives with no external packager, no network and no secrets, driven by a real
+  root-level workflow. The recommendation was to move three BigWigs workflows to the root
+  and prefix tags per package; this design makes one unprefixed `v*` tag *correct* again
+  by releasing the suite as a unit.
+- The installers were not just taught to *detect* the dependency. The three per-addon
+  installers became 13-line shims over one shared installer that **auto-prepends
+  ForeverCommsVoice and installs in dependency order**, so the failure mode is now
+  impossible rather than merely reported.
+- Version drift was not only fixed, it was **reduced at the source**. The `.ps1` banner
+  lines and `INSTALL-README.txt` version headings were removed entirely, taking the
+  per-package drift surface from seven locations to four, and `tools/verify_package.py`
+  now asserts each TOC version appears in that package's README.
 
-1. **Release packaging is now non-functional.** Three `package.yml` files and three
-   `.pkgmeta` files are positioned for a repository whose root is an addon folder. The
-   root has no `.github` directory, so no workflow will fire on a tag. On top of that, all
-   three listen on an unprefixed `v*` while the packages sit at three different versions.
-2. **The per-addon installers do not know about the new hard dependency.** Neither
-   contains the string `ForeverCommsVoice`. A user who runs `Install-ForeverGuildComms`
-   over an existing 0.4.3 install gets a GuildComms that will not load.
-3. **Nine version strings are stale**, and verification coverage got *less* even
-   though test lines grew — the new packages ship 1,838 lines of source behind two
-   harnesses, and neither has a syntax check.
+**Both functional defects are fixed, each with a purpose-built regression test**, and the
+tests are the kind that would have failed against the previous code:
 
-There is also one genuine, undocumented behaviour regression hidden in the extraction: the
-Expressive accent strength lost its trailing-period-to-exclamation conversion. Details
-below.
+- The Expressive trailing-period conversion is restored in `V:Render`, and
+  `integration.lua` asserts both halves — a terminal `.` becomes `!` on `nightelf`, a
+  terminal `!` doubles on `australian` — plus that a custom template ending in `.` is
+  left alone.
+- GuildComms' Restore Defaults no longer touches the shared profile, and `settings.lua`
+  proves it by loading **ForeverGroupComms** into the same harness, capturing its rendered
+  greeting, running `panel.OnDefault()`, and asserting the group output and all four
+  shared values are byte-identical afterwards. That is a cross-package regression test for
+  a cross-package bug.
 
-Finally, all eight steering files in `.kiro/steering/` still describe a single flat addon
-called Forever Guild Comms. They are now the least accurate documentation in the
-repository.
+**I verified the packaging work by executing it**, which was not possible for the Lua
+layer. Python 3 is present on this machine: `tools/package.py` built all four archives,
+`tools/verify_package.py` passed all five of its assertion groups, `--runtime` mode
+produced correct reduced archives, and I independently confirmed with my own archive
+inspection that `ForeverGuildComms-0.5.1-beta.zip` contains 17 `ForeverCommsVoice/`
+members, the shared installer, and `Bindings.xml`. This is the first pass in the project's
+history where any part of the build was actually run rather than read.
+
+**The weak point is unchanged and is now isolated.** The 13 Lua harnesses still do not run
+anywhere automatically, two of three packages still have no syntax check, and four modules
+are still loaded by no harness. CI now builds and verifies *packaging*, so the gap is
+narrower and more obviously shaped: the infrastructure to run things in CI exists, and the
+Lua suite simply is not wired into it.
+
+One genuine new defect was introduced: the three `install/INSTALL-README.txt` files and
+the three installer shims were generated from one template without special-casing the
+library, so ForeverCommsVoice's copies tell the user it depends on itself.
 
 ## Status of the Previous Recommendations
 
-| # | 0.4.3 recommendation | Status |
-| --- | --- | --- |
-| 1 | Add a test job, or a runner script, that runs every harness and checks the version strings | **Not done, and now materially worse.** The suite grew to 13 harnesses across three packages, the version strings grew to roughly 25 locations of which 9 are stale, and the three workflows that would have hosted the job cannot execute at all. Fourth consecutive pass as the top item |
-| 2 | Add the two new harnesses to `.kiro/steering/testing.md` | **Not done, and overtaken.** The document still says "nine offline Lua harnesses", still lists `Languages.lua`/`Accents.lua`/`RaceProfiles.lua` as GuildComms modules, and still names `Tabard.lua` as the module with no harness. It now needs a rewrite for three packages, not an addendum |
-| 3 | Confirm the tabard fix in a live client | **Unknown.** No evidence either way. `Tabard.lua` is byte-unchanged and `tests/tabard_dedup.lua` still passes it as written |
-| 4 | Make `OnDefault` preserve `outgoingMode` and voice settings, and remove its duplicated line | **Not done, and the blast radius grew.** See "New findings" #4 — `A.char.voice` is now the *same table object* as the shared profile, so GuildComms' Restore Defaults silently resets the voice settings GroupComms is using |
-| 5 | Derive `tests/syntax.lua`'s module list from the TOC | **Not done.** The list was correctly hand-updated to the new 9 modules, which is exactly the maintenance cost the recommendation was about. Two new packages now have no syntax harness at all |
-| 6 | Assert that `.pkgmeta` does not exclude `Bindings.xml` | **Not done.** No test references `.pkgmeta`. GroupComms now also ships a `Bindings.xml` with the same unasserted invariant |
-| 7 | Key approval rows by a monotonic id | **Not done.** `row.entryIndex` still positional in GuildComms. GroupComms repeated the pattern — its suggestion rows close over a fixed loop index `i` |
-| 8 | Drive `UpdateApprovalsUI` in a harness | **Not done.** No harness references `UpdateApprovalsUI`, `alertRows` or `approvalRows`. `variations.lua` drives `UI.lua`'s request path only |
-| 9 | Note in the README that `randomizeMessages` changes existing wording on upgrade | **Not done** |
-| 10 | Seed `math.random`, or comment that seeding is intentionally omitted | **Not done**, and there are now two unseeded shuffle bags in two packages |
-| 11 | Test the approval backlog cap, a 3-4 byte `ChatLimit` case, and the `expressive` punctuation branch | **Not done.** `voice.lua` sets Expressive and asserts the flair prefix appears, but nothing asserts the punctuation branch — which is how the regression in "New findings" #1 went unnoticed |
-| 12 | Add a floor between consecutive approvals | **Not done** in GuildComms. **Addressed by analogy in GroupComms**, whose `A:Send` enforces a 2-second floor on *every* post including an approved suggestion |
-| 13 | Add `.luacheckrc` | **Not done.** No `.luacheckrc`, `selene.toml` or `stylua.toml` anywhere in the workspace |
-| 14 | Clarify that Subtle applies no flair prefix | **Partly.** `V:Render` now carries a comment explaining the guild/group flair asymmetry, but the Settings label is unchanged |
-| 15 | Make the review window's auto-show optional | **Not done** in GuildComms. GroupComms deliberately avoids the problem — `A:Stage` prints a notification and never force-shows a window |
-| 16 | Comment that `pendingMessages` holds records | **Not done** |
-| 17 | Note the profession-name fallback in README limitations | **Not done** |
-| 18 | Move the README keybindings section below the byline | **Not done** |
-| 19 | Extract `A:CanFillRole`, reuse `fillDefaults` in `OnDefault` | **Not done.** No `CanFillRole` exists |
+### Before the first commit (items 1-7)
 
-**Zero of the nineteen were resolved this span**, and two were partly addressed by the new
-addon choosing a better pattern rather than by a change to the old one. This is the first
-pass in the project's history with no closures, which is unsurprising for a restructure
-release — but items 1, 2 and 4 all got harder rather than staying still.
+| # | Recommendation | Status |
+| --- | --- | --- |
+| 1 | Move packaging to the repository root with a job per package and prefixed tags | **RESOLVED, by replacement.** A root `.github/workflows/package.yml` (30 lines) runs `tools/package.py` then `tools/verify_package.py`, uploads all four ZIPs as a workflow artifact, and on a tag attaches them to a GitHub Release with the built-in token. BigWigs is no longer on the suite path. The three nested workflows are retained, normalised to the same shape, and each now carries a header comment stating it is active **only** when that addon's contents are a standalone repository root. The tag-namespace problem dissolved: one `v*` tag now releases the suite, and per-addon versions live in the ZIP filenames |
+| 2 | Make the per-addon installers detect, warn about, and ideally install the dependency | **RESOLVED, beyond the recommendation.** `install/Install-ForeverComms.ps1` grew to 153 lines and takes an `-Addons` parameter; the three per-addon `.ps1` files are now 13-line shims that delegate to it. The shared installer prepends `ForeverCommsVoice` whenever a consumer is selected and reorders to canonical dependency order, so a Voice-less install cannot be produced. It also now derives the file list from each TOC, adds `Media/Icon.tga` only when `IconTexture` is declared and validates the path, adds `Bindings.xml` when present, stages and validates everything before touching the destination, backs up to `Interface/AddOnBackups` **outside** `AddOns`, and rolls back on failure. `Set-StrictMode -Version 2.0` is set |
+| 3 | Add a test job that runs all 13 harnesses and checks every version string | **PARTLY.** The version half is done and automated — `verify_package.py` asserts each TOC version appears in that package's README, and the builders read versions from the TOCs rather than from any hardcoded constant. The 13 Lua harnesses still run nowhere. Fifth consecutive pass as the top open item, though for the first time a CI job exists that could host them |
+| 4 | Fix the nine stale version strings, and bump GuildComms' README title and PACKAGING.md | **RESOLVED.** All three packages bumped to 0.1.1 / 0.2.1 / 0.5.1 and consistent across TOC, `Core.lua`, README title, a new README "Current release" banner line, and both installer `.cmd` lines. `ForeverGuildComms/PACKAGING.md` shrank from 91 lines to an 8-line pointer at the new root `PACKAGING.md`, which removed the stale module list. Remaining older version numbers in the GuildComms README are historical changelog headings and are correct as history |
+| 5 | Add `tests/syntax.lua` to Voice and GroupComms, deriving the list from the TOC | **Not done.** Still 13 harnesses; only GuildComms has a syntax check, so 13 of 22 modules have no compile guard |
+| 6 | Write a real root `README.md` | **RESOLVED.** 24 lines: a three-row package table with versions and purposes, a four-step install sequence that states Voice is installed first, a "Changes since the first shared-engine beta" list, a pointer to `PACKAGING.md`, and a closing note that an in-game Windows install check is still needed |
+| 7 | Add `.release/` to the root `.gitignore` | **Not done**, and now largely moot: the suite path no longer uses BigWigs, so `.release/` is not produced at the root. The new `dist/` output is covered incidentally because the root `.gitignore` already ignores `*.zip` |
+
+### Correctness (items 8-13)
+
+| # | Recommendation | Status |
+| --- | --- | --- |
+| 8 | Restore the Expressive trailing-period conversion and assert it | **RESOLVED with a regression test.** `V:Render` now reproduces the legacy branch in full, with a comment recording that it runs *before* placeholder substitution so a player or quest name is never altered — which matches where the legacy `A:VoiceText` did it. `integration.lua` adds eight assertions covering the period case, the doubled-exclamation case, and custom-template immunity |
+| 9 | Make `OnDefault` leave the shared voice profile alone | **RESOLVED for the shared profile, with a cross-package regression test.** The `for key, value in pairs(A.voiceDefaults)` line is gone, replaced by a three-line comment explaining that `A.char.voice` points at the profile GroupComms also uses. The duplicated `UpdateRequestPreview` call — carried since 0.4.1 — is gone too. **Still open:** the generic `for k, value in pairs(A.defaults)` loop continues to reset `outgoingMode` to `automatic`, so Restore Defaults can still silently re-enable unattended public messaging, and it still copies one level deep |
+| 10 | Give the shared profile one writer | **RESOLVED.** `A:SetVoiceOption` went from 27 lines of independent validation to a 7-line delegation to `V:SetOption`, with a comment stating the library owns validation, mutation and dependent UI refresh. The duplicate validator is deleted. Behaviour is preserved because `V:SetOption` already performed the accent re-validation and already probed `_G.ForeverGuildComms` for `RefreshOptions` and `UpdateRequestPreview`; the delegation adds `UpdateBroker` |
+| 11 | Test the GroupComms chat-safety rails | **Not done** |
+| 12 | Test `parseIDs` and the `OnAddonMessage` header rejections | **Not done.** Still the most consequential untested code in the bundle |
+| 13 | Test the `questSync` opt-out and the outbox bounds | **Not done** |
+
+### Maintainability (items 14-25)
+
+| # | Recommendation | Status |
+| --- | --- | --- |
+| 14 | Rewrite `.kiro/steering/` for the bundle | **RESOLVED** in commit `76ca527`. All eight addon steering files were rewritten per package, `product.md`'s addon-comms non-goal was scoped to GuildComms, `testing.md` was rewritten for 13 harnesses, and `structure.md` / `lua-style.md` were moved off always-included. Three target-state rules the code did not yet meet were marked as explicit "Known deviation" blocks — **all three of those deviations are now closed by this span**, so those blocks are themselves stale and should be removed |
+| 15 | Delete `V:VoiceText` and `V:ChooseMessageTemplate` plus its forwarder | **Not done.** `V:VoiceText` remains unreachable dead code. Note it is no longer the *only* copy of the Expressive logic now that `Render` has it back, so deleting it is now purely a cleanup with no risk of losing behaviour |
+| 16 | Split `V:Render` into scope-specific resolvers | **Not done**, and `Render` grew by 8 lines |
+| 17 | Assert that the duplicated tables match | **Not done** for the template tables. `verify_package.py` added a different and useful version-consistency assertion, but nothing compares `GroupComms.variants` to `groupTemplates.en` or `GuildComms.defaults.templates` to `V.defaults.templates` |
+| 18 | Add harnesses for GroupComms `UI.lua` and `Options.lua` | **Not done** |
+| 19 | Add `.luacheckrc` | **Not done** |
+| 20 | Key approval and suggestion rows by a monotonic id | **Not done** |
+| 21 | Drive `UpdateApprovalsUI` in a harness | **Not done** |
+| 22 | Give GroupComms its own broker icon and `IconTexture` | **RESOLVED, and extended to Voice.** Both packages gained a distinct `Media/Icon.tga` (64 KB each) and `Media/ProjectIcon.png` (192 KB and 213 KB), an `## IconTexture:` TOC line, and a 40x40 project icon on their Settings panels. GroupComms' broker moved off `INV_Misc_QuestionMark` to its own texture. All three `Icon.tga` files are distinct artwork, confirmed by hash |
+| 23 | Make the combined installer copy only loadable files | **RESOLVED.** `Get-RuntimeFiles` parses the TOC, rejects unsafe or duplicate entries, and copies only the manifest plus the conditional icon and `Bindings.xml`. `tests/` and `install/` no longer reach `AddOns/` |
+| 24 | Confirm the tabard fix in a live client | **Unknown.** `Tabard.lua` remains byte-unchanged |
+| 25 | Remaining trivial carried items | **Not done.** `math.random` still unseeded; the `randomizeMessages` upgrade note is still absent; no floor between consecutive approvals; the review window still auto-shows; Subtle's absent flair is still unexplained in the label; `pendingMessages` still uncommented; the profession-name fallback is still undocumented; the README keybindings section still precedes the byline; no `A:CanFillRole`; `.pkgmeta`/`Bindings.xml` still unasserted by a Lua harness, though `verify_package.py` now asserts `Bindings.xml` reaches the runtime archives |
+
+**Tally: 10 resolved, 1 partly, 14 open.** Against the five items the user explicitly
+asked for, all five are addressed and four are fully closed; the fifth (Restore Defaults)
+is closed for the shared profile and still open for `outgoingMode`.
+
+## Verification Performed
+
+This section exists because the previous four passes could only read.
+
+| Action | Result |
+| --- | --- |
+| `python tools/package.py --output dist` | Exit 0. Built `ForeverCommsVoice-0.1.1-beta.zip` (19 files), `ForeverGuildComms-0.5.1-beta.zip` (51), `ForeverGroupComms-0.2.1-beta.zip` (36), `ForeverComms-Bundle-0.5.1-beta.zip` (75) |
+| `python tools/verify_package.py dist` | Exit 0. Five PASS lines: the four archives plus the source-fact group covering restore-defaults isolation, Expressive punctuation and installer dependency references |
+| `python tools/package.py --output dist-runtime --runtime` | Exit 0. 9 / 21 / 18 / 30 files |
+| Independent archive inspection of the GuildComms source ZIP | 32 `ForeverGuildComms/` members, **17 `ForeverCommsVoice/` members**, 2 `install/` members. `ForeverCommsVoice/ForeverCommsVoice.toc`, `install/Install-ForeverComms.ps1` and `ForeverGuildComms/Bindings.xml` all present |
+| Independent inspection of the runtime GuildComms ZIP | Exactly 21 members: both packages' TOC-listed modules, both `Media/Icon.tga`, `Bindings.xml`. No tests, no installers, no docs, no `ProjectIcon.png` |
+| Icon asset check | Three distinct `Icon.tga` files by MD5, 64 KB each; three `ProjectIcon.png` at 192 / 213 / 481 KB. Real artwork, not placeholders |
+| Version sweep across all packages and docs | Consistent at 0.1.1 / 0.2.1 / 0.5.1. Remaining older numbers are historical changelog headings |
+| `dist/` and `dist-runtime/` | Removed after verification |
+
+**Not verified**: the 13 Lua harnesses. No Lua interpreter is installed — `lua`, `lua5.1`,
+`luajit`, `texlua` and `lua54` are all absent from PATH. **None of the 13 is reported as
+passing**, including the two new regression tests, whose correctness is asserted from
+reading them. Nothing has been tested against a live Forever client, and `package.ps1`
+was not executed because the Python builder covers the same contract and is what CI runs.
 
 ## Test Coverage
 
-- **Overall**: Fair, down from Good. Thirteen harnesses, 995 lines, 29% of shipped Lua
-  (previously 40% of a smaller codebase).
-- **This rating comes from reading the harnesses, not running them.** `lua`, `lua5.1`,
-  `luajit`, `texlua` and `lua54` were all probed; none is on PATH. **No harness was
-  executed during this pass and none of the thirteen is reported as passing.** The
-  project's own testing rule requires stating this plainly.
+- **Overall**: Fair, trending up. Thirteen harnesses, 1,029 lines, **30%** of shipped Lua
+  (was 29%). Test code grew 34 lines while shipped code shrank 7.
+- Per package: Voice 1 harness / 79 lines; GuildComms 11 / 845; GroupComms 1 / 105.
 
-### Per-package coverage
+### The two new regression tests are the best work in this span
 
-| Package | Modules | Modules a harness loads | Harnesses | Test lines | Test % of source |
-| --- | --- | --- | --- | --- | --- |
-| ForeverCommsVoice | 7 | 6 of 7 | 1 | 64 | 7% |
-| ForeverGuildComms | 9 | 9 of 9 | 11 | 826 | 53% |
-| ForeverGroupComms | 6 | 3 of 6 | 1 | 105 | 11% |
+**`integration.lua` +15 lines.** Eight assertions that pin the Expressive contract from
+both directions: on `nightelf` (a period-terminated accent) the rendered login must
+contain `Keeper!` and must **not** contain `Keeper.`; on `australian` the result must end
+in `!!`; and a custom template `"Custom greeting, {name}."` must come back exactly as
+`"Custom greeting, Keeper."`. That last one is the important one — it proves the
+restoration did not leak into user-authored text. The block also restores the prior voice
+state afterwards so it does not perturb the assertions that follow, which several
+harnesses in this project are careless about.
 
-**The project lost its "every module is covered" property**, which it had held for exactly
-one pass. Four of twenty-two modules are now loaded by no harness:
+**`settings.lua` +21 lines.** A cross-package regression test for a cross-package bug. It
+sets the shared profile to Spanish / `mexican` / expressive through `V:SetOption`, loads
+the real `ForeverGroupComms/Core.lua` into the same harness, captures `G:Render("greet")`,
+flips a GuildComms setting, calls `panel.OnDefault()`, then asserts four things: the
+GuildComms setting was restored, the shared profile is still the **same table object**
+from both `V:GetSettings()` and `A.char.voice`, GroupComms' rendered greeting is
+byte-identical, and all three shared values survived. Asserting object identity as well as
+value equality is the right call here, because the bug was precisely that the two names
+refer to one table.
 
-| Uncovered module | Lines | Consequence |
-| --- | --- | --- |
-| `ForeverCommsVoice/Options.lua` | 76 | The `/fcv` panel, `V:SetOption`'s only UI caller, and the library's only event frame |
-| `ForeverGroupComms/UI.lua` | 175 | Both windows, including the quest comparison rendering and the suggestion rows |
-| `ForeverGroupComms/Options.lua` | 64 | All eight settings toggles and the `questSync` enable-triggers-sync side effect |
-| `ForeverGroupComms/Broker.lua` | 27 | The LDB object |
+### Module coverage — unchanged at 4 uncovered
 
-**Neither new package has a syntax harness.** GuildComms' `tests/syntax.lua` compiles its
-nine modules and nothing else, so a parse error in any of the thirteen Voice or GroupComms
-files would reach a user. This is the cheapest gap on the list: the harness is six lines
-and has no dependencies.
+| Package | Covered | Loaded but not driven | No harness loads it |
+| --- | --- | --- | --- |
+| Voice | `Core`, `Languages`, `Accents`, `RaceProfiles`, `MessageVariants`, `GroupPhrases` | — | **`Options.lua`** |
+| GuildComms | all 9 plus `Bindings.xml` | `UI.lua` partially | — |
+| GroupComms | `Core`, `Roster`, `Quests` | — | **`UI.lua`**, **`Options.lua`**, **`Broker.lua`** |
 
-### What the new harnesses do well
+`GroupComms/Core.lua` is now loaded by two harnesses in two different packages, which is
+a small structural improvement. `Broker.lua` changed this span (the icon) and is still
+loaded by nothing.
 
-**`ForeverCommsVoice/tests/integration.lua` is the most valuable 64 lines in the
-repository.** It is the only test that loads all three addons, and it verifies exactly the
-things the extraction put at risk:
+### Remaining untested paths, ranked
 
-- `MigrateLegacy` adopts a legacy guild profile once and sets the latch, and a second call
-  with the same legacy table does **not** overwrite a subsequent shared edit. That is the
-  migration's whole contract.
-- Both render paths produce interpolated output from one shared profile, and both adapters
-  are exercised against the real `ForeverGroupComms/Core.lua` and
-  `ForeverGuildComms/Core.lua` + `VoiceBridge.lua` rather than against reimplementations.
-- An item hyperlink survives a custom template, and a quest link survives a group `request`
-  template.
-- Role text is not transformed, and `group/skull` is asserted *equal* to the unaccented
-  English string — encoding "combat directives stay understandable" as a test rather than a
-  comment.
-- `useSharedVoice = false` restores the exact original English wording, which is the
-  documented opt-out contract.
-- A language change invalidates an incompatible accent to `auto`, and an unknown race
-  reduces the accent list to exactly the two safe entries.
-- Non-repeating shuffle draws in both scopes.
-
-It also, incidentally, guards the most dangerous latent coupling in the bundle. It copies
-`B.defaults.templates` into `B.db.templates` and then asserts the rendered login greeting
-is still translated — which only holds if GuildComms' default template strings are
-byte-identical to Voice's `V.defaults.templates`. If those two duplicated tables ever
-drift, every user's unmodified template would be treated as custom and translation would
-silently stop for everyone. The invariant is covered, but **implicitly**; a reader would
-not know that assertion is load-bearing.
-
-**`ForeverGroupComms/tests/smoke.lua` is dense and well chosen for a single harness.** It
-drives the full `Q`/`R` round trip through the real timer queue, then asserts the three
-classifications separately — a peer's active quest shows as *shared*, a quest absent from a
-peer's log with a completion reply shows as *missing*, and a non-addon party member shows
-as *unknown*. It then bumps `questEpoch` and asserts the previously-missing quest reverts
-to unknown, which is the precise guard against claiming someone lacks a quest based on a
-stale reply. The reverse comparison is covered too, including that an already-completed
-quest is suppressed.
-
-### Remaining coverage gaps, ranked
-
-1. **No CI runs any of this**, and the three workflows that might have cannot fire.
-2. **No syntax harness for 13 of the 22 modules.**
-3. **Four modules, 342 lines, loaded by nothing.**
-4. **The GroupComms chat-safety rails are untested**: the 2-second `A:Send` floor, the
-   `groupSerial` rejection in `A:Approve`, the `CanManageGroup` gates on ready checks and
-   target marks, and `Notify`'s dedup.
-5. **The `questSync` opt-out is untested.** `smoke.lua` runs with it on throughout; nothing
-   asserts that turning it off stops `QueuePacket`, `FlushPackets` and `BroadcastQuests`.
-6. **The outbox bounds are untested**: the 60-entry cap, the 1.15-second pacing, the
-   12-chunk refusal, and `outboxToken` cancellation.
-7. **`parseIDs` rejection cases are untested.** The validation is careful — oversize,
-   leading/trailing/doubled commas, non-digits, out-of-range IDs — and none of it is
-   asserted. For the only parser in the project that reads data from another player, this
-   is the most consequential untested code in the bundle.
-8. **The approvals and alerts window rendering** is still undriven *(carried)*.
-9. **The 30-entry approval backlog cap** is still untested *(carried)*.
-10. **`A:IsSelf` realm handling and the suspicious-roster-read guard** remain untested,
-    carried since 0.1.0.
-11. **`A:ChatLimit` is still tested only on a two-byte character** *(carried)*, and there
-    are now three copies of that algorithm, two of them untested.
-12. **The Expressive punctuation branch** *(carried)* — see finding #1.
+1. **No CI job runs the 13 Lua harnesses.** The job slot now exists.
+2. **No syntax harness for Voice or GroupComms** — 13 of 22 modules have no compile guard.
+3. The four uncovered modules above.
+4. GroupComms' chat-safety rails: the 2-second `Send` floor, `groupSerial` rejection in
+   `Approve`, the `CanManageGroup` gates, `Notify` dedup.
+5. `parseIDs` and `OnAddonMessage` rejection cases.
+6. The `questSync` opt-out and the outbox bounds.
+7. **Expressive punctuation for `group` scope.** The restored branch now also fires for
+   group `greet` / `welcome` / `level`; only guild scope is asserted. See new finding #2.
+8. `package.ps1`. Two implementations of the packager exist and only the Python one is
+   executed by CI or by `verify_package.py` — yet `package.cmd`, the documented Windows
+   entry point, invokes the PowerShell one.
+9. GuildComms' approvals and alerts window rendering.
+10. The 30-entry approval backlog cap.
+11. `A:IsSelf` realm handling and the suspicious-roster-read guard.
+12. The byte clamp on a 3- or 4-byte UTF-8 sequence.
+13. The duplicated template tables.
 
 ## Code Quality Indicators
 
-- **Linting**: none. Still no `.luacheckrc`. `.gitattributes` holds line endings
-  repository-wide, though its header comment still reads "Line-ending policy for Forever
-  Guild Comms".
-- **Code Style**: consistent, and impressively so across a package boundary. All three
-  packages use the same `local _, A = ...` opening, the same `function A:Name()` method
-  style, the same up-front state declaration, the same guarded cross-module calls, the
-  same single-dispatcher pattern, and the same `C_Timer.After` + latch idiom. A reader who
-  knows one package can read the other two. Voice's `Options.lua` and GroupComms' modules
-  are more compact than GuildComms' — fewer blank lines, more one-line bodies — but within
-  the documented house style.
-- **Documentation**: mixed, and this is the weakest indicator this pass.
-  - *Good*: `ForeverCommsVoice/README.md` is a clean library README with a real API
-    example and an honest migration section. `ForeverGroupComms/README.md` is unusually
-    candid — it states plainly that quest sharing uses WoW's push API and shares with the
-    group rather than an individual, that shareability and eligibility are different
-    things, that a Questie-only party member is not synced, and that the archive has not
-    been tested against a live server.
-  - *Bad*: `ForeverGuildComms/README.md` has a 0.5.0 section appended to a document whose
-    title, install instructions and "Build and tests" section all still say 0.4.3. The
-    build section lists six harnesses; there are eleven. `PACKAGING.md` is worse — it
-    states the version is 0.4.3 and its repository-layout block lists `Languages.lua`,
-    `Accents.lua`, `RaceProfiles.lua` and `MessageVariants.lua` as files that must exist at
-    the root, all four of which were moved out.
-  - *Worst*: the root `README.md` is two lines. A monorepo with three interdependent
-    packages, an installation order requirement and four installers has no bundle-level
-    documentation at all.
-  - *Comments* remain the project's strength and the new code upholds it. The best new
-    ones: "15 bytes; WoW prefix limit is 16"; "QUEST_LOG_UPDATE also fires for kill counts:
-    never resend unchanged logs on every objective tick"; "A lack of READY_CHECK_CONFIRM is
-    not proof the member clicked Not ready"; "Only accept a completion reply to our most
-    recently advertised log"; "Preserve clicks only when the exact roster is stable; no old
-    group sends"; and "Avoid repeating a racial catchphrase already present in a curated
-    party template". Each explains a decision, not a line.
-- **Error handling**: good, and the new code is the most defensive in the project.
-  `pcall` wraps every protected call in GroupComms — the ready check, the target mark, the
-  addon send, the prefix registration, four separate `C_QuestLog` calls and the quest push.
-  Every quest-log read supports both the modern and legacy API. `parseIDs` validates
-  format, length, range and integrality before trusting a single byte from another player.
-- **Global hygiene**: clean. Three addon globals, three `SLASH_*` pairs, the binding label
-  globals, and named frames. No `getglobal`, no `loadstring` in shipped code.
-- **Control flow**: good. `A:ScanRoster` is the densest new function — roster read,
-  identity diff, serial bump, three message decisions and three private-alert decisions in
-  one body — but each block is short and guarded. `V:Render` is the one function that is
-  genuinely hard to follow; see finding #2.
+- **Linting**: none. Still no `.luacheckrc`, `selene.toml` or `stylua.toml`. Python and
+  PowerShell are likewise unlinted, which now matters slightly more since there are
+  250 lines of new Python and 225 of new PowerShell on the release path.
+- **Code Style**: consistent, and the new code upholds it. The Lua diffs are small and in
+  the house idiom. `tools/package.py` is clean, flat, dependency-free standard library
+  only, with a module docstring stating the invocation and the dependency-bundling
+  behaviour. `install/Install-ForeverComms.ps1` is the strongest of the new files: named
+  functions, strict mode, validation separated from mutation, and a staged-then-move
+  strategy with an explicit rollback block.
+- **Documentation**: much improved and now the right shape. The root `README.md` and root
+  `PACKAGING.md` are new and accurate; `ForeverGuildComms/PACKAGING.md` correctly became
+  a pointer rather than being left to drift. Each addon README gained a "Current release"
+  banner line, which is also the string `verify_package.py` checks. `PACKAGING.md`
+  explicitly distinguishes the suite-repository layout from three standalone repositories
+  and states that the nested workflows are not discovered in the suite case — the exact
+  misconception that caused the previous pass's finding.
+- **Error handling**: good and extended. `tools/package.py` wraps `main` and reports
+  `OSError` / `ValueError` as a single-line failure with exit 1. Both builders refuse
+  unsafe archive members, unsafe TOC entries, absolute paths and `..` segments. The
+  installer validates every manifest before changing a file.
+- **Global hygiene**: unchanged and clean.
+
+### Observation: the fixes were again made defensively rather than minimally
+
+Consistent with the 0.4.3 span, each fix went wider than required:
+
+| Fix | Minimal version | What was done |
+| --- | --- | --- |
+| Packaging | Move three workflows to the root | Replaced the external packager on the suite path with two offline builders, added a verifier that also asserts source-level facts about the other fixes, and kept the nested workflows for the standalone case with a comment explaining when they apply |
+| Installer dependency | Detect and warn | Made the dependency-less install unreachable by construction, and simultaneously fixed the combined installer's over-copying and moved backups outside `AddOns` |
+| Version strings | Update nine strings | Updated them, then **deleted three of the locations** so there is less to drift, and added a CI assertion for the rest |
+| Restore Defaults | Delete one line | Deleted it, documented why in a comment aimed at the next reader, removed the long-carried duplicate statement, and added a cross-package regression test |
+| One writer for the profile | Route through `V:SetOption` | Did that and deleted the 20-line duplicate validator rather than leaving it unreachable |
+
+The version-string reduction is the most interesting. Removing a place a value can be
+stated is strictly better than adding a check that it is stated consistently, and the
+change did both.
 
 ## Technical Debt
 
 ### New findings
 
-#### 1. Expressive accent strength silently lost its punctuation conversion
-**Severity: low behaviour regression, undocumented, untested.**
+#### 1. The ForeverCommsVoice installer documentation is self-referential nonsense
+**Severity: low impact, high visibility. The one clear defect introduced this span.**
 
-The pre-extraction `A:VoiceText` ended an Expressive message like this:
+The three `install/INSTALL-README.txt` files and three installer shims were generated from
+a single template with the addon name substituted, and the library case was not
+special-cased. `ForeverCommsVoice/install/INSTALL-README.txt` therefore says:
 
-```lua
-text = accent.flair .. text
-if text:sub(-1) == "!" then text = text .. "!"
-elseif text:sub(-1) == "." then text = text:sub(1, -2) .. "!" end
-```
+- "This addon uses ForeverCommsVoice for shared translations and accents."
+- "The individual downloadable ZIP includes ForeverCommsVoice as a sibling addon."
+- "The installer installs/updates ForeverCommsVoice first, then **ForeverCommsVoice**."
+- "Manual install: copy BOTH ForeverCommsVoice and **ForeverCommsVoice** folders"
 
-`V:Render` kept only the first branch:
+And `Install-ForeverCommsVoice.ps1` prints:
 
-```lua
-if voice.accentStrength == "expressive" and template:sub(-1)=="!" then template=template.."!" end
-```
+> `ForeverCommsVoice uses ForeverCommsVoice for its shared language/accent settings.`
 
-The period-to-exclamation conversion is gone. It affected every accent whose templates end
-in a full stop — `nightelf`, `tauren`, `forsaken`, `bloodelf`, `draenei` — so on those
-voices Expressive is now indistinguishable from Moderate. The old code still exists,
-verbatim, in the now-dead `V:VoiceText`, which is presumably how it was lost: the behaviour
-was reimplemented in `Render` rather than moved. Nothing asserts it, which is carried
-recommendation #11.
+Every statement is wrong for the library: it has no dependency, its ZIP bundles no
+sibling, and there is one folder to copy. The functional path is correct — the shim passes
+`-Addons @('ForeverCommsVoice')` and the shared installer does the right thing — so this
+is purely user-facing text. It is also the first thing a user reads when installing the
+addon the other two depend on.
 
-#### 2. `V:Render` carries the complexity the extraction was meant to remove
+#### 2. Expressive punctuation now also applies to group messages
+**Severity: low, undocumented, untested.**
+
+The restored branch sits inside `V:Render`'s shared flair block, which runs for
+`scope == "guild"` with `kind ~= "help"` **or** `scope == "group"` with kind in
+`greet` / `welcome` / `level`. Legacy GuildComms behaviour is reproduced faithfully, but
+group messages gain punctuation rewriting they never had — at Expressive, the `tauren`
+group greeting "Walk in peace, companions." becomes "...companions!", and similarly for
+`nightelf`, `forsaken`, `bloodelf` and `draenei`.
+
+This is probably desirable and is certainly consistent, but the README describes the
+change as restoring behaviour for "built-in, accented guild messages", and
+`integration.lua` asserts guild scope only. Either scope the branch to guild or document
+and test the group case.
+
+#### 3. Two implementations of the packager, only one of them verified
 **Severity: medium maintainability.**
 
-`Render` is 55 lines handling two scopes with different accent semantics, two variant bank
-shapes, a custom-template short circuit, a preview flag, a randomize flag and a flair rule
-with a compound condition relying on `and`/`or` precedence:
+`tools/package.py` (97 lines) and `package.ps1` (72 lines) implement the same contract:
+the same three addons, the same four archive names, the same TOC validation, the same
+dependency bundling, the same "suite version tracks GuildComms" rule. They will drift.
+They already differ in one visible way — `package.ps1` has no `--runtime` mode — and
+`PACKAGING.md` documents that asymmetry rather than resolving it.
 
-```lua
-if accent and accent.flair and (scope == "guild" and kind ~= "help"
-    or scope == "group" and (kind == "greet" or kind == "welcome" or kind == "level")) then
+The risk is pointed: CI runs the Python builder and `verify_package.py` validates the
+Python builder's output, while `package.cmd` — the entry point `PACKAGING.md` tells
+Windows users to double-click — runs the **PowerShell** one. The unverified path is the
+one most users will take. Running `verify_package.py` against a `package.ps1` build, or
+having `package.ps1` shell out to Python when it is available, would close this.
+
+#### 4. `verify_package.py` asserts Lua source text
+**Severity: low, and a deliberate trade.**
+
+To guard the two functional fixes, the packaging verifier greps source:
+
+```python
+default_handler = settings.split('function panel.OnDefault()', 1)[1].split('\n    end', 1)[0]
+assert 'A.char.voice[key] =' not in default_handler
+assert 'template:sub(-1) == "."' in (ROOT / 'ForeverCommsVoice/Core.lua').read_text()
 ```
 
-That parses correctly, and a three-line comment explains the intent, but it is the one
-place in the bundle where the comment is doing load-bearing work for the reader. Two
-scope-specific resolver functions behind a thin `Render` would read better and would make
-finding #1 the kind of thing a diff shows.
+This is effective — it is the only automated guard either fix has, given the Lua suite
+runs nowhere — but it couples release packaging to the exact text and indentation of two
+Lua functions. A benign rename or reindent of `panel.OnDefault` fails the build with a
+packaging error. The `split('\n    end', 1)` boundary in particular assumes four-space
+indentation of the closing `end`. Worth a comment saying so, and worth retiring once the
+Lua harnesses run in CI, since both facts are already asserted there properly.
 
-#### 3. Two shuffle-bag implementations of the same algorithm
-**Severity: low duplication.**
-
-`V:Pick` in `Core.lua` and `V:ChooseMessageTemplate` in `MessageVariants.lua` implement
-identical logic — Fisher-Yates, position cursor, count-change invalidation, cross-bag
-`last` guard — differing only in how they build the candidate list and compute the
-signature. Both write into the same `V.messageVariantBags` table using **different
-signature formats**: `Pick` uses `scope:kind:language:accent` and `ChooseMessageTemplate`
-uses `kind:language:accent`. They cannot currently collide, because the only caller of
-`ChooseMessageTemplate` is `VoiceBridge`'s forwarder, which no GuildComms code path
-reaches now that `VoiceText` routes through `Render`. So the second implementation is
-reachable only by a consumer calling `A:ChooseMessageTemplate` directly — which nothing
-does. It is dead weight with a namespace-collision hazard attached.
-
-#### 4. GuildComms' Restore Defaults now resets the *shared* voice profile
-**Severity: medium, and a strict escalation of carried item #4.**
-
-`A:Initialize` assigns `self.char.voice = voiceEngine:MigrateLegacy(self.char.voice)`, and
-`MigrateLegacy` returns `ForeverCommsVoiceCharDB.voice` itself. `ForeverGuildCommsCharDB.voice`
-and `ForeverCommsVoiceCharDB.voice` are therefore **the same table object** at runtime.
-Consequences:
-
-- `panel.OnDefault` does `for key, value in pairs(A.voiceDefaults) do A.char.voice[key] = value end`.
-  Clicking Restore Defaults on the GuildComms Settings page now resets the language and
-  accent that GroupComms is using, with no prompt. It also bypasses `V:SetOption`, so
-  Voice's own panel is not refreshed and will display stale values until reopened.
-- `A:SetVoiceOption` writes the shared table directly for the same reason. It does validate
-  and it does call `V:RefreshOptions()`, so this one is correct — but it means the shared
-  profile now has **two writers with two independently implemented validators**,
-  `V:ValidateOption` and the `if key ==` ladder in `A:SetVoiceOption`. They agree today.
-  Nothing keeps them agreeing.
-- The client serializes each SavedVariables file separately, so the shared reference is
-  written into *both* files on logout and becomes two tables again on load.
-  `migratedFromGuild` means the GuildComms copy is then ignored forever, so behaviour
-  converges — but a stale duplicate of the voice settings is persisted into
-  `ForeverGuildCommsCharDB` indefinitely and never cleaned up.
-
-#### 5. Release packaging is broken by the restructure
-**Severity: high, and the reason this matters before the first commit.**
-
-- Three `.github/workflows/package.yml` files live in package subdirectories. GitHub
-  Actions reads workflows only from `.github/workflows` at the repository root, and the
-  root has no `.github` directory. **No workflow will run on a tag push.**
-- The three `.pkgmeta` files are likewise positioned for a checkout whose root is an addon
-  folder. GuildComms' even says so in a comment: "Place this file at the GitHub repository
-  root, next to ForeverGuildComms.toc".
-- All three workflows trigger on `v*`, and the packages are at 0.1.0, 0.2.0 and 0.5.0. Even
-  relocated, one unprefixed tag namespace cannot express three product versions.
-- `PACKAGING.md` documents the old single-addon-at-root layout as a requirement, so the
-  only packaging documentation in the repository now actively describes the wrong thing.
-- The root `.gitignore` is a generic Lua template. It does not ignore `.release/`, which the
-  BigWigs packager writes, so a local `release.sh -d` run would show up as untracked
-  output. GuildComms' own `.gitignore` does ignore it, for its subtree only.
-
-#### 6. The per-addon installers do not know about the hard dependency
-**Severity: high user-facing.**
-
-`Install-ForeverGuildComms.ps1` and `Install-ForeverGroupComms.ps1` contain no reference to
-`ForeverCommsVoice`. Each parses only its own TOC and copies only the files listed there
-plus `Bindings.xml` and, for GuildComms, `Media\Icon.tga`. Neither checks whether the
-dependency is present, warns, or offers to install it. `ForeverGuildComms/INSTALL-README.txt`
-and the README's numbered install steps are both unchanged and do not mention it.
-
-The failure is concrete: an existing 0.4.3 user who updates with the familiar installer
-gets GuildComms 0.5.0 without Voice, and the client refuses to load it. The mitigations
-that *do* exist — the combined root installer, Voice's own `INSTALL-README.txt` advising
-"Install ForeverCommsVoice before ForeverGuildComms / ForeverGroupComms", and the README's
-appended 0.5.0 section — all sit on paths a returning user is unlikely to take.
-
-#### 7. Nine stale version strings across three packages
-**Severity: medium.**
-
-| Package | TOC | Core.lua | README | PACKAGING | installer `.cmd` | installer `.ps1` | INSTALL-README |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Voice | 0.1.0 | 0.1.0 | 0.1.0 | n/a | 0.1.0 | 0.1.0 | — |
-| GroupComms | 0.2.0 | 0.2.0 | 0.2.0 | n/a | **0.1.0** | **0.1.0** | **0.1.0** |
-| GuildComms | 0.5.0 | 0.5.0 | **0.4.3** | **0.4.3** | **0.4.2** | **0.4.3** | **0.4.3** |
-
-Voice is internally consistent. GroupComms' installer trio was never bumped from 0.1.0.
-GuildComms has five stale locations, and its `.cmd` was already a release behind before
-this change. The steering rule says three places move together; there are now seven per
-package, and nothing checks them.
-
-#### 8. Steering is now the least accurate documentation in the repository
-**Severity: medium, affects future work on this project.**
-
-All eight files in `.kiro/steering/` describe a single flat addon:
-
-- `structure.md` gives a seven-row module table for `ForeverGuildComms` and states
-  "Flat addon folder, no subdirectories for source" and "`tests/smoke.lua` is an offline
-  harness" — there are now three packages, 22 modules and 13 harnesses.
-- `testing.md` says "nine offline Lua harnesses", lists `Languages.lua`/`Accents.lua`/
-  `RaceProfiles.lua` as GuildComms modules, and names `Tabard.lua` as the one module no
-  harness loads. All three statements are now wrong.
-- `release-packaging.md` describes one TOC, one set of SavedVariables and "three places"
-  for the version.
-- `product.md` lists "No addon-to-addon comms (`C_ChatInfo.SendAddonMessage`) unless the
-  user asks for it" as an unscoped non-goal. GroupComms' quest sync is exactly that, as a
-  headline feature. The constraint is still correct *for GuildComms* and the rule simply
-  predates the second addon, but as written it reads as a violation.
-- `guild-chat-safety.md` and `ui-frames.md` are GuildComms-specific and have no GroupComms
-  equivalent, even though GroupComms now writes to a shared channel and builds frames.
-
-#### 9. English group phrases are duplicated across the package boundary
-**Severity: low, deliberate, untested.**
-
-`ForeverGroupComms/Core.lua`'s `A.variants` and `ForeverCommsVoice/GroupPhrases.lua`'s
-`groupTemplates.en` hold the same 13 phrase lists, verbatim. The duplication is the
-mechanism behind `useSharedVoice`, so it is intentional. But `integration.lua` asserts the
-opt-out restores *one specific string* (`"Hello everyone!"`), not that the two tables
-match, so the remaining 12 kinds can drift silently in either direction.
-
-#### 10. Dead code left behind by the extraction
+#### 5. `tests/icon.lua` now reaches outside its package with no override
 **Severity: low.**
 
-- `V:VoiceText` in `RaceProfiles.lua` (~40 lines) reads `self.db`, which the library never
-  assigns, so it returns `""` immediately. It is the pre-extraction GuildComms method moved
-  wholesale. It is also where the lost Expressive punctuation logic still lives.
-- `A:CommsText`'s fallback branch, `return self:Format(self.db.templates[kind], vars)`, is
-  unreachable in a real client now that `VoiceText` is guaranteed by the hard dependency.
-  It remains useful to two harnesses, which is a reasonable justification, but the comment
-  above it still describes "optional stripped-down installs" that can no longer exist.
-- `V:ChooseMessageTemplate` is reachable only through a forwarder nothing calls — see
-  finding #3.
+It changed from reading `install/Install-ForeverGuildComms.ps1` to
+`../install/Install-ForeverComms.ps1`, which is correct since the icon-copying logic
+moved to the shared installer. But it adds a second cross-package path dependency to the
+harness suite, and unlike the Voice path — which honours `FOREVER_VOICE_PATH` — this one
+is hardcoded. `icon.lua` already required the package root as its working directory; it
+now additionally requires the sibling `install/` directory, so it cannot run against a
+standalone extraction of the GuildComms package at all.
 
-#### 11. Smaller observations
+#### 6. The suite version silently tracks GuildComms
+Both builders set the bundle archive version from `versions['ForeverGuildComms']`, with
+the comment "Bump the suite with GuildComms' release number; no stale hardcoded versions".
+Avoiding a fourth hardcoded version is the right instinct, and `PACKAGING.md` states the
+behaviour. But it means a release containing only a Voice fix would still be named for
+GuildComms' unchanged version, and `verify_package.py` would pass. Recorded as a
+documented design choice, not a defect.
 
-- **`GroupComms` initializes on `ADDON_LOADED`, not `PLAYER_LOGIN`.** `A:Initialize` calls
-  `GetUnitName("player", true)` at that point, which is not reliably populated that early.
-  The code handles an empty result with a fallback and `ScanRoster` re-derives `playerKey`
-  on every call, so it self-heals — but the first `ScanRoster(true)` is `silent`, so no
-  message can be mis-sent. Benign, worth a comment.
-- **GroupComms' suggestion rows close over a fixed index.** `A:Approve(i)` and the Dismiss
-  handler both use the loop variable `i`, repeating the positional-binding pattern that is
-  carried recommendation #7.
-- **`A:SameGroup` is defined and never called.**
-- **GroupComms ships no icon.** `Broker.lua` uses `INV_Misc_QuestionMark` and the TOC has no
-  `IconTexture`, while GuildComms has a custom emblem. Cosmetic inconsistency in a bundle.
-- **GroupComms' `README.md` mentions `CF_API_KEY`** while GuildComms' workflow uses
-  `CF_API_TOKEN`. The two workflow files genuinely differ in env var names.
-- **The combined root installer copies whole folders recursively**, so `tests/`,
-  `install/`, `.github/` and the READMEs all land in `AddOns/`. The per-addon installers
-  deliberately copy only loadable files, and GuildComms' README advertises that precision.
-  The combined path quietly abandons it. Harmless to the client, inconsistent with the
-  documented behaviour.
-- **`A.messageVariantBags` remains the only unbounded structure** *(carried)*, now shared
-  by two consumers and two implementations.
-- **`math.random` is still unseeded** in both bags *(carried)*.
+#### 7. Smaller observations
+
+- **The three steering "Known deviation" blocks are now stale.** `ui-frames.md`,
+  `release-packaging.md` and the installer note were written against the previous state;
+  all three deviations are closed. `release-packaging.md` also still says seven version
+  locations move together, where there are now four.
+- **`verify_package.py` has no `if __name__ == '__main__'` guard** and runs its assertions
+  at import time, unlike `package.py`. Fine as a script, inconsistent with its sibling.
+- **Bare `assert` in a verification tool** means `python -O` silently skips every check.
+  Low risk given CI invokes it plainly.
+- **`A:SetVoiceOption` now returns `false` when the library is missing**, where the old
+  code would have operated on a local table. Correct, and unreachable given the hard
+  dependency, but it means the method's failure now has two distinct causes — invalid
+  value, or no library — with no way for a caller to tell them apart. No current caller
+  cares.
+- **GroupComms' Settings panel gained a project icon but still implements none of the
+  three canvas callbacks**, so it remains the one panel that can show stale values if
+  anything else ever writes its settings.
 
 ### Carried forward unchanged
 
-Every item in the 0.4.3 "carried forward" list still stands: `OnDefault`'s silent resets,
-shallow copy and duplicated `UpdateRequestPreview` line; positional approval-row binding;
-no rate limit between approvals; `ShowApprovals` firing on every staged message; the
-unasserted `.pkgmeta`/`Bindings.xml` invariant; `A.GetActivityType` as a dot-called
-closure; duplicated role-availability logic in `A:Initialize` and `BuildRequestUI`;
-`pendingMessages` holding records without a comment; the undocumented profession-name
-fallback; Subtle's absent flair prefix; no `.luacheckrc`; and the orphaned README byline.
+`OnDefault` still resets `outgoingMode` and still copies one level deep. Positional row
+binding in both packages. No floor between consecutive approvals. `ShowApprovals` fires on
+every staged message. `A.GetActivityType` is a dot-called closure. Duplicated
+role-availability logic. `pendingMessages` holds records without a comment. The
+profession-name fallback is undocumented. Subtle's absent flair is unexplained. No
+`.luacheckrc`. `V:VoiceText` and `V:ChooseMessageTemplate` are dead. `V:Render` is still
+one dense function. `A.messageVariantBags` is unbounded. `math.random` is unseeded.
 
 ## Patterns and Anti-patterns
 
@@ -427,175 +355,134 @@ fallback; Subtle's absent flair prefix; no `.luacheckrc`; and the orphaned READM
 
 New this span:
 
-- **A library extraction that leaves the consumer unchanged.** Aliasing the moved data
-  tables onto the consumer's namespace meant 285 lines of `Options.lua` and 115 of
-  `TitanMenu.lua` needed no edits. The adapter absorbed the whole change.
-- **A library with no event registrations and no send path.** The clearest possible
-  statement of the boundary: Voice decides *what* a message says and nothing about when or
-  whether it is delivered.
-- **Two consumers, two deliberate dependency strengths**, each matching what the consumer
-  would lose. Hard-fail where the whole feature is delegated, soft fallback where the
-  fallback doubles as a user-facing opt-out.
-- **A scoped catalog registry.** One render pipeline serving guild and party messages,
-  registered by the data module rather than hardcoded in the engine.
-- **Serial and epoch invalidation of deferred work, applied consistently.** Five
-  independent counters — `groupSerial`, `rosterRequest`, `syncSeq`, `outboxToken`,
-  `questEpoch` — each guarding a specific class of stale action. The `questEpoch` rule is
-  the sharpest: a completion reply is accepted only for the currently advertised log, so a
-  late reply can never produce a false "this player is missing the quest".
-- **Minimum disclosure in a peer protocol.** Only active quest IDs are broadcast; no
-  titles, no objectives, no history. A completion answer covers only the IDs the asker
-  already revealed, so the protocol never volunteers what it was not asked.
-- **Validating peer input before trusting any of it.** `parseIDs` and the header checks in
-  `OnAddonMessage` apply eleven distinct validations — prefix, grouping, roster membership,
-  channel whitelist, pattern, protocol, integrality, ranges, `part <= total`, CSV shape,
-  epoch rule — before a single ID is stored.
-- **Signature suppression on a chatty event.** `QUEST_LOG_UPDATE` fires on kill counts;
-  broadcasting only when the sorted ID list actually changed, with a 240-second
-  rebroadcast window, turns a potential packet storm into near-silence.
-- **A paced outbox.** One addon message per 1.15 seconds, capped at 60 queued, with a
-  12-chunk refusal that reports honestly rather than truncating.
-- **Honest reporting of what cannot be known.** The ready-check tally labels unconfirmed
-  members as unconfirmed and says so in the message text; the quest UI distinguishes
-  "missing" from "unknown" and explains the difference on the panel.
-- **Refusing to infer.** GroupComms reads *assigned* roles and never guesses a spec, never
-  changes a role, and says so in the Settings hint.
-- **Quiet defaults for anything that posts.** `autoGreeting` and `autoLevel` both default
-  to `false`, so a fresh install stages everything for a click.
-- **A floor on every send, not just automatic ones.** GroupComms' `A:Send` applies its
-  2-second gap to approved suggestions too — the gap GuildComms still has.
-- **Suppressing a doubled catchphrase.** `V:Render` checks whether a curated group accent
-  template already opens with the flair before prepending it, avoiding "By the forge! By
-  the forge!".
-- **Restoring selection state around a mutating API.** `A:ShareQuest` records the selected
-  quest, selects the target, pushes, then restores — so sharing does not leave the player's
-  quest log on a different entry.
+- **A build tool with no dependencies.** Standard-library Python and `System.IO.Compression`
+  PowerShell, no packager install, no network, no secrets, no account. The suite can be
+  packaged from an extracted ZIP on a machine with nothing installed, which is exactly the
+  distribution model this project uses.
+- **Validation inside the builder, not beside it.** `manifest()` refuses a missing version,
+  a wrong `IconTexture` path, an unsafe TOC entry, a missing runtime file, a missing
+  dependency declaration and a missing project icon. A broken release fails to build
+  rather than shipping.
+- **Making the failure mode unreachable instead of reporting it.** The installer prepends
+  the dependency rather than warning about its absence.
+- **Deleting places a value can be stated.** Three version locations removed, then an
+  assertion added for the rest.
+- **A cross-package regression test for a cross-package bug.** `settings.lua` loads the
+  other consumer and asserts its output is unchanged, including object identity of the
+  shared table.
+- **Asserting the fix did not leak.** The Expressive test checks a custom template ending
+  in a period is untouched, not just that the accented one changed.
+- **Recording the reason in the code the next reader will edit.** Both Lua fixes left a
+  comment stating the rule rather than describing the change: "Restore Defaults belongs to
+  GuildComms, NOT ForeverCommsVoice", and "ForeverCommsVoice owns validation, mutations,
+  and dependent UI refresh."
+- **Retaining the alternative path with its applicability stated.** The nested BigWigs
+  workflows were kept and each gained a one-line header saying it is active only in a
+  standalone repository — so the next reader does not repeat the previous pass's
+  diagnosis.
+- **A runtime/source archive split.** `--runtime` produces addon-manager archives with no
+  installer, tests or promotional art, verified to contain exactly the runtime set.
 
-Carried forward intact: the single event dispatcher, `A:CanUse` as a universal gate,
-`QueueGuild` as the only automatic send path with `SendGuild` as the only call site,
-baseline-before-diffing, GUID-first self-exclusion, pattern-escaped localized globals,
-debounce-with-latch, bounded caches with two sweep triggers, clock-regression guards,
-fingerprinted draft caching, the non-consuming preview path, feature detection at every
-call site, and tests that encode the bug rather than only the fix.
+Carried forward intact: the single event dispatcher per package, `CanUse`/`CanChat` as
+universal gates, one send call site per package, baseline-before-diffing, GUID-first
+self-exclusion, serial and epoch invalidation, bounded caches with two sweep triggers,
+minimum disclosure in the peer protocol, inbound validation before trust, fingerprinted
+draft caching, the non-consuming preview path, feature detection at every call site, and
+tests that encode the bug rather than only the fix.
 
 ### Anti-patterns
 
-- **Automated release with no automated verification**, now compounded by **automated
-  release that cannot run at all**.
-- **Build and packaging configuration left at the old repository layout** after the layout
-  changed, with the documentation describing the old layout as a requirement.
-- **A hard dependency introduced without updating the installation path that creates it.**
-- **Version strings duplicated across seven locations per package with no check.**
-- **Steering and documentation describing a structure that no longer exists.**
-- **Behaviour reimplemented rather than moved during an extraction**, dropping a branch
-  that no test covered.
-- **Two implementations of one algorithm sharing one state table under two key formats.**
-- **A shared mutable table with two writers and two independent validators.**
-- **A generic defaults handler resetting another addon's settings.**
-- **Positional index binding between a UI row and a mutable list**, now in two packages.
-- **Verbatim data duplication across a package boundary** with only a single-string
-  assertion guarding it.
-- **Dead code retained after an extraction**, including the only copy of a behaviour that
-  was supposed to survive it.
+- **Two implementations of one build contract**, with CI verifying only the one most users
+  will not run.
+- **A release verifier coupled to Lua source text and indentation.**
+- **Template-generated user documentation without a special case for the odd member**, so
+  the library's installer tells users it depends on itself.
+- **Automated release with no automated *behavioural* verification.** Packaging is now
+  checked in CI; the 13 Lua harnesses still are not.
+- **Known-deviation notes left in steering after the deviations were fixed.**
+- **A generic defaults handler resetting a safety-relevant setting** — narrowed this span,
+  not eliminated.
+- Positional index binding between a UI row and a mutable list, in two packages.
+- Dead code retained after an extraction.
 
 ## Security Posture
 
-Still sound overall, but the surface genuinely widened for the first time, and that
-deserves a clear statement.
+Unchanged in substance, with a modest new surface that is handled well.
 
 ### What did not change
-No network surface, no HTTP, no file I/O outside SavedVariables, no credential handling,
-no `loadstring` in shipped code, no vendored libraries, no taint-risking string execution.
-All gear, invite, role, targeting and quest-acceptance actions remain in the player's
-hands. GuildComms still has no addon-to-addon messaging and still reads only
-`CHAT_MSG_GUILD`.
+No network surface in the addons, no credential handling, no file I/O outside
+SavedVariables, no `loadstring` in shipped code, no vendored libraries. All gear, invite,
+role, targeting and quest-acceptance actions remain in the player's hands. GuildComms
+still has no addon-to-addon messaging and still reads only `CHAT_MSG_GUILD`. GroupComms'
+quest protocol is unmodified this span, including all eleven inbound validations, the
+minimum-disclosure rule and the epoch guard.
 
-### What is new
-**GroupComms accepts data from other players.** `A:OnAddonMessage` is the first inbound
-untrusted-data path in the project. The handling is careful:
+### New surface: the build and install tooling
+This is developer-side rather than player-side, and the controls are appropriate:
 
 | Control | Implementation |
 | --- | --- |
-| Source restriction | Sender must not be self **and** must be in the current roster. An unrelated whisper from a stranger cannot inject a row |
-| Channel restriction | `PARTY`, `RAID`, `INSTANCE_CHAT` or `WHISPER` only |
-| Format restriction | Fixed six-field pipe pattern; protocol string must equal `"1"` |
-| Numeric hardening | Every field bounded and checked for integrality, so `1e9` or `1.5` is rejected |
-| Payload restriction | `parseIDs` rejects anything that is not digits and single commas, caps at 230 bytes, and bounds each ID to 1..99999999 |
-| Memory bounds | Reassembly state expires after 60 seconds and is swept; peers expire after 300; the outbox caps at 60 |
-| Replay and staleness | A `Q` older than the stored peer epoch is dropped; an `R` is accepted only for the current local epoch |
-| Interpretation | IDs are only ever compared numerically and passed to `C_QuestLog` lookups. Nothing from the wire is concatenated into a pattern, executed, or rendered as a format string |
+| Archive path confinement | Python rejects any member containing `..` or a leading `/`; PowerShell rejects any source path not under the repository root |
+| Symlink handling | `source_files` skips symlinks, so a link cannot pull a file in from outside the tree |
+| TOC entry allow-list | Both builders and the installer require `^[A-Za-z0-9_-]+\.(lua|xml)$`, so a TOC cannot name a path, a traversal or an executable |
+| Icon path validation | The declared `IconTexture` must match the expected per-addon path exactly, case-insensitively |
+| Install staging | Everything is validated and staged in a temp directory before the destination is touched, with rollback on failure |
+| Backup placement | `Interface/AddOnBackups`, deliberately outside `AddOns`, so a backup cannot be loaded as a stray addon |
+| SavedVariables | Never read, written or copied by any installer or builder |
+| Secrets | The suite workflow uses only the built-in `GITHUB_TOKEN` with `contents: write`. No third-party token is required or referenced on the suite path |
 
-The one value from a peer that reaches the UI is a **quest title**, and it is obtained
-locally from `C_QuestLog.GetTitleForQuestID` rather than taken from the packet. Peer
-*names* reach the UI, but they come from the local roster scan, not from the message body.
-
-**Residual observations**, none of them a defect:
-- `questSync` defaults to `true`, so the exchange is on after a fresh install. It is
-  disclosed in the Settings hint and the README, and the data disclosed is minimal, but it
-  is the one default in the bundle that turns on outbound traffic without a click.
-- A malicious party member could advertise fabricated quest IDs. The worst outcome is a
-  misleading row in the comparison window and, if the player clicks Ask, a chat message
-  naming a quest. There is no action taken on the data.
-- The `pairs`-with-`nil`-assignment pattern in the three sweep loops is explicitly
-  permitted in Lua for the current key, so it is correct rather than accidentally working.
+Two observations, neither a defect: the installer runs `Remove-Item -Recurse -Force` on a
+target directory during rollback, which is correct for restoring a backup but is the most
+destructive line in the repository, and it is reached only in the failure branch after a
+successful `Move-Item` to the backup location. And `-ExecutionPolicy Bypass` in the `.cmd`
+launchers remains scoped to that process only.
 
 ## Recommendations
 
-Ordered by value relative to effort. *(carried)* marks items from the 0.4.3 list.
-
-### Before the first commit
+Ordered by value relative to effort. *(carried)* marks items from the previous list.
 
 | # | Recommendation | Effort | Rationale |
 | --- | --- | --- | --- |
-| 1 | Move packaging to the repository root: one `.github/workflows/` directory with a job per package, each with its own `--pkgmeta` path, keyed off a prefixed tag such as `voice/v*`, `guild/v*`, `group/v*` | Medium | Tag-driven packaging is currently inert for all three packages. Fixing it before history exists avoids rewriting tags later |
-| 2 | Make the per-addon installers detect, warn about, and ideally install `ForeverCommsVoice` | Low | **The highest user-facing risk in the bundle.** An existing GuildComms user following the familiar install path ends up with an addon that will not load |
-| 3 | Add a test job that runs all 13 harnesses and checks every version string *(carried, was #1)* | Low | Fourth consecutive pass as the top item, and it would catch recommendations 4, 5 and 6 automatically. The harnesses are pure Lua with no dependencies |
-| 4 | Fix the nine stale version strings, and bump GuildComms' `README.md` title and `PACKAGING.md` to 0.5.0 | Low | `PACKAGING.md` additionally lists four files that no longer exist in that package |
-| 5 | Add `tests/syntax.lua` to ForeverCommsVoice and ForeverGroupComms, deriving the module list from the TOC *(extends carried #5)* | Low | 13 of 22 modules currently have no compile check. Six lines each, no dependencies |
-| 6 | Write a real root `README.md`: the three packages, the dependency, the install order, and the four installers | Low | A monorepo with an installation-order requirement and no bundle documentation |
-| 7 | Add `.release/` to the root `.gitignore` | Trivial | The packager's local output directory is currently untracked noise |
-
-### Correctness
-
-| # | Recommendation | Effort | Rationale |
-| --- | --- | --- | --- |
-| 8 | Restore the Expressive trailing-period-to-exclamation conversion in `V:Render`, and assert it *(relates to carried #11)* | Trivial | An undocumented behaviour regression affecting five accents. The original code is still visible in `V:VoiceText` |
-| 9 | Make GuildComms' `OnDefault` leave the shared voice profile alone, or route through `V:SetOption` with a confirmation *(carried, was #4)* | Low | Restore Defaults currently resets another addon's live settings silently and leaves Voice's panel stale |
-| 10 | Give the shared profile one writer. Have `A:SetVoiceOption` delegate to `V:SetOption` and delete its duplicate validator | Low | Two independent validators for one table is a divergence waiting to happen |
-| 11 | Test the GroupComms chat-safety rails: the 2-second `Send` floor, `groupSerial` rejection in `Approve`, the `CanManageGroup` gates, and `Notify` dedup | Medium | The safety model of a chat-writing addon is currently unasserted |
-| 12 | Test `parseIDs` and the `OnAddonMessage` header rejections | Low | The only parser reading data from another player has no negative tests, and negative assertions are the valuable ones here |
-| 13 | Test the `questSync` opt-out and the outbox bounds | Low | An opt-out that is never asserted is an opt-out that can silently stop working |
-
-### Maintainability
-
-| # | Recommendation | Effort | Rationale |
-| --- | --- | --- | --- |
-| 14 | Rewrite `.kiro/steering/` for the bundle: scope `structure.md`, `release-packaging.md`, `guild-chat-safety.md` and `ui-frames.md` per package; rewrite `testing.md` for 13 harnesses across three packages; scope `product.md`'s addon-comms non-goal to GuildComms and add GroupComms' opt-in protocol as a stated capability *(extends carried #2)* | Medium | Steering is now the least accurate documentation in the repository, and it is what guides future work |
-| 15 | Delete `V:VoiceText` and `V:ChooseMessageTemplate` plus its forwarder, after recommendation 8 rescues the punctuation logic | Low | Removes ~55 lines of unreachable code and a bag-signature collision hazard |
-| 16 | Split `V:Render` into `renderGuild` and `renderGroup` behind a thin dispatcher | Medium | The one function in the bundle whose correctness depends on operator precedence and a comment |
-| 17 | Assert that `GroupComms.variants` and `Voice.groupTemplates.en` match, and that `GuildComms.defaults.templates` matches `Voice.defaults.templates` | Low | Both are load-bearing duplications. The second is currently guarded only implicitly, as a side effect of one assertion in `integration.lua` |
-| 18 | Add harnesses for `ForeverGroupComms/UI.lua` and `Options.lua`, reusing GuildComms' synthetic widget layer | Medium | 239 lines loaded by nothing, including the `questSync` enable side effect |
-| 19 | Add `.luacheckrc` at the root covering all three packages *(carried, was #13)* | Low | Would catch the duplicated `UpdateRequestPreview` line, the unused `A:SameGroup`, and accidental globals across 22 files |
-| 20 | Key approval and suggestion rows by a monotonic id in both packages *(carried, was #7)* | Low | Same fragile invariant, now in two places, with the same failure mode: sending the wrong message |
-| 21 | Drive `UpdateApprovalsUI` in a harness *(carried, was #8)* | Medium | Part of the authorization path for public messages, and recommendation 20 would be safer behind a test |
-| 22 | Give GroupComms its own broker icon and `IconTexture` | Low | Cosmetic, but the bundle currently looks half-finished on the Titan bar |
-| 23 | Make the combined root installer copy only loadable files, matching the per-addon installers | Low | It currently ships `tests/`, `install/` and `.github/` into `AddOns/`, contradicting the documented behaviour |
-| 24 | Confirm the tabard fix in a live client *(carried, was #3)* | Low | Still never observed against a real event ordering |
-| 25 | Remaining carried items: seed `math.random` or comment why not; note that `randomizeMessages` changes existing wording on upgrade; add a floor between consecutive approvals; make the review window's auto-show optional; clarify that Subtle applies no flair; comment that `pendingMessages` holds records; note the profession-name fallback in README limitations; move the README keybindings section below the byline; extract `A:CanFillRole` and reuse `fillDefaults` in `OnDefault`; assert `.pkgmeta` retains `Bindings.xml` — now for two packages; test the approval backlog cap and a 3-4 byte `ChatLimit` case | Trivial to Low | Unchanged from the 0.4.3 list. None blocking |
+| 1 | Add a step to the root workflow that runs all 13 Lua harnesses *(carried, was #3)* | Low | Fifth consecutive pass as the top item, and the only one of the original seven pre-commit items still open. The job now exists, Lua 5.1 is a one-line `apt-get` on the runner, the harnesses have no dependencies, and doing this would let recommendation 4 retire the source-text greps |
+| 2 | Fix the three ForeverCommsVoice installer texts | Trivial | Self-referential nonsense in the first file a user of the base dependency reads. New finding #1 |
+| 3 | Add `tests/syntax.lua` to Voice and GroupComms *(carried, was #5)* | Low | 13 of 22 modules have no compile guard. Six lines each |
+| 4 | Decide the Expressive scope question: either restrict the branch to guild, or document and test the group case | Low | New finding #2. Currently an undocumented behaviour change riding along with a documented restoration |
+| 5 | Make `package.cmd` prefer `tools/package.py` when Python is present, or run `verify_package.py` against a `package.ps1` build | Low | New finding #3. The documented Windows path is the unverified one |
+| 6 | Make `OnDefault` preserve `outgoingMode`, and use `fillDefaults` instead of a one-level copy *(carried, was #9 and #19)* | Trivial | The remaining half of the Restore Defaults finding. Still able to silently re-enable unattended public messaging |
+| 7 | Refresh the three stale "Known deviation" blocks in steering, and correct `release-packaging.md`'s version-location count from seven to four | Trivial | The deviations are fixed; leaving the notes makes the steering wrong in the opposite direction |
+| 8 | Test the GroupComms chat-safety rails *(carried, was #11)* | Medium | The safety model of a chat-writing addon is still unasserted |
+| 9 | Test `parseIDs` and the `OnAddonMessage` header rejections *(carried, was #12)* | Low | Still the most consequential untested code in the bundle |
+| 10 | Test the `questSync` opt-out and the outbox bounds *(carried, was #13)* | Low | An opt-out that is never asserted can silently stop working |
+| 11 | Add `.luacheckrc` at the root *(carried, was #19)* | Low | 22 Lua files, plus it would flag the unused `A:SameGroup` |
+| 12 | Delete `V:VoiceText` and `V:ChooseMessageTemplate` plus its forwarder *(carried, was #15)* | Low | Now a pure cleanup: the Expressive logic it uniquely held has been restored to `Render` |
+| 13 | Give `verify_package.py` a `__main__` guard, replace bare `assert` with explicit raises, and comment the source-grep coupling | Low | New finding #4. It is now a load-bearing part of the release gate |
+| 14 | Add harnesses for GroupComms `UI.lua` and `Options.lua` *(carried, was #18)* | Medium | 239 lines loaded by nothing, and `Broker.lua` changed this span without a test |
+| 15 | Assert the duplicated template tables match *(carried, was #17)* | Low | Both are load-bearing; one is guarded only implicitly |
+| 16 | Split `V:Render` into scope-specific resolvers *(carried, was #16)* | Medium | It grew again, and finding #2 is a direct consequence of one shared flair block serving two scopes |
+| 17 | Key approval and suggestion rows by a monotonic id *(carried, was #20)* | Low | Same fragile invariant in two packages |
+| 18 | Drive `UpdateApprovalsUI` in a harness *(carried, was #21)* | Medium | Part of the authorization path for public messages |
+| 19 | Confirm the tabard fix in a live client *(carried, was #24)* | Low | Still never observed against real event ordering |
+| 20 | Remaining trivial carried items *(carried, was #25)* | Trivial to Low | Unchanged. None blocking |
 
 ### Assessment
 
-**The engineering is good; the plumbing is behind.** The extraction is the kind of change
-that usually leaves a trail of broken call sites and duplicated state, and this one did
-not: the library is clean, the adapter is small, the second consumer genuinely reuses the
-work, and the new addon's safety model is the most careful in the project — a minimal-
-disclosure protocol with eleven inbound validations and five staleness counters is better
-work than the feature strictly required.
+**This span closed the gap the previous pass opened.** Ten of twenty-five recommendations
+resolved, both functional defects fixed with purpose-built regression tests, and all five
+items the user named addressed. More telling than the count is the pattern: three of the
+fixes are better than what was recommended, and two of them worked by *removing* the
+thing that could go wrong — deleting version locations rather than checking them,
+constructing an installer in which a missing dependency is unreachable — rather than
+adding a guard around it.
 
-What has not kept up is everything around the code. Packaging, installers, version
-strings, README titles, steering and test distribution were all correct for a single flat
-addon and none of them was revisited. Items 1, 2 and 3 are the ones that matter before this
-becomes committed history; item 8 is the only functional regression and it is a two-line
-fix. The recurring top recommendation — run the tests automatically — would have caught
-four of the seven pre-commit items on its own, and it has now been outstanding for four
-passes while the suite it would run tripled in scope.
+It is also the first pass where I could verify rather than infer. The packaging claims are
+not taken on trust: the builder ran, the verifier passed, and I inspected the archives
+independently and confirmed the dependency bundling and the runtime/source split.
+
+The one new defect is cosmetic but conspicuous, and the standing weakness is now sharply
+defined. Packaging is verified in CI; behaviour is not. Thirteen dependency-free Lua
+harnesses, including the two written this span specifically to prevent these two bugs
+from returning, run only when someone remembers to run them — and nobody can, on this
+machine, because no interpreter is installed. Recommendation 1 has been the top item for
+five consecutive passes and is now the single highest-leverage change available: it would
+also let the release verifier stop grepping Lua source for proof that the fixes are
+still there.

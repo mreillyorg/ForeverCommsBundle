@@ -6,7 +6,7 @@ BINDING_HEADER_FOREVERGUILDCOMMS = "Forever Guild Comms"
 BINDING_NAME_FGC_OPEN_ALERTS = "Open guild alerts"
 BINDING_NAME_FGC_ASK_HELP = "Ask guild for help"
 BINDING_NAME_FGC_RESCAN_PROFESSION = "Rescan open profession"
-A.version = "0.5.0-beta"
+A.version = "0.5.1-beta"
 -- These language preferences are per character; old account-wide settings stay intact.
 A.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 A.defaults = {
@@ -300,37 +300,13 @@ function A:VoiceOptionLabel(key, id)
     return tostring(id)
 end
 function A:SetVoiceOption(key, value)
-    if not self.char or not self.char.voice or self.voiceDefaults[key] == nil then return false end
-    if key == "language" then
-        if not self.languageByID or not self.languageByID[value] then return false end
-    elseif key == "accent" then
-        if value ~= "auto" and value ~= "none" then
-            local valid = false
-            for _, entry in ipairs(self:GetAvailableAccents()) do
-                if entry.id == value then valid = true; break end
-            end
-            if not valid then return false end
-        end
-    elseif key == "accentStrength" then
-        if value ~= "subtle" and value ~= "moderate" and value ~= "expressive" then return false end
-    elseif key == "raceFilter" then
-        if type(value) ~= "boolean" then return false end
-    else return false end
-    self.char.voice[key] = value
-    if _G.ForeverCommsVoice and _G.ForeverCommsVoice.RefreshOptions then _G.ForeverCommsVoice:RefreshOptions() end
-    -- An old selection may no longer be compatible with the new language or
-    -- the newly narrowed race filter. Revert to Auto instead of using it invisibly.
-    if key == "raceFilter" or key == "language" then
-        local valid = false
-        for _, entry in ipairs(self:GetAvailableAccents()) do
-            if entry.id == self.char.voice.accent then valid = true; break end
-        end
-        if not valid then self.char.voice.accent = "auto" end
-    end
-    self:RefreshOptions()
-    if self.UpdateRequestPreview then self:UpdateRequestPreview() end
-    if self.UpdateBroker then self:UpdateBroker() end
-    return true
+    -- ForeverCommsVoice owns validation, mutations, and dependent UI refresh.
+    -- Never mutate the shared table directly in the consuming addons.
+    local engine = _G.ForeverCommsVoice
+    if not engine or not engine.SetOption then return false end
+    local success = engine:SetOption(key, value)
+    if success and self.UpdateBroker then self:UpdateBroker() end
+    return success
 end
 function A:VoiceChoices(key)
     if key == "language" then return self.languages or {{id="en", label="English"}} end

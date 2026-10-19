@@ -4,3 +4,4 @@ ignore:
   - .gitignore
   - tests
   - README.md
+  - Media/ProjectIcon.png

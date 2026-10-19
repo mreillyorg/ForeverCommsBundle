@@ -1,6 +1,7 @@
 # System Architecture
 
-**Analysis date**: 2026-10-19T09:52:22Z
+**Analysis date**: 2026-10-19T11:30:00Z
+**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
 **Workspace root**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
 
 ## System Overview
@@ -38,7 +39,7 @@ probe when a shared setting changes.
 
 ```mermaid
 flowchart TB
-    subgraph VoicePkg["ForeverCommsVoice 0.1.0-beta - 7 modules, 860 lines"]
+    subgraph VoicePkg["ForeverCommsVoice 0.1.1-beta - 7 modules, 872 lines"]
         VCore["Core.lua<br/>profile, migration, Format,<br/>Pick, Render, RegisterCatalog"]
         VLang["Languages.lua<br/>8 languages, locale templates,<br/>role and activity labels"]
         VAcc["Accents.lua<br/>29 accent phrasebooks"]
@@ -48,7 +49,7 @@ flowchart TB
         VOpt["Options.lua<br/>/fcv panel, ADDON_LOADED frame"]
     end
 
-    subgraph GuildPkg["ForeverGuildComms 0.5.0-beta - 9 modules, 1557 lines"]
+    subgraph GuildPkg["ForeverGuildComms 0.5.1-beta - 9 modules, 1534 lines"]
         GCore["Core.lua<br/>defaults, queue, approvals,<br/>dedup, slash, 14-event frame"]
         GBridge["VoiceBridge.lua<br/>25-line adapter to Voice"]
         GRoster["Roster.lua"]
@@ -61,7 +62,7 @@ flowchart TB
         GBind["Bindings.xml<br/>auto-loaded, not in TOC"]
     end
 
-    subgraph GroupPkg["ForeverGroupComms 0.2.0-beta - 6 modules, 978 lines"]
+    subgraph GroupPkg["ForeverGroupComms 0.2.1-beta - 6 modules, 982 lines"]
         PCore["Core.lua<br/>defaults, Render with fallback,<br/>Send, Stage, 10-event frame"]
         PRoster["Roster.lua<br/>roster, roles, ready check"]
         PQuests["Quests.lua<br/>Q and R protocol, comparison"]
@@ -142,6 +143,11 @@ page.
   `Initialize`; the `/fgc` handler; the one 14-event frame.
 - **Dependencies**: everything else in the package, called behind existence guards.
 - **Type**: Application
+
+**Changed this span**: `A:SetVoiceOption` went from 27 lines of independent validation and
+direct mutation of the shared table to a 7-line delegation to `V:SetOption`, making the
+library the sole writer of the shared profile. `panel.OnDefault` in `Options.lua` no longer
+resets the shared voice values.
 
 ### ForeverGuildComms / VoiceBridge.lua
 - **Purpose**: The entire coupling to the shared library, in 25 lines.
@@ -281,14 +287,35 @@ each of its own quests per member.
 
 - **CDK Stacks**: none. There is no cloud infrastructure in this project.
 - **Deployment Model**: file copy into `_classic_beta_\Interface\AddOns\<AddonName>`.
-  Four installers exist: one combined installer at the repository root that copies all
-  three folders recursively with staging, backup and rollback; and one per-addon
-  installer inside each package that parses its own TOC and copies only loadable files
-  plus `Bindings.xml` and, for GuildComms, `Media\Icon.tga`.
-- **CI/CD**: three `.github/workflows/package.yml` files, one per package subdirectory,
-  each triggering BigWigsMods/packager on a `v*` tag. **None of them will execute**:
-  GitHub Actions only reads workflows from `.github/workflows` at the repository root, and
-  the repository root has no `.github` directory. The same applies to the three
-  per-package `.pkgmeta` files, which the packager expects at the checkout root. This is
-  the highest-priority packaging consequence of the restructure.
+  Rebuilt this span into **one installer with three shims**:
+  - `install/Install-ForeverComms.ps1` (153 lines) takes an `-Addons` parameter, defaults
+    to all three, **prepends `ForeverCommsVoice` whenever a consumer is selected**, and
+    reorders to canonical dependency order. It derives each file list from that package's
+    TOC via `Get-RuntimeFiles`, rejecting unsafe or duplicate entries, adds
+    `Media\Icon.tga` only when `## IconTexture:` is declared and validates the declared
+    path, adds `Bindings.xml` when present, stages and validates everything before
+    touching the destination, backs up displaced folders to `Interface\AddOnBackups`
+    **outside** `AddOns`, and rolls back on failure. `Set-StrictMode -Version 2.0`.
+  - The three `<Addon>/install/Install-<Addon>.ps1` files are now 13-line shims that
+    locate the shared installer and invoke it with their own name.
+- **Build and release**: rebuilt this span. Two equivalent offline builders produce four
+  archives with no external packager, no network and no secrets:
+  - `tools/package.py` (97 lines, standard library only) — cross-platform, and the one CI
+    runs. Supports `--runtime` for reduced addon-manager archives.
+  - `package.ps1` (72 lines) / `package.cmd` — the documented Windows entry point. No
+    `--runtime` mode.
+
+  Both read versions from the TOCs, validate each manifest before building, and bundle
+  `ForeverCommsVoice` into each consumer's archive. `tools/verify_package.py` (52 lines)
+  checks the archives and asserts source-level facts about this span's fixes.
+- **CI/CD**: a real root workflow now exists — `.github/workflows/package.yml`,
+  "Build Forever Comms suite", on `workflow_dispatch` or a `v*` tag. It runs
+  `tools/package.py`, then `tools/verify_package.py`, uploads all four ZIPs as a workflow
+  artifact, and on a tag attaches them to a GitHub Release using the built-in token with
+  `contents: write`. BigWigsMods is no longer on the suite path, so the single unprefixed
+  `v*` namespace is now correct: one tag releases the suite and per-addon versions live in
+  the archive filenames. The three nested per-package workflows are retained for the
+  standalone-repository case and each now carries a header comment saying so.
+  **Verified by execution**: both builders and the verifier were run during this pass and
+  passed. The 13 Lua harnesses are still not run by any job.
 - **Networking**: not applicable.

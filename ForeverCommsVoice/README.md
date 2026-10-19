@@ -1,4 +1,6 @@
-# ForeverCommsVoice 0.1.0-beta
+> **Current release: 0.1.1-beta.** Provides both addons' language/accents, two new project textures and restored Expressive punctuation. The Windows installer uses the shared suite installer and does not require a nonexistent `Bindings.xml`.
+
+# ForeverCommsVoice 0.1.1-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -12,7 +14,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.5.0-beta and/or GroupComms 0.2.0-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.5.1-beta and/or GroupComms 0.2.1-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 

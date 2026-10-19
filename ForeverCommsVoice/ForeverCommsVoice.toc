@@ -2,7 +2,8 @@
 ## Title: Forever Comms Voice
 ## Notes: Shared translations, racial speaking styles and accents for Forever Guild/Group Comms.
 ## Author: Michael Reilly
-## Version: 0.1.0-beta
+## IconTexture: Interface\AddOns\ForeverCommsVoice\Media\Icon
+## Version: 0.1.1-beta
 ## SavedVariablesPerCharacter: ForeverCommsVoiceCharDB
 Core.lua
 Languages.lua

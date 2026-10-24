@@ -2,8 +2,8 @@
 
 **Analysis target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta,
 ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T02:30:00Z
-**Target commit**: `a64ac2a`
+**Analysis date**: 2026-10-25T03:10:00Z
+**Target commit**: `b712070`
 **Diff baseline**: `57f7cdc`, spanning commits `8166b8b`, `6cf2f38`, `a64ac2a`
 **Supersedes**: the `57f7cdc` pass of 2026-10-19T13:30:00Z
 
@@ -25,7 +25,7 @@ Executed, not inferred.
 | Action | Result |
 | --- | --- |
 | `python tools/run_tests.py` | **Exit 0 — PASSED: 28, FAILED: 0, TOTAL: 28** |
-| `python tools/fault_inject.py` | **Exit 0 — 28 of 28 injected faults caught** |
+| `python tools/fault_inject.py` | **Exit 0 — 31 of 31 injected faults caught** |
 | `luacheck .` (1.2.0) | 29 warnings, **0 errors**, 53 files |
 | `python tools/package.py` | Exit 0 — 33-entry bundle |
 | `python tools/check_bigwigs_bundle.py` | **Exit 0** — all three packages version-consistent |
@@ -36,8 +36,8 @@ Executed, not inferred.
 
 ## Test Coverage
 
-- **Overall**: **Good, and verified rather than asserted.** 28 harnesses, 4,138 lines,
-  **105% of shipped Lua** (3,927 lines). Every one of the 25 shipped modules is loaded by
+- **Overall**: **Good, and verified rather than asserted.** 28 harnesses, 4,257 lines,
+  **107% of shipped Lua** (3,967 lines). Every one of the 25 shipped modules is loaded by
   at least one harness.
 - **Unit / module tests**: offline Lua harnesses driving real modules against mocked WoW
   globals. No framework; plain `assert` with explanatory messages.
@@ -45,15 +45,15 @@ Executed, not inferred.
   packages; `parity.lua` and `bytelimit.lua` assert cross-package invariants; eight
   GuildComms harnesses load the Voice source.
 - **Mutation testing**: `tools/fault_inject.py` reverts one real guard at a time and
-  confirms the harness that should notice does fail. **28 of 28.**
+  confirms the harness that should notice does fail. **31 of 31.**
 
 ### Per package
 
 | Package | Harnesses | Lines | Shipped lines | Ratio |
 | --- | --- | --- | --- | --- |
 | ForeverCommsVoice | 8 | 1,053 | 1,221 | 86% |
-| ForeverGuildComms | 13 | 1,439 | 1,560 | 92% |
-| ForeverGroupComms | 7 | 1,646 | 1,146 | **144%** |
+| ForeverGuildComms | 13 | 1,490 | 1,580 | 94% |
+| ForeverGroupComms | 7 | 1,714 | 1,166 | **147%** |
 
 GroupComms exceeds 100% because its quest-sync protocol is the only code in the bundle
 that parses another player's data, and `protocol.lua` spends 273 lines on roughly 50
@@ -118,6 +118,19 @@ The previous "Carried forward unchanged" list, 13 entries:
 | `A.GetActivityType` is a dot-called closure | **Open** — `ForeverGuildComms/UI.lua:145` |
 | `A.messageVariantBags` is unbounded | **Open** — `ForeverCommsVoice/Core.lua:14` |
 
+### Raised and closed in this span
+
+| # | Item | Disposition |
+| --- | --- | --- |
+| 45 | Should the consumers embed the library under `Libs/` with LibStub? | **Rejected and recorded**, so it is not re-litigated. The library declares SavedVariables, which an embedded library cannot; see `dependencies.md` |
+| 46 | Both consumers should refuse to load without the library, from `Core.lua` | **Done.** GroupComms had no check and degraded silently; GuildComms checked from `VoiceBridge.lua`, by which point `Core.lua` had published the namespace and created the dispatcher, so the addon half-ran. Both now refuse at the first statement. Covered by regression blocks in `verify.lua` and `safety.lua` and three fault-injection entries |
+
+The previous `57f7cdc` assessment listed GroupComms' silent degradation as acceptable
+because every library call was guarded. That was wrong in a way the guards hid: the
+*fallback* approval path re-renders rather than replaying captured text, so what the
+player approved and what was sent could differ. Guarding every call site is not the same
+as the degraded state being correct.
+
 ## Technical Debt
 
 Four items remain in the ledger, plus the two carried-forward smells above.
@@ -154,8 +167,12 @@ Two code smells, neither a defect:
 - **Refuse rather than truncate at a bound.** The 60-entry outbox, the 12-chunk packet
   limit and the 30-entry approval list all decline work instead of silently shedding it;
   the two queues that do shed drop the oldest and never invoke its callback.
-- **Fail closed on a missing API.** `A:CanManageGroup` denies when
+- **Fail closed on a missing API or dependency.** `A:CanManageGroup` denies when
   `UnitIsGroupLeader`/`UnitIsGroupAssistant` are absent rather than assuming permission.
+  Both consumers' `Core.lua` refuse to load at all when `_G.ForeverCommsVoice` is unset,
+  as the first statement, so the addon goes inert rather than running degraded. The
+  degraded mode was shown to be *incorrect* and not merely reduced: the fallback approval
+  path re-renders instead of replaying the text the player reviewed.
 - **Explanatory comments at the point of decision**, including comments that record a
   *withdrawn* finding so it is not re-raised and "fixed" into a defect.
 

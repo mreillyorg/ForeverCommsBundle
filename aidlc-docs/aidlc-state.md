@@ -5,7 +5,7 @@
   Comms **0.3.4-beta**, Forever Guild Comms **0.6.3-beta**
 - **Project Type**: Brownfield, multi-package
 - **Start Date**: 2026-10-18T23:45:00Z
-- **Current Stage**: INCEPTION - Reverse Engineering (eighth pass complete, awaiting user approval)
+- **Current Stage**: INCEPTION - Reverse Engineering (ninth pass complete, awaiting user approval)
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -19,7 +19,7 @@
 - **Project Structure**: Monorepo with three flat World of Warcraft addon packages,
   25 shipped modules, plus root-level build, lint and install tooling
 - **Reverse Engineering Needed**: Completed eight times; artifacts current as of
-  2026-10-25T02:30:00Z against commit `a64ac2a`
+  2026-10-25T03:10:00Z against commit `b712070`
 - **Workspace Root**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
 
 ## Packages
@@ -27,8 +27,8 @@
 | Package | Version | Type | Modules | Lines | Methods | Harnesses | SavedVariables |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ForeverCommsVoice` | 0.2.2-beta | Shared library | 9 | 1,221 | 33 | 8 | `ForeverCommsVoiceCharDB` |
-| `ForeverGuildComms` | 0.6.3-beta | Application | 9 | 1,560 | 67 | 13 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
-| `ForeverGroupComms` | 0.3.4-beta | Application | 7 | 1,146 | 53 | 7 | `ForeverGroupCommsDB` |
+| `ForeverGuildComms` | 0.6.3-beta | Application | 9 | 1,580 | 67 | 13 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
+| `ForeverGroupComms` | 0.3.4-beta | Application | 7 | 1,166 | 53 | 7 | `ForeverGroupCommsDB` |
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither and is the **sole writer** of the shared voice profile.
@@ -85,8 +85,9 @@ evaluated during Reverse Engineering.
 - [x] Reverse Engineering - Fifth rerun completed 2026-10-19T11:30:00Z against the
       0.1.1 / 0.2.1 / 0.5.1 remediation release
 - [x] Reverse Engineering - Sixth rerun completed 2026-10-19T13:30:00Z against `57f7cdc`
-- [x] Reverse Engineering - **Seventh rerun** completed 2026-10-25T02:30:00Z against
-      `a64ac2a` (0.2.2 / 0.6.3 / 0.3.4) - awaiting approval
+- [x] Reverse Engineering - Seventh rerun completed 2026-10-25T02:30:00Z against `a64ac2a`
+- [x] Reverse Engineering - **Eighth rerun** completed 2026-10-25T03:10:00Z against
+      `b712070` (0.2.2 / 0.6.3 / 0.3.4, unchanged) - awaiting approval
 - [ ] Requirements Analysis - Not started (user has scoped every run to end after Reverse Engineering)
 - [ ] User Stories - Not assessed
 - [ ] Workflow Planning - Not started
@@ -100,11 +101,19 @@ evaluated during Reverse Engineering.
 - [ ] Placeholder stage
 
 ## Reverse Engineering Status
-- [x] Reverse Engineering - Eighth pass completed on 2026-10-25T02:30:00Z
+- [x] Reverse Engineering - Ninth pass completed on 2026-10-25T03:10:00Z
 - **Artifacts Location**: `aidlc-docs/inception/reverse-engineering/`
-- **Artifacts target**: commit `a64ac2a` — Voice 0.2.2-beta, GuildComms 0.6.3-beta,
-  GroupComms 0.3.4-beta. **All nine artifacts regenerated**, because every one of them
-  described a state that had been inverted rather than merely aged.
+- **Artifacts target**: commit `b712070` — Voice 0.2.2-beta, GuildComms 0.6.3-beta,
+  GroupComms 0.3.4-beta. No version changed in this span.
+- **Approach**: targeted update, not a regeneration. The previous pass rewrote all nine
+  artifacts against `a64ac2a` an hour earlier; re-deriving them wholesale would churn the
+  documents without improving them. `reverse-engineering-timestamp.md` was rewritten,
+  `dependencies.md` gained a substantial new section, six artifacts had the affected
+  sections and the re-measured figures updated, and `api-documentation.md` needed only its
+  header because the public API surface did not change.
+- **Why this pass was needed at all**: `b712070` carries both the previous pass's artifact
+  regeneration *and* the code change those findings prompted, so the artifacts committed
+  inside it describe `a64ac2a` while the code around them is one step further on.
 - **Change span covered**: remediation items 1–40 of `SUGGESTED-CHANGES.md` across two
   commits, then a version bump of all three packages with release notes in all four
   READMEs. The span restored the three failing harnesses and the CI test step, restored
@@ -131,21 +140,21 @@ evaluated during Reverse Engineering.
 
 ## Project Growth Across Passes
 
-| Metric | 0.1.0 | 0.2.0 | 0.4.1 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Packages | 1 | 1 | 1 | 1 | 3 | 3 | 3 | **3** |
-| Shipped Lua modules | 7 | 7 | 11 | 12 | 22 | 22 | 25 | **25** |
-| Shipped Lua lines | 882 | 1,097 | 1,733 | 2,022 | 3,395 | 3,388 | 3,806 | **3,927** |
-| Public methods | 38 | 45 | 62 | 64 | 129 | 129 | 152 | **153** |
-| Offline harnesses | 1 | 4 | 9 | 11 | 13 | 13 | 17 | **28** |
-| Harness lines | 72 | 207 | 589 | 816 | 1,029 | 1,215 | 1,215 | **4,138** |
-| Test % of shipped Lua | 8% | 19% | 34% | 40% | 29% | 30% | 32% | **105%** |
-| Modules with no harness | 6 | 3 | 1 | 0 | 4 | 4 | 5 | **0** |
-| Suite passing | n/a | n/a | n/a | n/a | not run | not run | NO — 3/17 | **YES — 28/28** |
-| Linter configured | No | No | No | No | No | No | No | **Yes — 0 errors** |
-| Assertions mutation-verified | No | No | No | No | No | No | No | **Yes — 28/28** |
-| Active CI workflows | 1 | 1 | 1 | 1 | 0 | 1 | 1 | **1** |
-| CI runs the harnesses | No | No | No | No | No | Yes | No | **Yes** |
+| Metric | 0.1.0 | 0.2.0 | 0.4.1 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` | `b712070` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Packages | 1 | 1 | 1 | 1 | 3 | 3 | 3 | 3 | **3** |
+| Shipped Lua modules | 7 | 7 | 11 | 12 | 22 | 22 | 25 | 25 | **25** |
+| Shipped Lua lines | 882 | 1,097 | 1,733 | 2,022 | 3,395 | 3,388 | 3,806 | 3,927 | **3,967** |
+| Public methods | 38 | 45 | 62 | 64 | 129 | 129 | 152 | 153 | **153** |
+| Offline harnesses | 1 | 4 | 9 | 11 | 13 | 13 | 17 | 28 | **28** |
+| Harness lines | 72 | 207 | 589 | 816 | 1,029 | 1,215 | 1,215 | 4,138 | **4,257** |
+| Test % of shipped Lua | 8% | 19% | 34% | 40% | 29% | 30% | 32% | 105% | **107%** |
+| Modules with no harness | 6 | 3 | 1 | 0 | 4 | 4 | 5 | 0 | **0** |
+| Suite passing | n/a | n/a | n/a | n/a | not run | not run | NO — 3/17 | YES — 28/28 | **YES — 28/28** |
+| Linter configured | No | No | No | No | No | No | No | Yes | **Yes — 0 errors** |
+| Assertions mutation-verified | No | No | No | No | No | No | No | 28/28 | **31/31** |
+| Active CI workflows | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | **1** |
+| CI runs the harnesses | No | No | No | No | No | Yes | No | Yes | **Yes** |
 
 ## Notes
 
@@ -187,3 +196,24 @@ evaluated during Reverse Engineering.
   ever been loaded by the client it targets. Offline confidence is now high; live
   confidence is still zero. Items 41 and 42 are the only ones that address it, and no
   further harness work can.
+
+### Added by the ninth pass
+
+- **The hard library dependency is now enforced at load in both consumers**, as the first
+  statement of each `Core.lua` (item 46). GroupComms previously had no check and degraded
+  silently; GuildComms checked from `VoiceBridge.lua`, the second TOC file, by which point
+  the namespace was published and the dispatcher created, so `ADDON_LOADED` still reached
+  `A:Initialize()` and the addon half-ran.
+- **This corrects the eighth pass**, which listed GroupComms' degradation as acceptable
+  because every library call was guarded. Guarding every call site is not the same as the
+  degraded state being correct: the fallback approval path calls `A:Send(kind, vars)` and
+  **re-renders** instead of replaying the captured text, so with `randomMessages` on the
+  message sent could differ from the one the player reviewed.
+- **Embedding the library under `Libs/` was considered and rejected on the record** as
+  item 45, so it is not re-litigated. The blocking reason is that `ForeverCommsVoice`
+  declares SavedVariables and an embedded library cannot.
+- **14 harnesses needed a library stub or a load-order fix**, which is the real cost of
+  item 46 and reveals that none of them had been modelling the shipped reality: every one
+  loaded a consumer's `Core.lua` with no library present, a state the TOC dependency makes
+  impossible in game.
+- Mutation coverage grew with the change rather than after it: 28 → **31 of 31** caught.

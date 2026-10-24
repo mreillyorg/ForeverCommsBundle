@@ -1,8 +1,8 @@
 # Technology Stack
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T02:30:00Z
-**Target commit**: `a64ac2a`
+**Analysis date**: 2026-10-25T03:10:00Z
+**Target commit**: `b712070`
 
 ## Programming Languages
 
@@ -43,7 +43,9 @@ API with an `InterfaceOptions_AddCategory` fallback, `C_Timer`, `StaticPopupDial
 | `C_QuestLog` | Probed, with a legacy `GetQuestLogTitle` branch | Optional |
 
 The only hard dependency anywhere is `## Dependencies: ForeverCommsVoice` in both
-consumer TOCs. It guarantees presence, not version.
+consumer TOCs. It guarantees presence, not version — and because it cannot see a library
+that loaded but failed, both consumers' `Core.lua` additionally refuse to load when
+`_G.ForeverCommsVoice` is unset. See `dependencies.md`.
 
 ## Build Tools
 
@@ -63,7 +65,7 @@ There is no compile step. Lua ships as source.
 | Lua interpreter | **5.1.5** | Runs every harness. Located at `~/tools/lua-5.1.5/lua5.1.exe` on this machine; CI installs `lua5.1` from apt |
 | Lua `assert` | stdlib | The entire assertion mechanism across all 28 harnesses. No test framework |
 | `tools/run_tests.py` | in-repo | Discovers and runs every harness, each with its package folder as the working directory. Refuses an explicitly requested interpreter that is not 5.1 rather than silently substituting |
-| `tools/fault_inject.py` | in-repo | Mutation check. Reverts one real guard at a time and asserts the relevant harness fails. 28 of 28 caught |
+| `tools/fault_inject.py` | in-repo | Mutation check. Reverts one real guard at a time and asserts the relevant harness fails. 31 of 31 caught |
 | **luacheck** | **1.2.0** | Static analysis, configured by the root `.luacheckrc`. Standalone Windows binary; no LuaRocks and no C compiler needed |
 | `tools/check_bigwigs_bundle.py` | in-repo | Release gate: archive structure, runtime completeness, version consistency |
 | `tools/verify_package.py` | in-repo | Verifies the `--source` archives |
@@ -76,7 +78,7 @@ Python tools use explicit `check()` helpers that raise a dedicated error rather 
 | Layer | Available | Executed | Result |
 | --- | --- | --- | --- |
 | **Lua harnesses** | Yes — 5.1.5 | **Yes** | **Exit 0. PASSED: 28, FAILED: 0, TOTAL: 28** |
-| **Mutation check** | Yes | **Yes** | **Exit 0. 28 of 28 injected faults caught** |
+| **Mutation check** | Yes | **Yes** | **Exit 0. 31 of 31 injected faults caught** |
 | **luacheck** | Yes — 1.2.0 | **Yes** | 29 warnings, **0 errors**, 53 files |
 | `tools/package.py` | Yes | **Yes** | Exit 0 — 33-entry bundle |
 | `tools/check_bigwigs_bundle.py` | Yes | **Yes** | **Exit 0** |

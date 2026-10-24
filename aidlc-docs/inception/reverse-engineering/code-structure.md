@@ -1,8 +1,8 @@
 # Code Structure
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T02:30:00Z
-**Target commit**: `a64ac2a`
+**Analysis date**: 2026-10-25T03:10:00Z
+**Target commit**: `b712070`
 
 ## Build System
 
@@ -66,12 +66,12 @@ state with a safe initial value, so a later file can never index nil.
 | `tests/*.lua` | 1,053 | — | 8 harnesses, none in the TOC |
 | `README.md` | 97 | — | User documentation, current at 0.2.2-beta, with release notes |
 
-### ForeverGuildComms — 1,560 shipped lines
+### ForeverGuildComms — 1,580 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `Core.lua` | 554 | 31 | Defaults and timing limits; `A:FillDefaults`; `A:CanFillRole`; `A:Key`/`A:IsSelf`; `A:ChatLimit`; dedup with periodic pruning; `A:SendGuild` through `pcall`; `A:QueueGuild` → `A:DrainQueue` spacing; `A:StageApproval`; the approval floor; settings writers shared by Settings and Titan; the single 14-event dispatcher; `/fgc` |
-| `VoiceBridge.lua` | 24 | 6 | Forwarders to the library |
+| `Core.lua` | 570 | 31 | **The load-time library guard, as the first statement**; defaults and timing limits; `A:FillDefaults`; `A:CanFillRole`; `A:Key`/`A:IsSelf`; `A:ChatLimit`; dedup with periodic pruning; `A:SendGuild` through `pcall`; `A:QueueGuild` → `A:DrainQueue` spacing; `A:StageApproval`; the approval floor; settings writers shared by Settings and Titan; the single 14-event dispatcher; `/fgc` |
+| `VoiceBridge.lua` | 28 | 6 | Forwarders to the library. Returns quietly when the library is absent rather than raising a second error, because `Core.lua` has already refused and a Lua error in one TOC file does not stop the client loading the rest |
 | `Roster.lua` | 123 | 7 | Roster request throttle, read, baseline capture, diff with self-exclusion, the suspicious-read guard, localized guild-join parsing, 60-second ticker |
 | `Alerts.lua` | 99 | 5 | `cleanChat` escape stripping, craft and group request detection, recipe cache scan, the 30-entry private alert list |
 | `Tabard.lua` | 70 | 2 | Capital-city detection, tabard checks, `StaticPopupDialogs` |
@@ -80,15 +80,15 @@ state with a safe initial value, so a later file can never index nil.
 | `TitanMenu.lua` | 129 | 2 | Nested context menu |
 | `Broker.lua` | 38 | 2 | Optional LibDataBroker object |
 | `Bindings.xml` | 14 | — | Three keybindings. **Not in the TOC** — the client auto-loads it |
-| `tests/*.lua` | 1,439 | — | 13 harnesses, none in the TOC |
+| `tests/*.lua` | 1,490 | — | 13 harnesses, none in the TOC |
 | `README.md` | 212 | — | User documentation, current at 0.6.3-beta, with release notes |
 | `PACKAGING.md` | 91 | — | Per-package release guide, current at 0.6.3-beta |
 
-### ForeverGroupComms — 1,146 shipped lines
+### ForeverGroupComms — 1,166 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `Core.lua` | 280 | 21 | Defaults; local English variant bank; `A:Trim`; `A:Render` with the `useSharedVoice` branch; `A:GroupChannel`; dedup; `A:Notify` with cap; **`A:SendPrepared` as the single send funnel** carrying the 2-second floor and the serial check; `A:Stage`/`A:Approve`; `A:CanManageGroup`; ready check; target marking; the single 10-event dispatcher; `/fgp` |
+| `Core.lua` | 300 | 21 | **The load-time library guard, as the first statement**; defaults; local English variant bank; `A:Trim`; `A:Render` with the `useSharedVoice` branch; `A:GroupChannel`; dedup; `A:Notify` with cap; **`A:SendPrepared` as the single send funnel** carrying the 2-second floor and the serial check; `A:Stage`/`A:Approve`; `A:CanManageGroup`; ready check; target marking; the single 10-event dispatcher; `/fgp` |
 | `Roster.lua` | 162 | 6 | Group scan, `groupSerial` bump on identity change plus approval wipe and queue purge, greeting and level staging, role counts, issues and summary, ready-check tally |
 | `Quests.lua` | 303 | 12 | The quest-sync protocol: `parseIDs`, `packetize` with the 12-chunk refusal, prefix registration, `A:QueuePacket` with the 60-entry bound, `A:FlushPackets` with 1.15s pacing and token cancellation, debounced scheduling, broadcast with the 240-second unchanged-log skip, completion replies, inbound validation and reassembly, comparison rows, sharing and requesting |
 | `UI.lua` | 164 | 6 | Group panel and the quest comparison window with 9 fixed paged rows |
@@ -96,7 +96,7 @@ state with a safe initial value, so a later file can never index nil.
 | `TitanMenu.lua` | 114 | 4 | Nested context menu, `A:StatusSnapshot` |
 | `Broker.lua` | 36 | 2 | Optional LibDataBroker object |
 | `Bindings.xml` | 11 | — | Three keybindings. **Not in the TOC** |
-| `tests/*.lua` | 1,646 | — | 7 harnesses, none in the TOC |
+| `tests/*.lua` | 1,714 | — | 7 harnesses, none in the TOC |
 | `README.md` | 83 | — | User documentation, current at 0.3.4-beta, with release notes |
 
 ### Repository root
@@ -166,10 +166,16 @@ state with a safe initial value, so a later file can never index nil.
 
 ### Fail-closed feature detection
 
-- **Location**: every non-trivial client API; see `dependencies.md` for the table.
-- **Purpose**: a beta client may not expose what the code expects.
+- **Location**: every non-trivial client API; see `dependencies.md` for the table. Also
+  the library dependency itself, at the first statement of both consumers' `Core.lua`.
+- **Purpose**: a beta client may not expose what the code expects, and a dependency that
+  the client considered satisfied may still have failed to initialise.
 - **Implementation**: `if C_X and C_X.Y then`. Where the answer gates a privileged action,
   absence means deny — `A:CanManageGroup` returns false rather than assuming permission.
+  Where it gates the whole addon, absence means refuse to load: erroring at the first
+  statement leaves the namespace unpublished and the dispatcher uncreated, so the addon is
+  inert rather than degraded. Degrading was measured to be *incorrect* here, not merely
+  reduced — the fallback approval path re-renders rather than replaying reviewed text.
 
 ## Critical Dependencies
 

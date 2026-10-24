@@ -2,9 +2,9 @@
 
 **Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.2.2-beta,
 ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta.
-**Analysis date**: 2026-10-25T02:30:00Z (eighth reverse-engineering pass, fourth
+**Analysis date**: 2026-10-25T03:10:00Z (ninth reverse-engineering pass, fifth
 multi-package pass)
-**Target commit**: `a64ac2a`
+**Target commit**: `b712070`
 
 ## Business Context Diagram
 
@@ -151,10 +151,10 @@ Shared layer (ForeverCommsVoice):
 
 ## Where the product stands
 
-The eight-pass history has moved this from one flat addon to a three-package bundle whose
-offline behaviour is now well covered: 28 harnesses, 4,138 lines of test against 3,927
+The nine-pass history has moved this from one flat addon to a three-package bundle whose
+offline behaviour is now well covered: 28 harnesses, 4,257 lines of test against 3,967
 lines of shipped Lua, a linter reporting zero errors, and a mutation check confirming all
-28 of its deliberately injected faults are caught.
+31 of its deliberately injected faults are caught.
 
 The business risk is unchanged and is not a code risk: **no part of this bundle has ever
 run in the client it is written for.** Every behaviour above is implemented against the

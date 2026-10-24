@@ -1,15 +1,15 @@
 # Component Inventory
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T02:30:00Z
-**Target commit**: `a64ac2a`
+**Analysis date**: 2026-10-25T03:10:00Z
+**Target commit**: `b712070`
 
 ## Application Packages
 
 | Package | Version | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| `ForeverGuildComms` | 0.6.3-beta | 9 | 1,560 | 67 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
-| `ForeverGroupComms` | 0.3.4-beta | 7 | 1,146 | 53 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks with a private response tally, target marking, bidirectional quest comparison, manual quest sharing, Titan menu |
+| `ForeverGuildComms` | 0.6.3-beta | 9 | 1,580 | 67 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
+| `ForeverGroupComms` | 0.3.4-beta | 7 | 1,166 | 53 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks with a private response tally, target marking, bidirectional quest comparison, manual quest sharing, Titan menu |
 
 ## Shared Packages
 
@@ -31,9 +31,9 @@ shipped archive by `.pkgmeta`.
 | Location | Harnesses | Lines |
 | --- | --- | --- |
 | `ForeverCommsVoice/tests/` | 8 | 1,053 |
-| `ForeverGuildComms/tests/` | 13 | 1,439 |
-| `ForeverGroupComms/tests/` | 7 | 1,646 |
-| **Total** | **28** | **4,138** |
+| `ForeverGuildComms/tests/` | 13 | 1,490 |
+| `ForeverGroupComms/tests/` | 7 | 1,714 |
+| **Total** | **28** | **4,257** |
 
 ## Module inventory
 
@@ -51,12 +51,12 @@ shipped archive by `.pkgmeta`.
 | `QueueUI.lua` | 136 | 4 | The movable scrollable queue overlay |
 | `Options.lua` | 134 | 3 | Settings canvas panel, `/fcv`, and the addon's `ADDON_LOADED` frame |
 
-### ForeverGuildComms — 9 modules, 1,560 lines, 67 methods
+### ForeverGuildComms — 9 modules, 1,580 lines, 67 methods
 
 | Module | Lines | Methods | Responsibility |
 | --- | --- | --- | --- |
-| `Core.lua` | 554 | 31 | Defaults, helpers, `A:IsSelf`, byte clamp, dedup with pruning, the guild send queue and its spacing, approval staging and the approval floor, settings writers, the single event dispatcher, `/fgc` |
-| `VoiceBridge.lua` | 24 | 6 | Thin forwarders to the library |
+| `Core.lua` | 570 | 31 | **Load-time library guard as its first statement**, defaults, helpers, `A:IsSelf`, byte clamp, dedup with pruning, the guild send queue and its spacing, approval staging and the approval floor, settings writers, the single event dispatcher, `/fgc` |
+| `VoiceBridge.lua` | 28 | 6 | Thin forwarders to the library; returns quietly if the library is absent, since `Core.lua` has already refused |
 | `Roster.lua` | 123 | 7 | Roster read, baseline capture, diff, the suspicious-read guard, guild-join parsing, polling |
 | `Alerts.lua` | 99 | 5 | Guild chat parsing, craft and group detection, recipe cache, the private alert list |
 | `Tabard.lua` | 70 | 2 | City detection and tabard reminders via `StaticPopupDialogs` |
@@ -65,11 +65,11 @@ shipped archive by `.pkgmeta`.
 | `TitanMenu.lua` | 129 | 2 | Nested LibDataBroker/Titan context menu |
 | `Broker.lua` | 38 | 2 | Optional LibDataBroker data object |
 
-### ForeverGroupComms — 7 modules, 1,146 lines, 53 methods
+### ForeverGroupComms — 7 modules, 1,166 lines, 53 methods
 
 | Module | Lines | Methods | Responsibility |
 | --- | --- | --- | --- |
-| `Core.lua` | 280 | 21 | Defaults, helpers, local variant bank, the single send funnel with the 2-second floor, staging and approval with serial checks, rank gate, ready check, target marking, the event dispatcher, `/fgp` |
+| `Core.lua` | 300 | 21 | **Load-time library guard as its first statement**, defaults, helpers, local variant bank, the single send funnel with the 2-second floor, staging and approval with serial checks, rank gate, ready check, target marking, the event dispatcher, `/fgp` |
 | `Roster.lua` | 162 | 6 | Group scan, `groupSerial` bump on identity change, greetings and level staging, role counts and issues, ready-check tally |
 | `Quests.lua` | 303 | 12 | The quest-sync protocol: parse, packetize, outbox with pacing and bounds, broadcast, completion replies, inbound validation, comparison rows, sharing |
 | `UI.lua` | 164 | 6 | Group panel and the quest comparison window with 9 paged rows |
@@ -150,10 +150,10 @@ shipped archive by `.pkgmeta`.
 | Measure | Value |
 | --- | --- |
 | Shipped Lua modules | 25 |
-| Shipped Lua lines | 3,927 |
+| Shipped Lua lines | 3,967 |
 | Public methods | 153 |
 | Offline harnesses | 28 |
-| Harness lines | 4,138 (105% of shipped) |
+| Harness lines | 4,257 (107% of shipped) |
 | Event dispatchers | 3, one per addon |
 | Registered events | 25 |
 | SavedVariables tables | 4 |

@@ -1,8 +1,8 @@
 # System Architecture
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T02:30:00Z
-**Target commit**: `a64ac2a`
+**Analysis date**: 2026-10-25T03:10:00Z
+**Target commit**: `b712070`
 
 ## System Overview
 
@@ -168,6 +168,12 @@ checks so a module can be absent.
 | ForeverGuildComms | `Core.lua`, bottom | 14 | `PLAYER_LOGIN` |
 | ForeverGroupComms | `Core.lua`, bottom | 10 | `ADDON_LOADED` matching the vararg |
 
+Both consumers' dispatchers are created at the *bottom* of a `Core.lua` whose *first*
+statement refuses to run without the library. That ordering is deliberate: a failed
+dependency check means the dispatcher is never created, so no event can reach a
+half-initialised addon. GuildComms previously checked from `VoiceBridge.lua` instead —
+the second TOC file — which left the dispatcher live and `A:Initialize()` reachable.
+
 Voice's dispatcher living in `Options.lua` rather than `Core.lua` is a known deviation
 from the project's own structure rule, recorded in `.kiro/steering/structure.md`. It is
 also where the `ADDON_LOADED` registration defect fixed this span had been hiding: the
@@ -191,6 +197,11 @@ until the user ran `/fcv`.
 These are the properties the design depends on, and all of them are now asserted by
 harnesses:
 
+0. **The library is required, and its absence is fatal at load.** Both consumers' `Core.lua`
+   refuse to load when `_G.ForeverCommsVoice` is unset, as their first statement, so
+   neither can run degraded. The TOC dependency covers a missing or disabled library; this
+   guard covers a library that loaded but failed. Degrading was rejected because the
+   fallback approval path re-renders rather than replaying the text the player reviewed.
 1. **The library never sends.** It words messages and holds a backlog; consumers deliver.
 2. **One validating writer per setting.** `V:SetOption` owns the shared profile;
    `A:SetOption` owns GuildComms' settings. Panels and menus route through them.

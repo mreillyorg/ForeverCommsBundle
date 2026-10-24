@@ -58,6 +58,11 @@ _G.C_ChatInfo = {
     end,
 }
 
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that check and exposes no methods, so every feature guard below still
+-- takes the same fallback path these assertions were written against.
+_G.ForeverCommsVoice = {}
+
 local A = {}
 for _, m in ipairs({"Core.lua", "Roster.lua", "Quests.lua"}) do
     assert(loadfile(base .. m))("ForeverGroupComms", A)

@@ -7,6 +7,9 @@ local printed={}
 _G.print = function(text) table.insert(printed, tostring(text)) end
 local sent=0
 _G.SendChatMessage=function() sent=sent+1 end
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that load-time guard; this harness needs nothing else from it.
+_G.ForeverCommsVoice = {}
 local A={}
 assert(loadfile(base .. "Core.lua"))("ForeverGuildComms", A)
 assert(loadfile(base .. "Alerts.lua"))("ForeverGuildComms", A)

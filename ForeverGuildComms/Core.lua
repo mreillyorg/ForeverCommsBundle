@@ -1,4 +1,20 @@
 local ADDON, A = ...
+-- Refuse to load without the shared library. The TOC's `## Dependencies: ForeverCommsVoice`
+-- already makes the client decline to load this addon when the library is missing or
+-- disabled, so this catches the narrower case the dependency check cannot: the library was
+-- loaded but failed partway through, leaving the global unset.
+--
+-- This is the first statement on purpose. The check used to live in VoiceBridge.lua, the
+-- second file in the TOC, which meant this file had already finished: the namespace global
+-- was published and the event dispatcher at the bottom was created and registered, so
+-- ADDON_LOADED still reached A:Initialize() and the addon half-ran before failing at
+-- render time. Erroring here instead leaves _G.ForeverGuildComms unpublished, creates no
+-- dispatcher, and lets the Bindings.xml handlers find nil -- the addon goes inert with one
+-- clear message. Matches ForeverGroupComms/Core.lua.
+if not _G.ForeverCommsVoice then
+    error("ForeverGuildComms requires ForeverCommsVoice. Install the Forever Comms " ..
+          "bundle, or enable ForeverCommsVoice in the AddOns list.")
+end
 _G.ForeverGuildComms = A
 A.name = ADDON
 -- Visible labels in WoW Options > Key Bindings > AddOns.

@@ -16,6 +16,9 @@ end}
 _G.CreateFrame = function()
     return {RegisterEvent=function() end, SetScript=function() end}
 end
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that load-time guard; this harness needs nothing else from it.
+_G.ForeverCommsVoice = {}
 local A = {}
 assert(loadfile(base.."Core.lua"))("ForeverGuildComms", A)
 local V = {}

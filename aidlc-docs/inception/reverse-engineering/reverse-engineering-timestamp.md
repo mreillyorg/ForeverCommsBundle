@@ -1,133 +1,152 @@
 # Reverse Engineering Metadata
 
-**Analysis Date**: 2026-10-19T13:30:00Z
+**Analysis Date**: 2026-10-25T02:30:00Z
 **Analyzer**: AI-DLC
 **Workspace**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
-**Analysis Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta,
-ForeverGuildComms 0.6.2-beta
-**Run**: 7th reverse-engineering pass; 3rd multi-package pass
-**Supersedes**: the pass of 2026-10-19T11:30:00Z, which describes commit `62c3853`
+**Analysis Target**: ForeverCommsVoice 0.2.2-beta, ForeverGuildComms 0.6.3-beta,
+ForeverGroupComms 0.3.4-beta
+**Target commit**: `a64ac2a` — "3rd round of Kiro changes", clean tree, pushed to `origin/main`
+**Run**: 8th reverse-engineering pass; 4th multi-package pass
+**Supersedes**: the pass of 2026-10-19T13:30:00Z, which describes commit `57f7cdc`
 **Trigger**: Explicit user request
-**Diff baseline**: `62c3853`, spanning two commits — `63222ea` (test automation) and
-`57f7cdc` (queue, Titan menu, BigWigs packaging)
+**Diff baseline**: `57f7cdc`, spanning three commits — `8166b8b`, `6cf2f38`, `a64ac2a`
 
 ## Artifacts Generated
 
+- [x] `reverse-engineering-timestamp.md` — regenerated
 - [x] `code-quality-assessment.md` — regenerated
 - [x] `component-inventory.md` — regenerated
-- [x] `reverse-engineering-timestamp.md` — regenerated
-- [x] `architecture.md` — updated
-- [x] `code-structure.md` — updated
-- [x] `api-documentation.md` — updated
-- [x] `dependencies.md` — updated
-- [x] `technology-stack.md` — updated
-- [x] `business-overview.md` — updated
+- [x] `architecture.md` — regenerated
+- [x] `code-structure.md` — regenerated
+- [x] `api-documentation.md` — regenerated
+- [x] `dependencies.md` — regenerated
+- [x] `technology-stack.md` — regenerated
+- [x] `business-overview.md` — regenerated
 
 ## Change scope
 
-Verified before regenerating. **The baseline had moved further than expected**: the user's
-request followed my own test-automation commit, but `HEAD` had since advanced to a second,
-larger commit that was not part of this session.
-
 | Commit | Content |
 | --- | --- |
-| `63222ea` | Test automation: `tools/run_tests.py`, CI test step, three TOC-derived syntax harnesses, the `keybindings.lua` 5.1 fix, `verify_package.py` cleanup |
-| `57f7cdc` | **Not from this session.** Shared review queue, GroupComms Titan menu, common styling, BigWigs packaging via a root `.pkgmeta`. **Reverts much of `63222ea`** |
+| `8166b8b` | Remediation items 1–15: the three failing harnesses fixed, the CI test step restored, two deleted regression tests restored, 11 stale version strings corrected, the version check ported into `check_bigwigs_bundle.py` and widened to four locations, `tools/package.py` rewritten as a `.pkgmeta`-driven mirror of BigWigs, all eight steering files rewritten |
+| `6cf2f38` | Remediation items 16–40: `OnUpdate` removed, `V:Render` split, dead code deleted, `A:FillDefaults` / `A:CanFillRole` extracted, the approval floor and `reviewAutoShow` added, GroupComms canvas callbacks implemented, `.luacheckrc` added, the Expressive scope decided and documented, and **11 new harnesses** |
+| `a64ac2a` | Version bump of all three packages across the four canonical locations each, plus release notes in all four READMEs |
+
+**Span total**: 67 files changed, 5,244 insertions, 1,202 deletions. 14 files added,
+53 modified. No files deleted.
 
 | Area | Change across the span |
 | --- | --- |
-| New shared modules | `ForeverCommsVoice/Queue.lua` 148, `QueueUI.lua` 136 |
-| New consumer module | `ForeverGroupComms/TitanMenu.lua` 114 |
-| Shrunk by consolidation | `ForeverGuildComms/UI.lua` −87 |
-| New harnesses | `queue.lua` 89, `queue_ui.lua` 65, plus 3 syntax harnesses |
-| Release pipeline | Replaced twice: offline Python builders, then BigWigs via root `.pkgmeta` + `check_bigwigs_bundle.py` |
-| Versions | Voice 0.1.1→0.2.1, GroupComms 0.2.1→0.3.3, GuildComms 0.5.1→0.6.2 |
+| New harnesses | 11 — `bytelimit`, `expressive`, `options`, `parity` (Voice); `alertsui`, `roster` (Guild); `outbox`, `protocol`, `safety`, `titanmenu`, `ui` (Group) |
+| New tooling | `.luacheckrc`, `tools/fault_inject.py` |
+| New tracking | `SUGGESTED-CHANGES.md` — 44-item remediation ledger |
+| New settings | GuildComms `reviewAutoShow`, `A.approvalFloorSeconds` |
+| Removed | `V:VoiceText`, `V:ChooseMessageTemplate`, the `VoiceBridge` forwarder, the only `OnUpdate` |
+| Versions | Voice 0.2.1→0.2.2, GuildComms 0.6.2→0.6.3, GroupComms 0.3.3→0.3.4 |
 
 ## Total Files Analyzed
 
-**84 project files**, excluding `aidlc-docs/` and `.kiro/aws-aidlc-rule-details/`.
+**112 project files**, counted mechanically, excluding `.git/`, `aidlc-docs/`,
+`.kiro/aws-aidlc-rule-details/` and build output.
+
+By extension: 53 `.lua`, 16 `.md`, 6 `.cmd`, 5 `.ps1`, 5 `.py`, 4 `.pkgmeta`, 4 `.yml`,
+3 `.png`, 3 `.tga`, 3 `.toc`, 3 `.txt`, 2 `.xml`, 2 `.gitignore`, plus `.gitattributes`,
+`.luacheckrc` and `LICENSE`.
 
 | Category | Count | Depth |
 | --- | --- | --- |
-| Shipped Lua modules | 25 | `Queue.lua` read in full; the 13 changed modules read as diffs; method counts measured across all 25 |
-| TOC manifests | 3 | Diffs read in full |
-| Offline harnesses | 17 | The 2 new queue harnesses and 3 syntax harnesses read; the reverted ones diffed |
-| Release tooling | 8 | Root `.pkgmeta`, `check_bigwigs_bundle.py`, the root workflow and all 3 nested workflow diffs read in full |
-| Markdown docs | 7 | Version-swept; `PACKAGING.md` and root `README.md` diffs read |
-| Steering | 9 | Checked for staleness against the replaced pipeline |
-| Git state | — | `log`, scoped `diff --stat` at two baselines, targeted `diff` |
+| Shipped Lua modules | 25 | Method counts measured across all 25; the 11 changed modules read as diffs |
+| Offline harnesses | 28 | All 11 authored this span read in full; the 17 pre-existing diffed |
+| TOC manifests | 3 | Read in full for module list, version and metadata |
+| Release tooling | 9 | `tools/*.py` ×5, `package.ps1`/`.cmd`, `run-tests.cmd`, root `.pkgmeta` |
+| Linter config | 1 | `.luacheckrc` read in full and executed |
+| Workflows | 4 | Root plus three nested, read for step order |
+| Markdown docs | 8 | Version-swept; all four READMEs and both `PACKAGING.md` diffs read |
+| Steering | 9 | Checked against current code |
+| Installers | 11 | Four `.ps1`, four `.cmd`, three `INSTALL-README.txt` |
+| Binary assets | 6 | Three `Media/Icon.tga`, three `ProjectIcon.png`; presence only |
+| Git state | — | `log`, `diff --stat`/`--name-status` at the baseline, targeted diffs |
 
 ## Verification Performed
 
+Everything below was executed, not inferred.
+
 | Action | Result |
 | --- | --- |
-| `python tools/run_tests.py` | **Exit 1 — PASSED: 14, FAILED: 3, TOTAL: 17** |
-| Each 0.5.1 fix located in source | All three present and intact |
-| Search for the deleted regression blocks | 0 references in `integration.lua`; 0 in `settings.lua` |
-| `python tools/verify_package.py` | **Exit 1** — `ForeverGuildComms/README.md does not mention version 0.6.2-beta` |
-| Version sweep across TOC / `Core.lua` / README / installer `.cmd` | 7 stale strings |
-| `SetScript("OnUpdate"` search across all 25 modules | Exactly one, `Queue.lua:70` |
-| Queue integration points mapped | `V:Enqueue` called from both consumers' `Core.lua`; `V:PendingCount` from GroupComms `TitanMenu`/`UI` and GuildComms `Core` |
-| Mechanical re-measurement | 25 modules, 3,806 lines, 152 methods, 17 harnesses, 1,215 test lines |
+| `python tools/run_tests.py` | **Exit 0 — PASSED: 28, FAILED: 0, TOTAL: 28** |
+| `luacheck .` (1.2.0) | **Exit 1 — 29 warnings, 0 errors in 53 files.** Nonzero is luacheck's warning status |
+| `python tools/fault_inject.py` | **Exit 0 — 28 of 28 injected faults caught** |
+| `python tools/package.py` | Exit 0 — `ForeverCommsBundle-0.6.3-beta.zip`, 33 entries |
+| `python tools/check_bigwigs_bundle.py` | **Exit 0** — version consistent across all four locations for all three packages |
+| `python tools/package.py --source` | Exit 0 — four source archives |
+| `python tools/verify_package.py` | **Exit 0** |
+| Mechanical re-measurement | 25 modules, 3,927 lines, 153 methods, 28 harnesses, 4,138 test lines |
+| `SetScript("OnUpdate"` across all 25 modules | **Zero** |
+| Modules loaded by no harness | **Zero** |
+| Working tree / sync | Clean; `main` level with `origin/main`; HEAD contained in `origin/main` |
 
-**Not verified**: the BigWigs release path. `BigWigsMods/packager@v2` is a GitHub Action
-and cannot run locally, so unlike the previous span's offline builders the pipeline could
-not be executed. `tools/check_bigwigs_bundle.py` was read but not run, as it requires the
-`.release/` output. Nothing has been tested against a live Forever client.
+**Not verified**: the BigWigs release path itself. `BigWigsMods/packager@v2` is a GitHub
+Action and cannot run locally; `tools/package.py` mirrors it from the same root
+`.pkgmeta` and was run instead. **Nothing in this bundle has been executed against a
+live Forever client.** That remains true of every pass to date.
 
 ## Metrics
 
-| Metric | Voice | Guild | Group | Bundle | Δ |
+| Metric | Voice | Guild | Group | Bundle | Δ vs `57f7cdc` |
 | --- | --- | --- | --- | --- | --- |
-| Version | 0.2.1-beta | 0.6.2-beta | 0.3.3-beta | — | all bumped |
-| Shipped Lua modules | 9 | 9 | 7 | **25** | +3 |
-| Shipped Lua lines | 1,207 | 1,491 | 1,108 | **3,806** | +418 |
-| Public methods | 35 | 65 | 52 | **152** | +23 |
-| Offline harnesses | 4 | 11 | 2 | **17** | +4 |
-| Harness lines | 243 | 828 | 144 | **1,215** | +186 |
-| **Harnesses failing** | **2** | **1** | 0 | **3** | +3 |
-| Modules no harness loads | 1 | 0 | 4 | **5** | +1 |
+| Version | 0.2.2-beta | 0.6.3-beta | 0.3.4-beta | — | all bumped |
+| Shipped Lua modules | 9 | 9 | 7 | **25** | — |
+| Shipped Lua lines | 1,221 | 1,560 | 1,146 | **3,927** | +121 |
+| Public methods | 33 | 67 | 53 | **153** | +1 |
+| Offline harnesses | 8 | 13 | 7 | **28** | **+11** |
+| Harness lines | 1,053 | 1,439 | 1,646 | **4,138** | **+2,923** |
+| Harnesses failing | 0 | 0 | 0 | **0** | **−3** |
+| Modules no harness loads | 0 | 0 | 0 | **0** | **−5** |
+| Events / dispatchers | 1 / 1 | 14 / 1 | 10 / 1 | 25 / 3 | — |
 | SavedVariables tables | 1 | 2 | 1 | **4** | — |
 
-## Comparison across all seven passes
+Test lines are now **105%** of shipped Lua, up from 32%.
 
-| Metric | 0.1.0 | 0.2.0 | 0.4.1 | 0.4.3 | Bundle | 0.x.1 | This pass |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Packages | 1 | 1 | 1 | 1 | 3 | 3 | **3** |
-| Shipped Lua modules | 7 | 7 | 11 | 12 | 22 | 22 | **25** |
-| Shipped Lua lines | 882 | 1,097 | 1,733 | 2,022 | 3,395 | 3,388 | **3,806** |
-| Public methods | 38 | 45 | 62 | 64 | 129 | 129 | **152** |
-| Offline harnesses | 1 | 4 | 9 | 11 | 13 | 13 | **17** |
-| Test % of shipped Lua | 8% | 19% | 34% | 40% | 29% | 30% | **32%** |
-| Modules with no harness | 6 | 3 | 1 | 0 | 4 | 4 | **5** |
-| **Suite passing** | n/a | n/a | n/a | n/a | not run | not run | **NO — 3 of 17 fail** |
-| CI runs the harnesses | No | No | No | No | No | **Yes** | **No — regressed** |
-| Recommendations resolved | — | 3/15 | 6/17 | 3/19 | 0/19 | 10/25 | **2/20, 1 regressed** |
+## Comparison across all eight passes
 
-This is the first pass where the suite is known to be failing, because it is the first
-pass where the suite could be run at all and was not green.
+| Metric | 0.1.0 | 0.2.0 | 0.4.1 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | **This pass** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Packages | 1 | 1 | 1 | 1 | 3 | 3 | 3 | **3** |
+| Shipped Lua modules | 7 | 7 | 11 | 12 | 22 | 22 | 25 | **25** |
+| Shipped Lua lines | 882 | 1,097 | 1,733 | 2,022 | 3,395 | 3,388 | 3,806 | **3,927** |
+| Public methods | 38 | 45 | 62 | 64 | 129 | 129 | 152 | **153** |
+| Offline harnesses | 1 | 4 | 9 | 11 | 13 | 13 | 17 | **28** |
+| Test % of shipped Lua | 8% | 19% | 34% | 40% | 29% | 30% | 32% | **105%** |
+| Modules with no harness | 6 | 3 | 1 | 0 | 4 | 4 | 5 | **0** |
+| Suite passing | n/a | n/a | n/a | n/a | not run | not run | **NO — 3/17 fail** | **YES — 28/28** |
+| Linter configured | No | No | No | No | No | No | No | **Yes — 0 errors** |
+| CI runs the harnesses | No | No | No | No | No | Yes | **No — regressed** | **Yes** |
+| Recommendations resolved | — | 3/15 | 6/17 | 3/19 | 0/19 | 10/25 | 2/20 | **40/44** |
+
+This is the first pass where the suite is green, a linter exists, and the test assertions
+have themselves been verified to fail when the behaviour they guard is removed.
 
 ## Headline findings
 
-1. **The suite is red: 3 of 17 harnesses fail.** Verified by execution, not inferred.
-2. **The two new queue harnesses resolve paths from the suite root**, the opposite of the
-   convention every other harness, the runner and the steering all use. They cannot pass as
-   written.
-3. **`keybindings.lua`'s Lua 5.1 fix was reverted**, so that harness again cannot execute
-   on the mandated interpreter.
-4. **CI no longer runs the Lua harnesses.** The step was added in `63222ea` and removed in
-   `57f7cdc`. Sixth consecutive pass as the top recommendation.
-5. **Both 0.5.1 regression tests were deleted.** All three underlying code fixes survive
-   and were individually verified, but they are now unguarded.
-6. **Seven stale version strings, and the check that catches them was retired in the same
-   commit.** Running `verify_package.py` reproduces the failure exactly.
-7. **The release pipeline was replaced a second time**, now BigWigs via a root `.pkgmeta`
-   with `move-folders`, leaving four offline release tools orphaned but still documented.
-8. **The queue itself is good work**: transient by design with the reason recorded, bounded
-   at 100, expiry re-checked before an approving click, `pcall` around the consumer
-   callback, a `"stale"` reason contract, and monotonic IDs that incidentally closed a
-   finding carried since 0.4.1.
-9. **`Queue.lua` uses `OnUpdate`**, the only one in the bundle and a direct violation of
-   `lua-style.md`.
-10. **Steering is stale in the opposite direction from last pass** — it now claims CI runs
-    the harnesses and that the Python builder is the CI path.
+1. **Every finding from the previous pass is closed.** All ten of its headline items were
+   either fixed or, in one case, withdrawn as incorrect. Section "Previous findings" in
+   `code-quality-assessment.md` records each with its disposition.
+2. **The suite is green and meaningfully so.** 28 of 28 harnesses pass, and
+   `tools/fault_inject.py` confirms 28 of 28 deliberately injected faults are caught.
+   Four assertions were initially too weak to notice their fault and were strengthened.
+3. **Coverage is complete at the module level.** Every one of the 25 shipped modules is
+   loaded by at least one harness; the previous pass had five that were loaded by none.
+4. **A linter now exists and the codebase is clean under it.** `.luacheckrc` declares the
+   28 globals the bundle may create and 58 read-only client APIs. 0 errors; the 29
+   warnings are cosmetic and enumerated as item 43.
+5. **Writing the linter config found a live defect.** `ForeverCommsVoice/Options.lua`
+   gated `ADDON_LOADED` on a bare `ADDON`, nil outside `Core.lua`, so the Voice Settings
+   panel was never registered until the user typed `/fcv`. Fixed and regression-tested.
+6. **The release gate now checks four version locations per package** and runs on both
+   the CI and local paths. All three packages pass at the bumped versions.
+7. **Two carried-forward code smells remain open**: `A.GetActivityType` is a dot-called
+   closure (`ForeverGuildComms/UI.lua:145`), and `A.messageVariantBags` is unbounded
+   (`ForeverCommsVoice/Core.lua:14`). Neither is a defect; both are noted for a future pass.
+8. **The in-game checklist has still never been walked.** No part of this bundle has run
+   against a live Forever server. Offline confidence is now high; live confidence is
+   unchanged at zero. This is the single largest remaining risk and no amount of harness
+   work addresses it.

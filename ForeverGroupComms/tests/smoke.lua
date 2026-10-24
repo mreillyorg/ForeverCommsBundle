@@ -57,11 +57,19 @@ local function module(path)
     assert(f,err)
     f('ForeverGroupComms',A)
 end
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that check and exposes no methods, so every guard below still takes the
+-- same fallback path these assertions were written against.
+ForeverCommsVoice = {}
 module('Core.lua'); module('Roster.lua'); module('Quests.lua')
 A.BuildOptions=function() end
 A.TryBroker=function() end
 A.RefreshQuestUI=function() end
 A:Initialize()
+-- This harness has always exercised the LOCAL variant bank, because it ran without the
+-- library at all. The stub above satisfies Core.lua's load guard but has no Render, so
+-- say explicitly which path is under test rather than relying on the library's absence.
+A.db.useSharedVoice = false
 assert(A.activeGroup)
 assert(A:RoleSummary():find('Ben Another Tank',1,true))
 assert(#A:RoleIssues() == 0)

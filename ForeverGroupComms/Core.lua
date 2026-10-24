@@ -1,4 +1,24 @@
 local ADDON, A = ...
+-- Refuse to load without the shared library, matching ForeverGuildComms' VoiceBridge.
+-- The TOC's `## Dependencies: ForeverCommsVoice` already makes the client decline to load
+-- this addon if the library is missing or disabled, so this catches the narrower case the
+-- dependency check cannot: the library was loaded but failed partway through, leaving the
+-- global unset.
+--
+-- Degrading instead of failing was the previous behaviour and it was not safe. Every call
+-- into the library is guarded, so the addon would have run with English-only wording and
+-- no shared queue -- and in that state A:Stage falls back to the local approval list,
+-- whose A:Approve re-renders through A:Send rather than replaying the captured text. With
+-- randomMessages on, the message sent could then differ from the one the player reviewed.
+--
+-- This is the first statement on purpose: erroring here means _G.ForeverGroupComms is
+-- never published, the event dispatcher at the bottom of this file is never created, and
+-- the Bindings.xml handlers find nil. The addon goes inert with one clear message rather
+-- than half-running.
+if not _G.ForeverCommsVoice then
+    error("ForeverGroupComms requires ForeverCommsVoice. Install the Forever Comms " ..
+          "bundle, or enable ForeverCommsVoice in the AddOns list.")
+end
 _G.ForeverGroupComms = A
 A.name, A.version = ADDON, "0.3.4-beta"
 BINDING_HEADER_FOREVERGROUPCOMMS = "Forever Group Comms"

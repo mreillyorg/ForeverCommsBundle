@@ -1,92 +1,141 @@
 # Component Inventory
 
-**Analysis date**: 2026-10-19T13:30:00Z
-**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
+**Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
+**Analysis date**: 2026-10-25T02:30:00Z
+**Target commit**: `a64ac2a`
 
 ## Application Packages
 
 | Package | Version | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| `ForeverGuildComms` | 0.6.2-beta | 9 | 1,491 | 65 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings. Its review backlog now delegates to the shared queue, which is why `UI.lua` shrank 87 lines this span |
-| `ForeverGroupComms` | 0.3.3-beta | 7 | 1,108 | 52 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks and a private response tally, target marking, bidirectional quest comparison, manual quest sharing. **Gained `TitanMenu.lua` this span**, reaching menu parity with GuildComms |
+| `ForeverGuildComms` | 0.6.3-beta | 9 | 1,560 | 67 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
+| `ForeverGroupComms` | 0.3.4-beta | 7 | 1,146 | 53 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks with a private response tally, target marking, bidirectional quest comparison, manual quest sharing, Titan menu |
 
 ## Shared Packages
 
 | Package | Version | Type | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ForeverCommsVoice` | 0.2.1-beta | Library / Models | 9 | 1,207 | 35 | Two shared capabilities now. **Wording**: the per-character voice profile and its sole writer, 8 languages, 29 accent phrasebooks, the race map, both phrase catalogs, variant banks, shuffle bags, the `Render` pipeline. **Review queue, new this span**: one transient click-to-send backlog shared by both consumers, with its own movable UI |
-
-Content and capability owned by the shared package:
-
-| Asset | Count |
-| --- | --- |
-| Languages | 8 — en, es, fr, de, it, pt, pl, nl |
-| Accents | 29 |
-| Guild message kinds | 4 — login, join, level, help |
-| Group message kinds | 13 |
-| Registered catalog scopes | 2 — guild, group |
-| **Review queue sources** | **2 — guild, group** |
-| **Queue settings** | **6 — visibleRows, autoSkipSeconds, sourceDisplay, showOnNew, x, y** |
+| `ForeverCommsVoice` | 0.2.2-beta | Library / Models | 9 | 1,221 | 33 | Two shared capabilities. **Wording**: the per-character voice profile and its sole writer, 8 languages, 29 accent phrasebooks, the race map, both phrase catalogs, variant banks, shuffle bags, the `Render` pipeline. **Review queue**: one transient click-to-send backlog shared by both consumers, with its own movable overlay |
 
 ## Infrastructure Packages
 
-None. No CDK, Terraform, CloudFormation or container definition.
-
-Build and install tooling. **The release path changed again this span** — BigWigs is now
-the CI pipeline and four offline tools are orphaned while still being documented:
-
-| Artifact | Lines | Status |
-| --- | --- | --- |
-| `.github/workflows/package.yml` | 39 | **Active.** BigWigsMods/packager with `-d`, then `check_bigwigs_bundle.py`, artifact upload, Release on tag. **No test step** |
-| `.pkgmeta` (root) | 37 | **Active, new.** `package-as: ForeverCommsBundle` with `move-folders` lifting the three addons to top level, plus a 24-entry ignore list |
-| `tools/check_bigwigs_bundle.py` | 28 | **Active, new.** Asserts exactly three top-level folders, each TOC present, both consumer `Dependencies` lines intact, and no `tests/`/`install/`/`.github/` content |
-| `tools/run_tests.py` | 120 | **Orphaned from CI.** The single harness runner; still the documented local command |
-| `tools/package.py` | 97 | **Orphaned.** Offline builder, still named as the build command in `PACKAGING.md` line 5 |
-| `tools/verify_package.py` | 89 | **Orphaned.** Its TOC-versus-README version check currently **fails** on live drift |
-| `package.ps1` / `package.cmd` | 72 / 11 | **Orphaned.** Offline Windows builder |
-| `run-tests.cmd` | 15 | Launcher over `run_tests.py` |
-| `install/Install-ForeverComms.ps1` + `.cmd` | 153 / 12 | The one real installer: `-Addons` selection, dependency prepending, TOC-derived file lists, staging, backup outside `AddOns`, rollback |
-| `<Addon>/install/Install-<Addon>.ps1` x3 | 13 each | Shims delegating to the shared installer |
-| `<Addon>/install/Install-<Addon>.cmd` x3 | 31 each | Launchers. **All six version lines are stale** |
-| `<Addon>/install/INSTALL-README.txt` x3 | 14-16 | **The ForeverCommsVoice copy still says the library depends on itself** |
-| `<Addon>/.pkgmeta` x3 | 7 each | Per-addon packager exclusions, for the standalone-repository case |
-| `<Addon>/.github/workflows/package.yml` x3 | 19 each | BigWigs, standalone case only |
-| `PACKAGING.md` (root) | 35 | Documents **two** release paths without stating which is authoritative |
-| `ForeverGuildComms/PACKAGING.md` | 128 | Re-expanded from the 8-line pointer it was reduced to last span |
+None. This is a WoW addon bundle; there is no cloud infrastructure, no CDK, no
+Terraform, no CloudFormation and no deployable service. "Deployment" is copying folders
+into `Interface\AddOns`.
 
 ## Test Packages
 
-No separate test packages. Each package carries its own `tests/`, none TOC-listed, none
-shipped.
+None as packages. Three `tests/` directories, excluded from every TOC and from every
+shipped archive by `.pkgmeta`.
 
-| Location | Harnesses | Lines | Status |
-| --- | --- | --- | --- |
-| `ForeverGuildComms/tests/` | 11 | 828 | **1 failing.** `keybindings.lua` cannot execute — its Lua 5.1 `loadstring` fix was reverted. `syntax.lua` was reverted to a hand-maintained list, losing TOC derivation and `Bindings.xml` coverage. The Restore Defaults regression block was deleted from `settings.lua` |
-| `ForeverCommsVoice/tests/` | 4 | 243 | **2 failing.** `queue.lua` and `queue_ui.lua` resolve modules from the **suite root**, against the project convention. `syntax.lua` is TOC-derived and passes. The Expressive regression block was deleted from `integration.lua` |
-| `ForeverGroupComms/tests/` | 2 | 144 | Both pass. `syntax.lua` is TOC-derived and also compiles the 3 `Bindings.xml` handlers |
-
-**Suite status: 14 pass, 3 fail, 17 total. Verified by execution.**
-
-## Module coverage
-
-| Package | Covered | No harness loads it |
+| Location | Harnesses | Lines |
 | --- | --- | --- |
-| Voice | 8 of 9, but `Queue`/`QueueUI` only via the two failing harnesses | `Options.lua` |
-| GuildComms | all 9 | — |
-| GroupComms | `Core`, `Roster`, `Quests` | `UI.lua`, `Options.lua`, `Broker.lua`, **`TitanMenu.lua`** |
+| `ForeverCommsVoice/tests/` | 8 | 1,053 |
+| `ForeverGuildComms/tests/` | 13 | 1,439 |
+| `ForeverGroupComms/tests/` | 7 | 1,646 |
+| **Total** | **28** | **4,138** |
 
-Five modules, 468 lines, loaded by nothing — up from four last pass, because the new
-`TitanMenu.lua` arrived without a harness while GuildComms' equivalent has had a dedicated
-one since 0.4.1.
+## Module inventory
 
-## Documentation and tooling (non-shipped)
+### ForeverCommsVoice — 9 modules, 1,221 lines, 33 methods
 
-| Location | Purpose |
+| Module | Lines | Methods | Responsibility |
+| --- | --- | --- | --- |
+| `Core.lua` | 251 | 9 | Namespace, voice profile and its validating writer, legacy migration latch, catalog registry, `V:Format` with the byte clamp, shuffle-bag `V:Pick`, the `V:Render` dispatcher and its per-scope resolvers |
+| `Languages.lua` | 81 | 0 | 8 language definitions and the guild locale template bank |
+| `Accents.lua` | 51 | 0 | 29 accent registrations: label, language, four guild templates, flair prefix |
+| `RaceProfiles.lua` | 76 | 5 | Race-to-accent map, availability filtering, role and activity localization |
+| `MessageVariants.lua` | 200 | 0 | Accent and locale variant banks for guild wording |
+| `GroupPhrases.lua` | 144 | 0 | Group/dungeon catalog for 8 languages plus curated per-accent group wordings |
+| `Queue.lua` | 148 | 12 | The shared review queue: settings, enqueue, approve, skip, expiry ticker, 100-entry cap |
+| `QueueUI.lua` | 136 | 4 | The movable scrollable queue overlay |
+| `Options.lua` | 134 | 3 | Settings canvas panel, `/fcv`, and the addon's `ADDON_LOADED` frame |
+
+### ForeverGuildComms — 9 modules, 1,560 lines, 67 methods
+
+| Module | Lines | Methods | Responsibility |
+| --- | --- | --- | --- |
+| `Core.lua` | 554 | 31 | Defaults, helpers, `A:IsSelf`, byte clamp, dedup with pruning, the guild send queue and its spacing, approval staging and the approval floor, settings writers, the single event dispatcher, `/fgc` |
+| `VoiceBridge.lua` | 24 | 6 | Thin forwarders to the library |
+| `Roster.lua` | 123 | 7 | Roster read, baseline capture, diff, the suspicious-read guard, guild-join parsing, polling |
+| `Alerts.lua` | 99 | 5 | Guild chat parsing, craft and group detection, recipe cache, the private alert list |
+| `Tabard.lua` | 70 | 2 | City detection and tabard reminders via `StaticPopupDialogs` |
+| `UI.lua` | 229 | 11 | Alerts window with 7 paged rows, help composer and its preview draft |
+| `Options.lua` | 294 | 1 | Settings canvas panel |
+| `TitanMenu.lua` | 129 | 2 | Nested LibDataBroker/Titan context menu |
+| `Broker.lua` | 38 | 2 | Optional LibDataBroker data object |
+
+### ForeverGroupComms — 7 modules, 1,146 lines, 53 methods
+
+| Module | Lines | Methods | Responsibility |
+| --- | --- | --- | --- |
+| `Core.lua` | 280 | 21 | Defaults, helpers, local variant bank, the single send funnel with the 2-second floor, staging and approval with serial checks, rank gate, ready check, target marking, the event dispatcher, `/fgp` |
+| `Roster.lua` | 162 | 6 | Group scan, `groupSerial` bump on identity change, greetings and level staging, role counts and issues, ready-check tally |
+| `Quests.lua` | 303 | 12 | The quest-sync protocol: parse, packetize, outbox with pacing and bounds, broadcast, completion replies, inbound validation, comparison rows, sharing |
+| `UI.lua` | 164 | 6 | Group panel and the quest comparison window with 9 paged rows |
+| `Options.lua` | 87 | 2 | Settings canvas panel with the three canvas callbacks |
+| `TitanMenu.lua` | 114 | 4 | Nested context menu and status snapshot |
+| `Broker.lua` | 36 | 2 | Optional LibDataBroker data object |
+
+## Harness inventory
+
+### ForeverCommsVoice
+
+| Harness | Lines | Covers |
+| --- | --- | --- |
+| `bytelimit.lua` | 199 | The 250-byte UTF-8 clamp in **all three** implementations, 2/3/4-byte characters, 138 checks |
+| `expressive.lua` | 121 | The accent-strength scope matrix across both scopes |
+| `integration.lua` | 80 | Cross-package rendering, migration, shuffle bags, both adapters |
+| `options.lua` | 303 | The Settings panel, queue settings, and the `ADDON_LOADED` registration gate |
+| `parity.lua` | 120 | The three duplicated message tables, plus the behaviour they protect |
+| `queue.lua` | 135 | The shared queue end to end, including the 100-entry cap |
+| `queue_ui.lua` | 67 | The queue overlay |
+| `syntax.lua` | 28 | TOC-derived compile check |
+
+### ForeverGuildComms
+
+| Harness | Lines | Covers |
+| --- | --- | --- |
+| `alertsui.lua` | 252 | Alerts window paging, row reuse, whisper targeting, Review count |
+| `roster.lua` | 213 | `A:IsSelf` matrix, baseline, the suspicious-read guard |
+| `titanmenu.lua` | 176 | Nested menu, Titan/Settings synchronisation, fallbacks |
+| `verify.lua` | 132 | Approval flow, mode switches, guild change, approval floor, 30-entry cap |
+| `settings.lua` | 126 | Settings panel, SavedVariables migration, Restore Defaults scope |
+| `tabard_dedup.lua` | 117 | Tabard reminder deduplication |
+| `variations.lua` | 100 | Message variety and shuffle behaviour |
+| `smoke.lua` | 79 | Roster diff, self-exclusion, alerts, recipe cache |
+| `keybindings.lua` | 65 | `Bindings.xml` handlers against the 5.1 dialect |
+| `timing.lua` | 59 | Timing clamps |
+| `voice.lua` | 53 | Voice delegation and option validation |
+| `syntax.lua` | 44 | TOC-derived compile check plus `Bindings.xml` handlers |
+| `icon.lua` | 23 | Icon asset presence |
+
+### ForeverGroupComms
+
+| Harness | Lines | Covers |
+| --- | --- | --- |
+| `ui.lua` | 350 | Group panel, quest window paging, Settings canvas callbacks |
+| `outbox.lua` | 307 | Pacing, 60-entry cap, 12-chunk refusal, cancellation token, `questSync` opt-out |
+| `safety.lua` | 285 | The 2-second floor, `groupSerial` rejection, rank gate, `Notify` dedup and cap |
+| `titanmenu.lua` | 283 | Nested menu, every toggle's key, rank and grouping gates |
+| `protocol.lua` | 273 | ~50 malformed and hostile addon-message payloads |
+| `smoke.lua` | 105 | Roster, roles, quick actions, Q/R round trip, sharing |
+| `syntax.lua` | 43 | TOC-derived compile check plus `Bindings.xml` handlers |
+
+## Build and release tooling
+
+| Tool | Purpose |
 | --- | --- |
-| `aidlc-docs/` | AI-DLC state, audit log and these artifacts |
-| `.kiro/steering/` | 9 files. **Stale again**: `testing.md` asserts CI runs the harnesses and expects 13; `release-packaging.md` names `tools/package.py` as the CI builder. The interpreter section added last span remains accurate and valuable |
-| `README.md` (root) | 24 lines. Package table, install order, Titan menu and queue notes |
-| `LICENSE` | Repository root |
+| `tools/run_tests.py` | The single harness runner. Discovers `tests/*.lua` per package; CI and local use the same command |
+| `tools/package.py` | Local mirror of BigWigs, reading the **same root `.pkgmeta`**. `--source` builds the installer-bearing archives |
+| `tools/check_bigwigs_bundle.py` | Release gate for both paths: archive structure, runtime completeness, version consistency across four locations per package |
+| `tools/verify_package.py` | Verifies the `--source` archives only |
+| `tools/fault_inject.py` | Mutation check: reverts one guard at a time and confirms a harness fails. Developer tool, deliberately not in CI |
+| `package.ps1` / `package.cmd` | Windows launcher over `tools/package.py` |
+| `run-tests.cmd` | Windows launcher over `tools/run_tests.py` |
+| `.luacheckrc` | Linter configuration for all three packages |
+| `.pkgmeta` (root) | The single source of truth for what ships |
+| `.github/workflows/package.yml` | Checkout, install Lua 5.1, run all harnesses, BigWigs build, structure check, artifact upload, Release on a tag |
 
 ## Total Count
 
@@ -94,61 +143,30 @@ one since 0.4.1.
 - **Application**: 2 — ForeverGuildComms, ForeverGroupComms
 - **Infrastructure**: 0
 - **Shared**: 1 — ForeverCommsVoice
-- **Test**: 0 as packages; 3 `tests/` directories holding 17 harnesses
+- **Test**: 0 as packages; 3 `tests/` directories holding 28 harnesses
 
 ### Aggregate
 
-| Metric | Value | Change |
-| --- | --- | --- |
-| Shipped Lua modules | 25 | +3 |
-| Shipped Lua lines | 3,806 | +418 |
-| Public methods | 152 | +23 |
-| Registered events | 25 across 3 dispatchers | — |
-| **`OnUpdate` handlers** | **1** — `Queue.lua:70`, against the project's own rule | +1 |
-| SavedVariables tables | 4 | — |
-| Offline harnesses | 17, 1,215 lines, 32% of shipped Lua | +4 |
-| **Harnesses failing** | **3** | +3 |
-| Modules no harness loads | 5 | +1 |
-| Active CI workflows | 1 at the repository root | — |
-| **CI steps verifying behaviour** | **0** — regressed from 1 | −1 |
-| CI steps verifying packaging | 1 — `check_bigwigs_bundle.py` | −4 |
-| Release paths present | 3 — BigWigs, Python builder, PowerShell builder | +1 |
-| Release paths exercised | 1 | — |
-| Stale version strings | 7 | +7 |
-| Embedded third-party libraries | 0 | — |
-
-## Package relationships
+| Measure | Value |
+| --- | --- |
+| Shipped Lua modules | 25 |
+| Shipped Lua lines | 3,927 |
+| Public methods | 153 |
+| Offline harnesses | 28 |
+| Harness lines | 4,138 (105% of shipped) |
+| Event dispatchers | 3, one per addon |
+| Registered events | 25 |
+| SavedVariables tables | 4 |
+| Modules loaded by no harness | 0 |
 
 ```mermaid
-flowchart BT
-    Voice["ForeverCommsVoice 0.2.1-beta<br/>SHARED LIBRARY<br/>wording + review queue"]
-    Guild["ForeverGuildComms 0.6.2-beta<br/>APPLICATION"]
-    Group["ForeverGroupComms 0.3.3-beta<br/>APPLICATION"]
-    Guild -->|"Render + Enqueue/PendingCount"| Voice
-    Group -->|"Render + Enqueue/PendingCount"| Voice
-    Voice -.->|"QueueChanged refreshes both"| Guild
-    Voice -.->|"QueueChanged refreshes both"| Group
+graph TD
+    Voice["ForeverCommsVoice 0.2.2-beta<br/>SHARED LIBRARY<br/>wording + review queue"]
+    Guild["ForeverGuildComms 0.6.3-beta<br/>APPLICATION"]
+    Group["ForeverGroupComms 0.3.4-beta<br/>APPLICATION"]
+    Titan["Titan Panel / LibDataBroker<br/>OPTIONAL, runtime probe"]
+    Guild -->|hard TOC dependency| Voice
+    Group -->|hard TOC dependency| Voice
+    Guild -.->|optional| Titan
+    Group -.->|optional| Titan
 ```
-
-**Text alternative**: Both applications depend on the shared library, now for two things
-rather than one: message wording via `V:Render`, and click-to-send review via `V:Enqueue`
-and `V:PendingCount`. The library calls back into whichever consumers are present through
-`V:QueueChanged`, which probes `_G.ForeverGuildComms` for `UpdateApprovalsUI` and
-`UpdateBroker` and `_G.ForeverGroupComms` for `RefreshUI`. That back-reference was
-optional before this span and is now how both consumers learn the queue changed. There is
-still no dependency between the two applications.
-
-## Observations relevant to planning
-
-1. **The suite is red and nothing automated would notice.** Three mechanical failures, all
-   introduced because the CI test step was removed in the same commit.
-2. **The library now owns two shared capabilities.** Adding the queue was the right call —
-   it removed parallel implementations and closed a positional-binding finding carried
-   since 0.4.1 — but it raises the cost of a breaking library change, since both
-   consumers now depend on the library for wording *and* delivery review.
-3. **Three release paths, one exercised, documentation pointing at an unexercised one.**
-   Decide which is authoritative.
-4. **Version drift returned immediately** after the check that prevents it stopped running.
-5. **GroupComms is the least-tested package by a wide margin**: 2 harnesses for 7 modules,
-   with four of those modules loaded by nothing, while it is the package holding the only
-   inbound untrusted-data path in the bundle.

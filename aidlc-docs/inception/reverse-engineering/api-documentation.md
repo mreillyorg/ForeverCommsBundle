@@ -1,378 +1,235 @@
 # API Documentation
 
-**Analysis date**: 2026-10-19T13:30:00Z
-**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
+**Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
+**Analysis date**: 2026-10-25T02:30:00Z
+**Target commit**: `a64ac2a`
 
 ## REST APIs
 
-None. The bundle has no network surface, no HTTP client and no server component.
-
-## Public cross-addon API
-
-This is the one genuinely public contract in the project: the surface
-`ForeverCommsVoice` exposes to its two consumers. Everything else is internal to a single
-addon.
-
-**New in 0.2.1**: the library exposes a second shared capability, a click-to-send review
-queue, alongside the rendering surface. Both are consumed by both applications.
-
-### `_G.ForeverCommsVoice` — review queue, new this span
-
-| Method | Signature | Contract |
-| --- | --- | --- |
-| `V:Enqueue` | `(data) -> id or nil` | **The queue entry point.** Requires `data.source` of `"guild"` or `"group"`, a non-empty `data.text`, and a `data.send` function; returns nil on any validation failure. `data.timeout` overrides the configured auto-skip, clamped 0..3600 where 0 means never expire. Prunes expired items first, assigns a monotonic `id`, drops the oldest if the backlog is at 100, starts the expiry watcher, notifies consumers, and shows the window when `showOnNew` is set |
-| `V:Approve` | `(id) -> boolean` | Re-checks expiry **before** calling the consumer's `send`, so a click racing the sweep cannot resurrect a stale message. `pcall`s the callback. Treats `true` as sent and removes the item; a second return value of `"stale"` also removes it, letting a consumer discard work it can no longer honour — a guild change, for example — without the library knowing why |
-| `V:Skip` / `V:SkipAll` | `(id)` / `(source)` -> boolean | Discard one item, or all items optionally filtered by source. Never sends |
-| `V:Expire` | `(timestamp) -> boolean` | Removes every item past `expiresAt`; returns whether anything changed |
-| `V:PendingCount` / `V:PendingList` | `(source)` -> number / array | Count or list, optionally filtered to `"guild"` or `"group"`. Both consumers use the count for their indicators and menus |
-| `V:FindQueueItem` | `(id) -> index, item` | ID lookup; the reason no consumer binds a UI row to a list position any more |
-| `V:QueueChanged` | `()` | Fan-out. Refreshes the shared UI, then probes `_G.ForeverGuildComms` for `UpdateApprovalsUI` and `UpdateBroker`, and `_G.ForeverGroupComms` for `RefreshUI` |
-| `V:EnsureQueueTicker` | `()` | Lazily creates the expiry watcher. **Uses `SetScript("OnUpdate")`** throttled to 0.5s, against the project's own `C_Timer` rule — the only `OnUpdate` in the bundle |
-| `V:GetQueueSettings` | `() -> table` | Reads and clamps `ForeverCommsVoiceCharDB.queue`: `visibleRows` 1..10, `autoSkipSeconds` 0..3600, `sourceDisplay` `text`/`icon`, `showOnNew` boolean, `x`/`y` within ±10000 |
-| `V:SetQueueOption` | `(key, value) -> boolean` | Validating writer for the six queue settings |
-| `V:BuildQueueUI` / `V:RefreshQueueUI` / `V:RefreshQueueCountdowns` / `V:ShowQueue` | — | The movable shared list window |
-| `V:Print` | `(message)` | Tagged output. **Defined in `Queue.lua`**, though every other package keeps `Print` in `Core.lua` |
-
-**Queue item shape**: `{id, source, kind, label, text, send, created, timeout, expiresAt}`.
-`send` is a function reference supplied by a consumer, which is why the queue is
-deliberately never persisted.
-
-### `_G.ForeverCommsVoice` — rendering
-
-| Method | Signature | Contract |
-| --- | --- | --- |
-| `V:Render` | `(scope, kind, vars, options) -> string` | **The primary entry point.** Returns final, interpolated, byte-clamped text. `scope` is `"guild"` or `"group"`; `kind` is a key within that catalog. `options.custom` is a consuming addon's user-authored template and, when it differs from the English base, is used verbatim with no translation or accent. `options.random = false` disables variation; `options.preview = true` renders without consuming a shuffle-bag draw. `options.fallback` is used when the scope or kind is unknown |
-| `V:GetSettings` | `() -> table` | Lazily creates and normalizes `ForeverCommsVoiceCharDB.voice`, caches it on `V.char.voice`, returns it |
-| `V:MigrateLegacy` | `(legacy) -> table` | One-time adoption of a consuming addon's old per-character voice table, latched by `ForeverCommsVoiceCharDB.migratedFromGuild`. Re-validates the accent afterwards and falls back to `"auto"` |
-| `V:SetOption` | `(key, value) -> boolean` | Validates, writes, re-validates the accent when language or race filter changes, then refreshes its own panel and probes `_G.ForeverGuildComms` for `RefreshOptions` and `UpdateRequestPreview`. **As of 0.1.1 this is the only sanctioned writer of the shared profile** — GuildComms' `A:SetVoiceOption` delegates here. The back-probe is consequently load-bearing rather than a convenience |
-| `V:ValidateOption` | `(key, value) -> boolean` | Pure validation against `voiceDefaults`, `languageByID` and the accent list |
-| `V:RegisterCatalog` | `(scope, catalog) -> boolean` | Registers a language-keyed template table under a scope name. Called twice by `GroupPhrases.lua` |
-| `V:GetAvailableAccents` | `() -> array` | `{{id, label}, ...}` beginning with `auto` and `none`, filtered by the selected language and optionally by race |
-| `V:ResolveAccent` | `() -> accent or nil` | The accent record actually in force, resolving `auto` through `raceAccents` and returning nil for `none` or an ineligible selection |
-| `V:GetPlayerRace` | `() -> string` | `UnitRace("player")` token, with a substring probe that maps a Skyborne race to `"Skyborne"` |
-| `V:LocalizeRoleText` | `(roles, fallback) -> string` | Slash-joined localized role names in `roleOrder`, or the localized fallback label |
-| `V:LocalizeActivityType` | `(kind) -> string` | Localized `Dungeon`/`Raid`/`Quest` |
-| `V:Format` | `(template, vars) -> string` | `{name}`-style interpolation; unknown placeholders are left literal. Clamps to 250 bytes without splitting a UTF-8 character |
-| `V:Pick` | `(scope, kind, language, accent, base, additional, randomized) -> string` | Shuffle-bag selection among `base` plus deduplicated `additional` |
-| `V:ChooseMessageTemplate` | `(kind, language, accent, base) -> string` | The older guild-only shuffle bag, still called through `VoiceBridge` |
-| `V:BuildOptions` / `V:OpenOptions` / `V:RefreshOptions` | `()` | Settings panel lifecycle |
-| `V:VoiceText` | `(kind, vars, preview) -> string` | **Legacy and unreachable inside the library.** Reads `self.db`, which the library never assigns, so it returns `""`. Retained verbatim from the pre-extraction GuildComms module |
-
-### Documented usage, from `ForeverCommsVoice/README.md`
-
-```lua
-local V = _G.ForeverCommsVoice
-local message = V:Render("group", "pull", nil, {random=true})
-local welcome = V:Render("guild", "join", {name="Rosa"},
-    {custom=ForeverGuildCommsDB.templates.join, random=true})
-```
-
-The library never sends chat, never takes an action on the player's behalf and never
-changes what the player types. Delivery timing belongs entirely to the consumer.
+**None.** This is a WoW addon bundle. There is no HTTP surface, no socket, and no cloud
+service. The only inter-process communication is the game's own chat transport.
 
 ## Internal APIs
 
-### ForeverGuildComms — `_G.ForeverGuildComms`, 64 methods
+### ForeverCommsVoice — the shared library (33 methods)
 
-#### Core.lua — 27 methods
+Published as `_G.ForeverCommsVoice`. This is the only cross-package API contract in the
+bundle, so a change here is a change to both consumers.
 
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:NormalizeTiming` | `(key, value, fallback) -> number or nil` | Clamp and round a timing value to `timingLimits`; rejects NaN and infinities |
-| `A:Print` | `(s)` | Tagged chat-frame output |
-| `A:Key` | `(name) -> string` | Lowercase, trim, collapse whitespace. All name-keyed lookups go through this |
-| `A:IsSelf` | `(name, guid) -> boolean` | GUID first, then the normalized name, `selfKeys`, and a single explicit `-Realm` strip. Never shortens a character name further |
-| `A:ChatLimit` | `(text) -> string` | UTF-8-safe 250-byte clamp |
-| `A:Format` | `(template, vars) -> string` | Interpolate then clamp |
-| `A:CommsText` | `(kind, vars, preview) -> string` | Prefers `VoiceText` when present, else the raw template. The one seam that makes the voice layer optional |
-| `A:CanUse` | `() -> boolean` | `db.enabled and IsInGuild()`. The precondition for every guild-facing behaviour |
-| `A:Now` | `() -> number` | `GetTime()` or 0 |
-| `A:PruneEventsSeen` | `(now)` | Drop dedup keys older than 3600s, throttled to once per 60s |
-| `A:IsDuplicate` | `(key, cooldown) -> boolean` | Prune, then test and record |
-| `A:SendGuild` | `(message) -> boolean` | The **only** `SendChatMessage` call site. Re-checks `CanUse`, clamps, wraps in `pcall` |
-| `A:QueueGuild` | `(message, key, cooldown)` | The required path for every automatic message: dedup, build an entry stamped with the current guild, then stage or enqueue |
-| `A:StageApproval` | `(entry)` | Append to the verify backlog, capped at 30 oldest-first |
-| `A:ApproveMessage` | `(index)` | Explicit send. Discards the entry if the guild changed; never schedules a delayed send after a click |
-| `A:DismissMessage` | `(index)` | Discard without sending |
-| `A:ClearApprovals` | `()` | Wipe the backlog |
-| `A:DrainQueue` | `()` | Latched timer enforcing `max(3, messageSpacing)` between automatic sends; re-checks guild identity and mode inside the callback |
-| `A:RoleText` | `(roles, noneText) -> string` | Untranslated role join, used for custom templates |
-| `A:RefreshOptions` | `()` | Invoke the Settings panel's refresh closure list |
-| `A:SetOption` | `(key, value) -> boolean` | The single settings writer for Settings and the Titan menu. Validates by key class; templates are deliberately rejected here |
-| `A:VoiceOptionLabel` | `(key, id) -> string` | Display label for a voice value |
-| `A:SetVoiceOption` | `(key, value) -> boolean` | **Rewritten in 0.5.1 as a 7-line delegation to `V:SetOption`**, then `UpdateBroker`. Returns `false` if the library or its `SetOption` is missing. The former 27-line duplicate validator and the direct mutation of `self.char.voice` are deleted |
-| `A:VoiceChoices` | `(key) -> array` | Choice list for a voice cycler |
-| `A:RunQuickAction` | `(action)` | `alerts`, `help`, `rescan`. None of them sends guild chat |
-| `A:OpenSettings` | `(section)` | Open the panel, optionally deferring a scroll to the messages or languages anchor |
-| `A:Initialize` | `()` | SavedVariables creation and migration, timing normalization, the one-time Voice migration, identity capture, class role defaults, module construction, the 300s prune ticker, the 3-second login tabard check, the broker probe |
+#### `Core.lua` — wording and the voice profile
 
-#### VoiceBridge.lua — 7 methods
+| Method | Purpose |
+| --- | --- |
+| `V:Print(message)` | Tagged console output |
+| `V:GetSettings()` | The per-character voice profile, normalized and clamped on every read |
+| `V:MigrateLegacy(legacy)` | One-time adoption of GuildComms' old profile, latched by `migratedFromGuild` |
+| `V:ValidateOption(key, value)` | Whether a profile write is acceptable |
+| `V:SetOption(key, value)` | **The sole writer of the shared profile.** Validates, writes, refreshes dependents. Returns `true` on success |
+| `V:RegisterCatalog(scope, catalog)` | Register a phrase catalog under `"guild"` or `"group"` |
+| `V:Format(template, vars)` | Substitute `{name}`-style placeholders, then clamp to 250 bytes on a UTF-8 boundary |
+| `V:Pick(scope, kind, language, accent, base, additional, randomized)` | Shuffle-bag selection; exhausts a bank before repeating and avoids consecutive duplicates |
+| `V:Render(scope, kind, vars, options)` | **The main entry point.** Dispatches to a per-scope resolver, picks a template, applies flair and the Expressive punctuation rule, substitutes and clamps |
 
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:GetPlayerRace` | `() -> string` | Forward to `V` |
-| `A:GetAvailableAccents` | `() -> array` | Forward to `V` |
-| `A:ResolveAccent` | `() -> accent or nil` | Forward to `V` |
-| `A:VoiceText` | `(kind, vars, preview) -> string` | `V:Render("guild", kind, vars, {custom=db.templates[kind], random=db.randomizeMessages == true, preview=preview})`. The whole translation of GuildComms' old contract into the library's |
-| `A:LocalizeRoleText` | `(roles, fallback) -> string` | Forward to `V` |
-| `A:LocalizeActivityType` | `(kind) -> string` | Forward to `V` |
-| `A:ChooseMessageTemplate` | `(kind, language, accent, base) -> string` | Forward to `V` |
+**`V:Render` options contract** — the part a consumer depends on:
 
-The module also aliases eight Voice data tables onto `A` — `voiceDefaults`, `languages`,
-`languageByID`, `localeTemplates`, `localeRoleNames`, `localeActivityTypes`, `accents`,
-`accentOrder`, `raceAccents`, `localeVariants`, `accentVariants`, `messageVariantBags` —
-so `Options.lua` and `TitanMenu.lua` required no changes.
+| Field | Meaning |
+| --- | --- |
+| `custom` | A user-authored template. If it differs from the English catalog base it is treated as a user edit and returned **untransformed** |
+| `random` | `false` pins the first template; otherwise the shuffle bag is consulted |
+| `preview` | `true` renders without consuming a shuffle choice |
+| `fallback` | Used when the scope or kind is unknown |
 
-#### Roster.lua — 7 methods
+#### `Queue.lua` — the shared review backlog
 
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:RequestRoster` | `(force)` | `C_GuildInfo.GuildRoster()` behind a 30-second throttle |
-| `A:ReadRoster` | `() -> members, count, online` | Normalized snapshot keyed by `A:Key(name)` |
-| `A:AcceptRoster` | `(members, count, online, baseline)` | The diff. Level congratulations need online-to-online plus a numeric prior level above zero plus a strictly higher new level; login greetings need offline-to-online. A baseline read sends nothing |
-| `A:CaptureBaseline` | `()` | First read; retries in 4 seconds on a zero count |
-| `A:OnRosterEvent` | `(event)` | Guild-change reset that wipes the pending queue and clears approvals, baseline deferral, and the incomplete-read guard: reject a count of zero or, above 10 known members, a count below 70% of the known total |
-| `A:OnSystemGuildJoin` | `(message)` | Pattern built from the localized `ERR_GUILD_JOIN_S` with Lua metacharacters escaped |
-| `A:SetupRoster` | `()` | Immediate and 5-second reads, then a 60-second request ticker |
+| Method | Purpose |
+| --- | --- |
+| `V:GetQueueSettings()` | Persisted queue settings, each clamped on read |
+| `V:SetQueueOption(key, value)` | Validating writer for queue settings |
+| `V:PendingCount(source)` | Count, optionally filtered to `"guild"` or `"group"` |
+| `V:PendingList(source)` | The records, optionally filtered |
+| `V:FindQueueItem(id)` | Returns index and item |
+| `V:QueueChanged()` | Notify both consumers' UI |
+| `V:EnsureQueueTicker()` | Arm the expiry ticker; cancelled when the queue drains |
+| `V:Enqueue(data)` | **The producer entry point.** Returns a monotonic id, or nil if rejected |
+| `V:Skip(id)` / `V:SkipAll(source)` | Remove without sending |
+| `V:Approve(id)` | Invoke the record's callback **only** on an explicit click |
+| `V:Expire(timestamp)` | Drop timed-out records. Never sends |
 
-#### Alerts.lua — 5 methods
+**`V:Enqueue` record contract**:
 
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:AddAlert` | `(kind, sender, text)` | Private only: 120-second dedup, push onto a 30-entry list, print locally, optional sound, refresh UI and broker |
-| `A:ScheduleRecipeScan` | `()` | 0.5-second debounce |
-| `A:ScanRecipes` | `() -> boolean` | Fresh cache for the open profession; learned, non-disabled, non-gathering recipes with names of at least 4 characters |
-| `A:MatchCraft` | `(lower) -> string or nil` | Requires both an explicit request phrase and an exact cached recipe or output name |
-| `A:OnGuildChat` | `(message, sender)` | Drops self, cleans escapes, then craft and group matching. Group alerts are suppressed when the line already matched a craft request |
-
-#### Tabard.lua — 2 methods
-
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:CheckTabard` | `(initial)` | Transition state machine. A login check can still prompt after an earlier zone check initialized `wasInCity`; `tabardCityPrompted` enforces at most one prompt per city stay |
-| `A:ScheduleTabardCheck` | `()` | 1.2-second latched debounce |
-
-#### UI.lua — 11 methods
-
-`A:BuildUI`, `A:UpdateAlertsUI`, `A:ShowAlerts`, `A:BuildApprovalsUI`,
-`A:UpdateApprovalsUI`, `A:ShowApprovals`, `A:BuildRequestUI`, `A:RequestText`,
-`A:UpdateRequestPreview`, `A:ShowRequest`, `A:SendHelpRequest`.
-
-`A:RequestText` is the notable one: it builds a fingerprint from the template, the
-randomize flag, all four voice values and all five interpolated variables, and reuses the
-cached draft unless the fingerprint changed — so Send posts exactly the previewed
-wording. `A:SendHelpRequest` calls `SendGuild` directly after an explicit click and
-enforces one request per 20 seconds.
-
-#### Options.lua, TitanMenu.lua, Broker.lua — 5 methods
-
-`A:BuildOptions`; `A:PopulateTitanMenu`, `A:OpenTitanMenu`; `A:TryBroker`,
-`A:UpdateBroker`.
-
-### ForeverGroupComms — `_G.ForeverGroupComms`, 47 methods
-
-#### Core.lua — 20 methods
-
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:Now` | `() -> number` | `GetTime()` or 0 |
-| `A:Print` | `(s)` | Tagged `DEFAULT_CHAT_FRAME` output |
-| `A:Key` | `(n) -> string` | Same normalization contract as GuildComms |
-| `A:Trim` | `(text) -> string` | UTF-8-safe 250-byte clamp |
-| `A:Render` | `(kind, vars) -> string` | Shared-voice branch when `useSharedVoice` and the global are both present, passing `fallback = variants[kind][1]`; otherwise the local English rotation with a one-step anti-repeat |
-| `A:GroupChannel` | `() -> string or nil` | `INSTANCE_CHAT`, `RAID` or `PARTY`; nil when ungrouped |
-| `A:SameGroup` | `(name) -> boolean` | Roster membership test |
-| `A:IsSelf` | `(name) -> boolean` | Normalized comparison against `playerKey` |
-| `A:IsDuplicate` | `(key, seconds) -> boolean` | Inline sweep of entries older than 1200s, throttled to 60s, then test and record |
-| `A:Notify` | `(message, key)` | Private only: 90-second dedup, push onto a list bounded by `maxNotifications`, print, refresh |
-| `A:CanChat` | `() -> boolean` | `db.enabled and activeGroup and SendChatMessage` |
-| `A:Send` | `(kind, vars) -> boolean` | The **only** `SendChatMessage` call site. Renders, enforces a 2-second floor since the last send, `pcall`s the send |
-| `A:Stage` | `(kind, vars, desc)` | Queue a suggestion stamped with `groupSerial`, capped at 12 oldest-first, and notify |
-| `A:Approve` | `(index)` | Explicit send; discards a suggestion whose serial no longer matches |
-| `A:Quick` | `(kind) -> boolean` | Dispatch for keybindings, buttons and slash commands |
-| `A:CanManageGroup` | `() -> boolean` | Leader, or raid assistant in a raid |
-| `A:ReadyCheck` | `()` | Rank check, combat check, `C_PartyInfo.DoReadyCheck` or `DoReadyCheck`, `pcall` |
-| `A:MarkTarget` | `(index)` | Rank check, target exists, target hostile, combat check, `SetRaidTarget` or `SetRaidTargetIcon`, `pcall` |
-| `A:OpenSettings` | `()` | Settings category or the panel |
-| `A:Initialize` | `()` | SavedVariables creation with per-key type repair, `maxNotifications` clamped to 5..40, identity capture, quest-sync init, options, first roster scan, broker probe |
-
-#### Roster.lua — 6 methods
-
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:ScanRoster` | `(silent)` | Enumerate units, read assigned roles and levels, detect identity change, bump `groupSerial` and wipe suggestions and quest peers when it changes, then decide greetings, welcomes and congratulations. A `silent` call suppresses all messaging |
-| `A:RoleCounts` | `() -> table` | Tank, healer, damager, none |
-| `A:RoleSummary` | `() -> string` | Role-sorted `Name Role` list, collapsing to counts above 160 characters |
-| `A:RoleIssues` | `() -> array` | Unassigned roles always; in a non-raid party, a tank or healer count other than one |
-| `A:ReviewRoles` | `(quiet)` | Private notification keyed by `groupSerial` |
-| `A:OnReadyCheckEvent` | `(event, ...)` | Private tally. Records confirmations against the current serial and reports ready, not-ready and unconfirmed counts, explicitly stating that unconfirmed is not proof of a negative answer |
-
-#### Quests.lua — 12 methods
-
-| Method | Signature | Purpose |
-| --- | --- | --- |
-| `A:InitializeQuestSync` | `()` | `pcall` the prefix registration, record `questCommsReady`, seed the local quest snapshot |
-| `A:ClearQuestPeers` | `()` | Wipe peers, reassembly state and the outbox; bump `outboxToken` to cancel in-flight work |
-| `A:QueuePacket` | `(message, channel, target)` | Enqueue behind the ready, grouped and `questSync` gates; outbox capped at 60 |
-| `A:FlushPackets` | `()` | One send per 1.15 seconds, re-checking serial, grouping and the setting inside the timer |
-| `A:ScheduleQuestSync` | `(force)` | 2.5s forced, 4s otherwise, invalidated by `syncSeq` |
-| `A:BroadcastQuests` | `(force)` | Signature suppression: an unchanged sorted ID list is not resent within 240 seconds. Bumps `questEpoch` and invalidates stored peer completions |
-| `A:ReplyCompletions` | `(sender, epoch, ids)` | Whispered `R` packets covering **only the IDs the peer disclosed** |
-| `A:OnAddonMessage` | `(prefix, message, channel, sender)` | Validate prefix, group membership and channel; parse and bound-check the header; reassemble; accept `Q` only if not older than the stored epoch and `R` only for the current local epoch |
-| `A:QuestRows` | `() -> array` | Per-quest classification into missing, has, completed and unknown, sorted by missing then unknown |
-| `A:ShareQuest` | `(id)` | Combat check, log presence check, pushable check, select-and-restore around `QuestLogPushQuest`, all `pcall`ed |
-| `A:OtherQuestRows` | `() -> array` | Reverse comparison: peers' active quests absent from the local log, suppressing those already flagged completed |
-| `A:RequestQuest` | `(id)` | Verify the quest is still in the reverse list, then send a chat request naming it |
-
-#### UI.lua, Options.lua, Broker.lua — 9 methods
-
-`A:BuildPanel`, `A:RefreshUI`, `A:ShowPanel`, `A:BuildQuests`, `A:RefreshQuestUI`,
-`A:ShowQuests`; `A:BuildOptions`; `A:TryBroker`, `A:UpdateBroker`.
-
-## Slash commands and bindings
-
-| Addon | Commands | Keybindings |
-| --- | --- | --- |
-| Voice | `/fcv`, `/commsvoice` — opens the shared voice panel | none |
-| GuildComms | `/fgc`, `/guildcomms` with `options`, `request`/`help`, `alerts`, `verify`/`review`, `recipes`, `clearrecipes`, `status`; bare input opens alerts | `FGC_OPEN_ALERTS`, `FGC_ASK_HELP`, `FGC_RESCAN_PROFESSION` |
-| GroupComms | `/fgp`, `/forevergroup` with `open`, `quests`/`quest`, `roles`, `ready`, `skull`, `moon`, `pull`, `mana`, `regroup`, `heal`, `cc`, `interrupt`, `sync`, `settings` | `FGROUP_PANEL`, `FGROUP_ROLES`, `FGROUP_QUESTS` |
-
-No binding has a `default=` attribute; all six are opt-in. Both `Bindings.xml` files are
-loaded automatically from their addon root and are deliberately absent from the TOCs.
-
-## Wire protocol — GroupComms quest sync
-
-The only serialized format in the project.
-
-```text
-Prefix:  ForeverGrpComms          (15 bytes; the WoW limit is 16)
-Packet:  <kind>|<proto>|<epoch>|<part>|<total>|<csv>
-  kind   Q = sender's active quest IDs, broadcast to the group
-         R = responder's completed IDs, whispered back to the asker
-  proto  "1"
-  epoch  1 .. 100000000, integer
-  part   1 .. total
-  total  1 .. 12
-  csv    comma-separated integers, 1 .. 99999999, max 230 bytes,
-         no leading/trailing/doubled commas, digits and commas only
+```lua
+V:Enqueue{
+    source  = "guild" | "group",   -- required, validated
+    kind    = "login",             -- optional label key
+    label   = "Login greeting",    -- optional display label
+    text    = "Welcome back!",     -- required, non-empty
+    send    = function() return true end,  -- required
+    timeout = 20,                  -- optional; omit for the user's default
+}
 ```
 
-Chunking targets 205 bytes of payload per packet and refuses to send more than 12
-chunks, printing "Quest log too large for group sync" instead.
+The producer owns identity re-validation inside `send`. Returning `false, "stale"` tells
+the queue to drop the record rather than leave it clickable; returning plain `false`
+leaves it queued so the click can be repeated.
 
-**Validation applied to every inbound packet**, in order: prefix match, message is a
-string, the client is grouped, sender is not self, sender is in the current roster,
-channel is one of `PARTY`/`RAID`/`INSTANCE_CHAT`/`WHISPER`, header matches the pattern,
-protocol equals `"1"`, every numeric field is an integer within range, `part <= total`,
-the CSV parses, the reassembly `total` matches, and finally the epoch rule — a `Q` older
-than the stored peer epoch is dropped and an `R` is accepted only when it equals the
-local `questEpoch`.
+#### `QueueUI.lua` and `Options.lua`
 
-**Disclosure limits**: only active quest IDs are broadcast. No titles, no objective
-progress, no completion history is volunteered. A completion reply answers only the IDs
-the asking peer already disclosed.
+`V:BuildQueueUI()`, `V:RefreshQueueCountdowns()`, `V:RefreshQueueUI()`,
+`V:ShowQueue(onlyShow)`, `V:RefreshOptions()`, `V:BuildOptions()`, `V:OpenOptions()`.
+
+#### `RaceProfiles.lua`
+
+`A:GetPlayerRace()`, `A:GetAvailableAccents()`, `A:ResolveAccent()`,
+`A:LocalizeRoleText(roles, fallback)`, `A:LocalizeActivityType(kind)`.
+
+### ForeverGuildComms (67 methods)
+
+Published as `_G.ForeverGuildComms`. Selected methods; see `code-structure.md` for the
+per-module breakdown.
+
+| Method | Purpose |
+| --- | --- |
+| `A:FillDefaults(dest, defaults)` | Recursive backfill, shared by load-time migration and Restore Defaults |
+| `A:CanFillRole(role)` | Whether this character's class can offer a role |
+| `A:Key(name)` | Lowercase, trim, collapse whitespace. All name keys go through it |
+| `A:IsSelf(name, guid)` | GUID first, then the normalized name and realm-qualified variants. Strips only an explicit `-Realm` suffix, never a prefix |
+| `A:ChatLimit(text)` | 250-byte clamp on a UTF-8 boundary |
+| `A:CommsText(kind, vars, preview)` | The single wording indirection; delegates to the library |
+| `A:CanUse()` | Enabled **and** `IsInGuild()`. Gates every guild-facing behaviour |
+| `A:IsDuplicate(key, cooldown)` | Deduplication with periodic pruning |
+| `A:SendGuild(message)` | The one send call site; `pcall` around `SendChatMessage` |
+| `A:QueueGuild(message, key, cooldown)` | Dedup, then either stage for review or enqueue for spaced automatic sending |
+| `A:StageApproval(entry)` | Hand to the shared queue capturing guild and text; falls back to a local 30-entry list |
+| `A:ApprovalThrottled()` | The 2-second floor between explicit approvals |
+| `A:ApproveMessage(index)` / `A:DismissMessage(index)` / `A:ClearApprovals()` | Fallback-list approval actions |
+| `A:DrainQueue()` | Spaced automatic sending, re-checking guild and mode before each send |
+| `A:SetOption(key, value)` | Validating writer shared by Settings and the Titan menu |
+| `A:SetVoiceOption(key, value)` | Delegates to `V:SetOption`; the library stays the sole profile writer |
+| `A:RunQuickAction(action)` | Single entry point for keybindings and the Titan menu |
+| `A:AcceptRoster(members, count, online, baseline)` | The diff. `baseline = true` writes state and sends nothing |
+| `A:OnRosterEvent(event)` | Guild-change reset, baseline scheduling, and the suspicious-read guard |
+| `A:OnGuildChat(message, sender)` | Guild-chat-only alert parsing, self-excluded |
+| `A:UpdateAlertsUI()` | Re-bind the 7 fixed rows to the current page |
+
+### ForeverGroupComms (53 methods)
+
+Published as `_G.ForeverGroupComms`.
+
+| Method | Purpose |
+| --- | --- |
+| `A:Trim(text)` | 250-byte clamp on a UTF-8 boundary |
+| `A:Render(kind, vars)` | Library wording, or the local English bank when `useSharedVoice` is off |
+| `A:GroupChannel()` | `INSTANCE_CHAT`, `RAID` or `PARTY`; nil when ungrouped |
+| `A:Notify(message, key)` | Private notification with optional dedup and a capped backlog |
+| `A:CanChat()` | Enabled, grouped, and `SendChatMessage` present |
+| `A:SendPrepared(message, serial)` | **The single send funnel.** Enforces `CanChat`, the serial check, and the 2-second floor. Returns `false, "stale"` on a serial mismatch |
+| `A:Stage(kind, vars, desc)` | Capture the rendered text and serial, hand to the shared queue, fall back to a 12-entry list |
+| `A:Approve(index)` | Fallback-list approval with a serial check |
+| `A:CanManageGroup()` | Leader, or raid assistant in a raid. **Denies when the API is absent** |
+| `A:ReadyCheck()` / `A:MarkTarget(index)` | Rank-gated, combat-gated, feature-probed |
+| `A:ScanRoster(silent)` | Group scan; bumps `groupSerial` on an identity change and purges staged work |
+| `A:OnReadyCheckEvent(event, ...)` | Private response tally; never announces results |
+
+#### `Quests.lua` — the addon-message protocol
+
+| Method | Purpose |
+| --- | --- |
+| `A:InitializeQuestSync()` | Register the prefix; sets `questCommsReady` |
+| `A:ClearQuestPeers()` | Wipe peer state and **bump `outboxToken`**, cancelling queued packets |
+| `A:QueuePacket(message, channel, target)` | Enqueue under the 60-entry bound, stamped with `groupSerial` |
+| `A:FlushPackets()` | One packet per 1.15 seconds, re-checking token, serial, grouping and `questSync` at send time |
+| `A:BroadcastQuests(force)` | Advertise active quest ids; skips an unchanged log inside 240 seconds; refuses past 12 chunks |
+| `A:ReplyCompletions(sender, epoch, ids)` | Answer **only** the ids the peer disclosed |
+| `A:OnAddonMessage(prefix, message, channel, sender)` | Inbound validation and reassembly |
+| `A:QuestRows()` / `A:OtherQuestRows()` | Comparison rows in both directions |
+| `A:ShareQuest(id)` / `A:RequestQuest(id)` | Manual, click-driven only |
 
 ## Data Models
 
-### `ForeverCommsVoiceCharDB` — per character
+### Wire format — quest sync
+
+```text
+KIND|PROTOCOL|EPOCH|PART|TOTAL|CSV
+```
+
+| Field | Rule |
+| --- | --- |
+| `KIND` | Exactly `Q` (advertisement) or `R` (completion reply) |
+| `PROTOCOL` | Exactly `1` |
+| `EPOCH` | Integer 1–100000000 |
+| `PART` | Integer, 1 ≤ PART ≤ TOTAL |
+| `TOTAL` | Integer 1–12 |
+| `CSV` | Digits and single commas only, ≤ 230 bytes, each id 1–99999999. Empty is **valid** and means "no active quests" |
+
+**Inbound validation order**, every step a rejection: prefix equality → body is a string
+→ grouped → sender resolves, is not self, and **is in the current roster** → channel in
+`PARTY`/`RAID`/`INSTANCE_CHAT`/`WHISPER` → header matches → protocol equals `1` →
+numeric ranges → integrality → payload parses → reassembly `total` agrees → all parts
+present. For `Q`, an older epoch is dropped; for `R`, the epoch must equal the local
+`questEpoch` exactly.
+
+Nothing from the wire is ever used as a name or compiled into a pattern. Peer names come
+from the roster; quest titles come from local `C_QuestLog` lookups.
+
+### SavedVariables
+
+Four tables, three owners. No package writes another's table.
+
+#### `ForeverCommsVoiceCharDB` (per character)
 
 ```lua
 {
     voice = {language="en", accent="none", raceFilter=true, accentStrength="subtle"},
+    queue = {visibleRows=2, autoSkipSeconds=20, sourceDisplay="text",
+             showOnNew=true, x=0, y=0},
     migratedFromGuild = true,   -- latch; set once by MigrateLegacy
 }
 ```
+
 - **Validation**: `language` must exist in `languageByID` or resets to `en`;
-  `accentStrength` must be `subtle`/`moderate`/`expressive`; `raceFilter` must be
-  boolean; `accent` must be a string and must appear in `GetAvailableAccents()` or falls
-  back to `auto`.
+  `accentStrength` must be `subtle`/`moderate`/`expressive`; `raceFilter` must be boolean;
+  `accent` must appear in `GetAvailableAccents()` or falls back to `auto`. Queue fields are
+  clamped on every read — `visibleRows` 1–10, `autoSkipSeconds` 0–3600, `sourceDisplay`
+  to `text`/`icon`, position to ±10000.
+- **Note**: `A.char.voice` in GuildComms and this `voice` table are the **same object** at
+  runtime. Route every change through `V:SetOption`.
 
-### `ForeverGuildCommsDB` — account wide
+#### `ForeverGuildCommsDB` (account-wide)
 
-```lua
-{
-    enabled=true, outgoingMode="automatic",
-    greetLogin=true, greetJoin=true, congratulateLevel=true,
-    randomizeMessages=true,
-    craftingAlerts=true, groupAlerts=true,
-    tabardInCity=true, tabardOnExit=false,
-    loginCooldown=300, messageSpacing=6, alertsSound=false,
-    templates = {login=..., join=..., level=..., help=...},
-}
-```
-- **Validation**: `fillDefaults` backfills recursively; `outgoingMode` is forced to
-  `automatic` unless exactly `verify`; blank or whitespace-only templates are refilled;
-  both timing keys pass `NormalizeTiming` on load. `messageSpacing` is clamped to 3..120
-  and `loginCooldown` to 0..3600.
+Behaviour settings and custom templates, including `outgoingMode` (`"automatic"` or
+`"verify"`), `greetLogin`, `greetJoin`, `congratulateLevel`, `craftingAlerts`,
+`groupAlerts`, `randomizeMessages`, **`reviewAutoShow`** (new in 0.6.3-beta),
+`loginCooldown`, `messageSpacing`, and `templates` for the four guild message kinds.
 
-### `ForeverGuildCommsCharDB` — per character
+- **Migration**: `fillDefaults` backfills missing keys recursively on load; timing values
+  are clamped by `A:NormalizeTiming`; `outgoingMode` is forced to a known value.
 
-```lua
-{
-    voice = {...},            -- legacy; migrated into ForeverCommsVoiceCharDB
-    recipes = {["Profession"] = {["lowercase name"] = "Display Name"}},
-    myRoles = {tank=bool, healer=bool, damage=bool},
-    needRoles = {tank=bool, healer=bool, damage=bool},
-}
-```
-- **Relationships**: `myRoles` is seeded from `classRoles[playerClass]`; `recipes` feeds
-  `MatchCraft`. The `voice` subtable is read once by `MigrateLegacy` and then superseded
-  by the shared table.
+#### `ForeverGuildCommsCharDB` (per character)
 
-### `ForeverGroupCommsDB` — account wide
+`recipes` (keyed by profession name), `myRoles`, `needRoles`, and the legacy `voice`
+table retained only so the migration latch can ignore it.
 
-```lua
-{
-    enabled=true, autoGreeting=false, autoLevel=false,
-    privateRoleAlerts=true, privateQuestReminder=true,
-    questSync=true, randomMessages=true, useSharedVoice=true,
-    maxNotifications=20,
-}
-```
-- **Validation**: missing keys copied from defaults; any key whose stored **type** does
-  not match the default's type is reset; `maxNotifications` clamped to 5..40 and floored.
-- **Note on defaults**: the two settings that would post to chat without a click —
-  `autoGreeting` and `autoLevel` — both default to `false`. `questSync` defaults to
-  `true`, which enables the addon message exchange on first load.
+#### `ForeverGroupCommsDB` (account-wide)
 
-### `ForeverCommsVoiceCharDB` — queue settings, new this span
+`enabled`, `autoGreeting`, `autoLevel`, `privateRoleAlerts`, `privateQuestReminder`,
+`questSync`, `randomMessages`, `useSharedVoice`, `maxNotifications`.
 
-```lua
-{
-    voice = {language="en", accent="none", raceFilter=true, accentStrength="subtle"},
-    migratedFromGuild = true,
-    queue = {visibleRows=2, autoSkipSeconds=20, sourceDisplay="text",
-             showOnNew=true, x=0, y=0},
-}
-```
-- **Validation**: every numeric field passes one `integer()` helper with NaN and infinity
-  guards; `sourceDisplay` collapses to `"text"` unless exactly `"icon"`; `showOnNew` must
-  be boolean; `x`/`y` reset to 0 beyond ±10000.
-- **Note**: `autoSkipSeconds` defaults to **20**, so a queued message is discarded 20
-  seconds after being staged unless the user clicks. `0` disables expiry. This is a safe
-  direction for a chat addon — it drops rather than sends — but it is a new way for a
-  pending message to disappear without the user acting, and neither consumer's README
-  documents the default.
-- The queue **list** itself is never persisted; only these settings are. The module header
-  comment says "Never persisted", which is true of `reviewQueue` but reads as covering the
-  whole module.
+- **Migration**: `copyDefaults` plus a per-key `type()` check in `Initialize` repairs a
+  wrong-typed stored value; `maxNotifications` is clamped to 5–40.
 
-### Runtime-only state
+### Transient in-memory records
 
-| Addon | Field | Shape | Bound |
-| --- | --- | --- | --- |
-| Voice | `messageVariantBags` | signature to `{order, position, count, last}` | unbounded, session-local |
-| Voice | `catalogs` | scope to language-keyed table | 2 entries |
-| Guild | `eventsSeen` | dedup key to timestamp | pruned at 3600s |
-| Guild | `alerts` | newest-first list | 30 |
-| Guild | `pendingApprovals` | oldest-first list | 30 |
-| Guild | `pendingMessages` | FIFO queue | unbounded in principle; drained on a timer and wiped on guild change |
-| Guild | `roster` | key to `{name, level, online, guid}` | guild size |
-| Guild | `requestDraft` | `{fingerprint, text}` | 1 |
-| Group | `seen` | dedup key to timestamp | pruned at 1200s |
-| Group | `notifications` | newest-first list | `maxNotifications`, 5..40 |
-| Group | `approvals` | oldest-first list | 12 |
-| Group | `roster` | key to `{name, key, guid, token, role, level}` | group size |
-| Group | `questPeers` | key to `{epoch, active, completed, completionEpoch, when}` | group size, 300s TTL |
-| Group | `questParts` | token to `{total, pieces, when}` | pruned at 60s |
-| Group | `addonOutbox` | FIFO queue | 60 |
+| Record | Shape | Bound |
+| --- | --- | --- |
+| Review queue item | `{id, source, kind, label, text, send, created, timeout, expiresAt}` | 100, oldest dropped |
+| GuildComms pending message | `{text, kind, guild, time}` | Unbounded list, drained with spacing |
+| GuildComms approval | same shape as above | 30, oldest dropped |
+| GuildComms alert | `{kind, sender, text, time}` | 30, oldest dropped |
+| GroupComms approval | `{kind, vars, text, serial}` | 12, oldest dropped |
+| Addon outbox entry | `{message, channel, target, serial}` | 60, **refused** past the bound |
+| Quest peer | `{epoch, active, completed, completionEpoch, when}` | One per roster member, 300-second TTL |
+| Reassembly state | `{total, pieces, when}` | 60-second TTL, pruned at most once a minute |
+
+**Nothing transient is persisted.** Queue contents hold a live callback and a
+session-specific identity, so a reload discards them by design — which is why no stale
+message can reach a new guild or group.

@@ -1,220 +1,113 @@
 # Dependencies
 
-**Analysis date**: 2026-10-19T13:30:00Z
-**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
+**Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
+**Analysis date**: 2026-10-25T02:30:00Z
+**Target commit**: `a64ac2a`
 
 ## Internal Dependencies
 
 ```mermaid
-flowchart TB
-    subgraph Shared["Shared library"]
-        Voice["ForeverCommsVoice 0.2.1-beta"]
+graph TD
+    subgraph Hard["Hard, declared in the TOC"]
+        Voice["ForeverCommsVoice 0.2.2-beta"]
+        Guild["ForeverGuildComms 0.6.3-beta"]
+        Group["ForeverGroupComms 0.3.4-beta"]
     end
-    subgraph Apps["Applications"]
-        Guild["ForeverGuildComms 0.6.2-beta"]
-        Group["ForeverGroupComms 0.3.3-beta"]
-    end
-    subgraph Dist["Distribution"]
-        Builders["package.py / package.ps1"]
-        Installer["install/Install-ForeverComms.ps1"]
-    end
-
-    Guild -->|"Runtime, HARD"| Voice
-    Group -->|"Runtime, declared hard<br/>soft in code"| Voice
-    Voice -.->|"optional callback probe"| Guild
-    Builders -->|"bundles Voice into<br/>every consumer archive"| Voice
-    Installer -->|"prepends Voice to any<br/>consumer-only selection"| Voice
+    Titan["Titan Panel / LibDataBroker-1.1<br/>OptionalDeps + runtime probe"]
+    Guild -->|"## Dependencies"| Voice
+    Group -->|"## Dependencies"| Voice
+    Guild -.->|"LibStub(name, true)"| Titan
+    Group -.->|"LibStub(name, true)"| Titan
 ```
 
-**Text alternative**: Both application packages depend on the shared library at runtime and
-the library has no outbound package dependency, though it opportunistically probes the
-GuildComms global to refresh that addon's options panel. New this span: the dependency is
-also enforced by the distribution layer — the builders place a complete copy of
-ForeverCommsVoice inside each consumer's release archive, and the installer prepends it to
-any selection that names a consumer without it.
-
 ### ForeverGuildComms depends on ForeverCommsVoice
-- **Type**: Runtime, hard.
-- **Declaration**: `## Dependencies: ForeverCommsVoice` in `ForeverGuildComms.toc`.
-- **Enforcement**: now fourfold.
-  1. The client refuses to load an addon whose declared dependency is missing or disabled.
-  2. `VoiceBridge.lua` calls `error("ForeverGuildComms requires ForeverCommsVoice")` if
-     the global is nil.
-  3. **New** — every `ForeverGuildComms-*.zip` the builders produce contains a complete
-     `ForeverCommsVoice/` tree. Verified this pass: 17 `ForeverCommsVoice/` members in the
-     source archive, 9 in the `--runtime` archive.
-  4. **New** — `install/Install-ForeverComms.ps1` prepends `ForeverCommsVoice` to the
-     install list whenever a consumer is selected, and installs in canonical dependency
-     order, so the 13-line `Install-ForeverGuildComms.ps1` shim cannot produce a
-     Voice-less installation.
-- **Reason**: four modules, roughly 465 lines, were moved into the library. GuildComms'
-  entire outgoing wording path is served from there.
-- **Coupling surface**: one module, 26 lines, 7 forwarded methods and 12 aliased data
-  tables. **Reduced this span**: `A:SetVoiceOption` in `Core.lua` went from 27 lines of
-  independent validation and direct mutation of the shared table to a 7-line delegation to
-  `V:SetOption`, so the library is now the sole writer of the shared profile and the
-  duplicate validator is gone.
-- **Residual**: `A.char.voice` and `ForeverCommsVoiceCharDB.voice` remain the **same table
-  object** at runtime. That is by design, but it is why `panel.OnDefault` could previously
-  reset another addon's settings. The write path is now funnelled; the aliasing itself is
-  unchanged.
+
+- **Type**: Runtime, hard. `## Dependencies: ForeverCommsVoice` in the TOC.
+- **Reason**: all wording — languages, accents, race filtering, message variation — and
+  the shared review queue live in the library. `VoiceBridge.lua` is a 24-line set of
+  forwarders; `A:CommsText` is the single indirection the rest of the addon calls.
+- **Effect if absent**: the client refuses to load the addon.
 
 ### ForeverGroupComms depends on ForeverCommsVoice
-- **Type**: Runtime; declared hard, implemented soft.
-- **Declaration**: `## Dependencies: ForeverCommsVoice` in `ForeverGroupComms.toc`.
-- **Enforcement**: the client's TOC check, plus the two new distribution-layer guarantees.
-  `Core.lua` does not error; `A:Render` tests
-  `self.db.useSharedVoice and _G.ForeverCommsVoice` and falls through to the local
-  `A.variants` English table when either is false.
-- **Coupling surface**: two call sites — `V:Render("group", ...)` in `Core.lua` and
-  `V:OpenOptions()` from the Settings button in `Options.lua`.
-- **Note**: the soft fallback is also the user-facing `useSharedVoice` opt-out. The TOC is
-  nonetheless stricter than the code: GroupComms will not load without the library even
-  though its runtime path tolerates the absence.
 
-### ForeverCommsVoice depends on both consumers
-- **Type**: Runtime, optional, probe-only — but **broader and more load-bearing this span.**
-- **Two probes now**:
-  - `V:SetOption` probes `_G.ForeverGuildComms` for `RefreshOptions` and
-    `UpdateRequestPreview`. Because `A:SetVoiceOption` delegates to the library, this is
-    the *only* thing refreshing GuildComms' panel after a voice change.
-  - `V:QueueChanged`, new, probes `_G.ForeverGuildComms` for `UpdateApprovalsUI` and
-    `UpdateBroker`, and `_G.ForeverGroupComms` for `RefreshUI`. This is how **both**
-    consumers learn the shared review backlog changed, so the library now fans out to both
-    rather than just one.
-- **Consequence**: the library's back-reference is no longer a convenience. Both
-  applications depend on it for UI correctness, and the dependency graph is cyclic at
-  runtime even though it remains acyclic at load time — the probes are all guarded and
-  happen only after both addons have initialised.
-- GroupComms still implements none of the three Settings canvas callbacks, so its options
-  panel can display stale values; the queue fan-out refreshes its main UI, not its panel.
+- **Type**: Runtime, hard. `## Dependencies: ForeverCommsVoice` in the TOC.
+- **Reason**: group and dungeon wording for 8 languages, plus the shared review queue.
+- **Effect if absent**: the client refuses to load the addon.
+- **Note**: GroupComms retains a complete local English variant bank (`A.variants`) and a
+  `useSharedVoice` setting, so it can be switched back to its original wording at
+  runtime. That table and the library's `groupTemplates.en` are duplicated deliberately
+  and are now asserted entry-by-entry by `ForeverCommsVoice/tests/parity.lua`.
 
-### Both applications depend on ForeverCommsVoice for message review — new this span
-- **Type**: Runtime, hard, in addition to the existing rendering dependency.
-- **Surface**: `V:Enqueue` from both consumers' `Core.lua`; `V:PendingCount` from
-  GroupComms' `TitanMenu.lua` and `UI.lua` and GuildComms' `Core.lua`.
-- **Shape**: the consumer supplies a `send` **function reference** that the library
-  `pcall`s on approval, plus a `"stale"` return contract letting the consumer discard work
-  it can no longer honour. This is the first time the library holds executable references
-  belonging to another addon, which is why the queue is deliberately never persisted.
-- **Risk**: a breaking change to the library now breaks wording **and** delivery review in
-  both consumers. There is still no version negotiation.
+### ForeverCommsVoice depends on nothing
 
-### Intra-package load-order dependencies
-`Core.lua` must load first in each package because it declares the namespace and the state
-that later files index. Every forward call across modules is guarded. Two intentional
-exceptions rely on the TOC's load-order guarantee: `GroupPhrases.lua` calls
-`V:RegisterCatalog` at file scope, and `Languages.lua` reads `A.defaults.templates` at
-file scope.
+Root of the graph. It has no `## Dependencies` line and no `## OptionalDeps`.
 
-### Test-time dependencies
-The harness suite's cross-package coupling **increased** this span:
+### Version coupling
 
-| Harness | Reaches outside its package | Override |
-| --- | --- | --- |
-| 8 GuildComms harnesses | `../ForeverCommsVoice/` | `FOREVER_VOICE_PATH` |
-| `ForeverGuildComms/tests/settings.lua` | **also** `../ForeverGroupComms/Core.lua` | none |
-| `ForeverGuildComms/tests/icon.lua` | **now** `../install/Install-ForeverComms.ps1` | none, and it also requires the package root as cwd |
-| `ForeverCommsVoice/tests/integration.lua` | `../ForeverGroupComms/` and `../ForeverGuildComms/` | none |
-
-Consequence: the suite requires the bundle checkout layout. Three distinct relative paths
-now cross package boundaries and only one of them has an escape hatch. A package extracted
-and tested standalone cannot run its full suite.
+`## Dependencies` guarantees **presence, not version**. There is no negotiation
+mechanism, so a breaking change to the `V:Render` options contract or the `V:Enqueue`
+record shape requires bumping and releasing all three packages together. Both consumer
+READMEs state the library version they were built against — currently
+**ForeverCommsVoice 0.2.2-beta** — and that line is part of the documented bump checklist.
 
 ## External Dependencies
 
-### WoW Forever client API
-- **Version**: 1.60.1, Interface `16001`.
-- **Purpose**: the runtime. Every non-pure-Lua call.
-- **Acquisition**: none. Never vendored, never version-checked beyond the TOC number.
-- **Mitigation**: feature detection at every call site plus `pcall` around every protected
-  call that can error.
+### Runtime
 
-### LibDataBroker-1.1
-- **Version**: whichever copy Titan Panel embeds.
-- **Purpose**: the optional panel indicator in both behaviour addons.
-- **Usage**: `LibStub("LibDataBroker-1.1", true)` in both `Broker.lua` files. The silent
-  flag means a missing library returns nil and `TryBroker` returns immediately.
-- **Declaration**: `## OptionalDeps: Titan` in both application TOCs. Nothing is
-  redistributed, so no license question arises.
-- **Changed this span**: GroupComms' data object moved off the placeholder
-  `INV_Misc_QuestionMark` to its own `Interface\AddOns\ForeverGroupComms\Media\Icon`.
+| Dependency | Version | Purpose | Hardness | License |
+| --- | --- | --- | --- | --- |
+| WoW Forever client API | 1.60.1 / Interface `16001` | The entire runtime: frames, chat, roster, quests, timers, settings | **Required** | Proprietary (Blizzard) |
+| Titan Panel | any providing LibDataBroker-1.1 | A broker button with a nested right-click menu | **Optional**, probed with `LibStub("LibDataBroker-1.1", true)` | Open source, not vendored |
+| Blizzard `MenuUtil` | client-provided | Nested context menus | Optional, feature-probed; falls back to opening Settings | Proprietary |
 
-### Blizzard MenuUtil
-- **Purpose**: the nested right-click menu in `ForeverGuildComms/TitanMenu.lua`.
-- **Usage**: probed; prints a notice and opens the Settings page when absent.
+**Nothing is vendored.** No `Libs/` directory, no `embeds.xml`, no `externals` block in
+any `.pkgmeta`. Titan integration deliberately uses Titan's own LibDataBroker copy rather
+than shipping a second one, which is why Titan appears under `OptionalDeps` and never
+under `Dependencies`.
 
-### Blizzard Settings API
-- **Purpose**: the three Settings canvas panels.
-- **Usage**: `Settings.RegisterCanvasLayoutCategory` with `InterfaceOptions_AddCategory`
-  as the fallback in Voice and GroupComms. GuildComms is stricter — `BuildOptions` returns
-  early with a printed notice if the modern API is absent, so on such a client GuildComms
-  has no options page while the other two fall back.
+### Feature-probed client APIs
 
-### Python 3 — new this span
-- **Version**: 3.12 pinned in CI via `actions/setup-python@v5`; any 3.x locally.
-- **Purpose**: `tools/package.py` and `tools/verify_package.py`.
-- **Dependencies**: **none**. Standard library only — `argparse`, `pathlib`, `re`, `sys`,
-  `zipfile`. No `requirements.txt`, no lockfile, no virtual environment.
-- **Scope**: build and release only. No Python reaches a user's machine through any
-  archive except as the optional cross-platform builder inside the suite ZIP.
+Because the target is a beta client, every non-trivial API is checked before use. The
+fallback behaviour is part of the contract:
 
-### GitHub Actions — new on the suite path
-- **Actions used**: `actions/checkout@v4`, `actions/setup-python@v5`,
-  `actions/upload-artifact@v4`, plus the `gh` CLI for the release step.
-- **Secrets**: only the built-in `GITHUB_TOKEN`, with `contents: write`. No third-party
-  token is required or referenced by the suite workflow.
+| API | Fallback when absent |
+| --- | --- |
+| `C_GuildInfo.GuildRoster` | Skip the explicit roster request; rely on the event and ticker |
+| `C_PartyInfo.DoReadyCheck` | Bare `DoReadyCheck`, then refuse with a message |
+| `SetRaidTarget` | `SetRaidTargetIcon`, then refuse with a message |
+| `C_QuestLog.GetNumQuestLogEntries` / `GetInfo` | Legacy `GetNumQuestLogEntries` / `GetQuestLogTitle` |
+| `C_QuestLog.IsQuestFlaggedCompleted` | Send no completion reply at all |
+| `C_QuestLog.IsPushableQuest` | Shareability reported as unknown rather than assumed |
+| `C_ChatInfo.RegisterAddonMessagePrefix` | `questCommsReady` stays false; sending disabled, receiving unaffected |
+| `Settings.RegisterCanvasLayoutCategory` | `InterfaceOptions_AddCategory` |
+| `Settings.OpenToCategory` | `InterfaceOptionsFrame_OpenToCategory`, called twice |
+| `UnitIsGroupLeader` / `UnitIsGroupAssistant` | **Deny.** Rank checks fail closed |
+| `MenuUtil.CreateContextMenu` | Open the Settings panel instead |
+| `PlaySound` / `SOUNDKIT` | Silent |
+| `math.randomseed` | **Does not exist in the client.** Never called; the client seeds the RNG itself at startup |
 
-### BigWigsMods/packager
-- **Version**: `@v2` action.
-- **Status changed this span**: **no longer on the suite release path.** The three nested
-  per-package workflows are retained for the case where one package's contents become a
-  standalone repository root, and each now carries a header comment saying so. Their env
-  vars were normalised to `GH_API_TOKEN` and `CF_API_TOKEN`, correcting an inconsistency
-  where two used `GITHUB_OAUTH` / `CF_API_KEY` and one used the other pair.
-- **Documented limitation**: a standalone packager release does **not** bundle
-  ForeverCommsVoice; `PACKAGING.md` states that users must install it separately and that
-  any CurseForge project metadata must declare it as a dependency.
+### Build and development
 
-### Lua 5.1 standard library
-- **Purpose**: `string`, `table`, `math`, iteration, `pcall`, conversions. `wipe` and
-  `date` are WoW-provided rather than standard.
-- **Constraint**: LuaJIT extensions are deliberately avoided so harness code cannot come
-  to depend on something the client lacks.
+| Dependency | Version | Purpose | Required for |
+| --- | --- | --- | --- |
+| Lua interpreter | **5.1** | Running the 28 offline harnesses | Testing |
+| Python | 3 | The five `tools/*.py` scripts | Testing, packaging |
+| luacheck | 1.2.0 | Static analysis against the root `.luacheckrc` | Linting, not yet in CI |
+| BigWigsMods/packager | `@v2` | The authoritative GitHub release path | Releases |
+| GitHub Actions | — | Runs the suite, then the packager | CI |
+| PowerShell | 5.1+ | The four Windows installers | Manual installation |
 
-## Vendored code
-
-**None.** No `Libs/`, no `embeds.xml`, no `.pkgmeta` `externals` block, no Python
-packages, no PowerShell modules. Every third-party capability is probed at runtime through
-an API the client or another addon already provides. The release toolchain uses only
-language standard libraries and first-party GitHub Actions.
+None of these ship to users. `.pkgmeta` excludes `tests`, `install`, `.github` and
+`PACKAGING.md` from every archive.
 
 ## Dependency risks
 
-| # | Risk | Severity | Status |
-| --- | --- | --- | --- |
-| 1 | No version negotiation across the package boundary | Medium | **Open.** Neither consumer reads `V.version` before calling `V:Render`; the TOC check verifies presence, not version. Partly mitigated now: bundling the library into each consumer archive means an archive install cannot produce a mismatched pair, but a user who installs the library from one archive and a consumer from an older one still can |
-| 2 | Per-addon installers do not install the dependency | **CLOSED** | The shared installer prepends it and installs in dependency order; archives bundle it |
-| 3 | Packaging workflows inert | **CLOSED** | A root workflow now runs two offline builders and a verifier. Verified by execution this pass |
-| 4 | One tag namespace cannot express three versions | **CLOSED by redesign** | One `v*` tag releases the suite; per-addon versions live in the archive filenames. The bundle archive takes GuildComms' version by documented design |
-| 5 | Dead legacy path inside the library | Low | **Open.** `V:VoiceText` is still unreachable. No longer risky to delete, since the Expressive logic it uniquely held has been restored to `V:Render` |
-| 6 | English group phrases duplicated across the boundary | Low | **Open.** `integration.lua` asserts one specific opt-out string, not that the two tables match |
-| 7 | GuildComms requires the modern Settings API absolutely | Low | **Open.** Pre-existing and inconsistent with the other two packages |
-| 8 | **Two packager implementations** | Medium | **New.** `tools/package.py` and `package.ps1` implement the same contract and can drift — they already differ in `--runtime` support. CI runs and verifies the Python one; `package.cmd`, the documented Windows entry point, runs the PowerShell one. The unverified path is the one most users take |
-| 9 | **Release verifier greps Lua source** | Low | **New.** `verify_package.py` asserts the text and indentation of `panel.OnDefault` and two string literals in `V:Render`. Effective as the only automated guard either fix has, but a benign refactor fails the build with a packaging error. Should retire once the Lua harnesses run in CI |
-| 10 | **Harness suite has three unoverridable cross-package paths** | Low | **New.** Only `../ForeverCommsVoice/` honours an environment override; the GroupComms and `install/` paths do not |
-
-## Dependency inventory summary
-
-| Category | Count | Items |
-| --- | --- | --- |
-| Internal package dependencies | 2 | Guild → Voice, Group → Voice |
-| Internal optional back-references | 1 | Voice → Guild, probe only, now load-bearing for panel refresh |
-| Vendored third-party libraries | 0 | — |
-| Runtime-probed third-party libraries | 1 | LibDataBroker-1.1 |
-| Host platform APIs | 1 | WoW Forever 1.60.1, Interface 16001 |
-| Build-time language runtimes | 2 | Python 3 standard library, PowerShell 5.1 |
-| Build-time third-party packages | 0 | — |
-| CI actions | 4 | checkout, setup-python, upload-artifact, gh CLI |
-| CI secrets required | 0 | Built-in `GITHUB_TOKEN` only |
-| Test-time dependencies | 1 | A Lua 5.1 interpreter, **not installed on this machine** |
+| Risk | Assessment |
+| --- | --- |
+| **Hard library dependency breaks both consumers** | Real but accepted. A missing or mismatched `ForeverCommsVoice` means the client refuses to load GuildComms and GroupComms. Mitigated by bundling all three in every archive, by the combined installer prepending the library to any consumer selection, and by both per-package installers refusing rather than producing an unloadable addon |
+| **No version negotiation** | A breaking library change must be released as all three packages together. Documented in `release-packaging.md`; nothing enforces it mechanically |
+| **Beta client API churn** | Every non-trivial API is probed, with the fallbacks tabled above. Rank checks and send paths fail closed |
+| **Duplicated tables drifting** | Two pairs are load-bearing. Both are now asserted by `parity.lua`, which also pins the behaviour the parity protects — a drifted guild default would make every untouched template look like a user edit and silently stop translation |
+| **Three copies of the byte clamp** | Deliberate, so each package works standalone. All three are asserted together by `bytelimit.lua` across 2-, 3- and 4-byte characters |
+| **Titan absent** | No effect. Both addons are fully functional without a broker |
+| **Live client never exercised** | **Unmitigated.** This is the largest open risk in the project and no offline work addresses it |

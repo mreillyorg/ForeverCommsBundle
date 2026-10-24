@@ -75,6 +75,11 @@ _G.MenuUtil = {CreateContextMenu = function(owner, builder)
     builder(owner, root)
 end}
 
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that check and exposes no methods, so the menu's "library unavailable"
+-- branches still exercise as written. A richer stub is installed later in this file.
+_G.ForeverCommsVoice = {}
+
 local A = {}
 for _, m in ipairs({"Core.lua", "Roster.lua", "Quests.lua", "TitanMenu.lua"}) do
     assert(loadfile(base .. m))("ForeverGroupComms", A)
@@ -269,6 +274,9 @@ A:OpenTitanMenu(nil)
 assert(lastOwner == UIParent, "a nil owner falls back to UIParent")
 
 -- Before Initialize there is no db, and the menu must build nothing rather than error.
+-- Restore the library stub first: the "without the library" case above cleared the global,
+-- and Core.lua now refuses to load without it.
+_G.ForeverCommsVoice = {}
 local B = {}
 for _, m in ipairs({"Core.lua", "Roster.lua", "TitanMenu.lua"}) do
     assert(loadfile(base .. m))("ForeverGroupComms", B)

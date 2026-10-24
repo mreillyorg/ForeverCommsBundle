@@ -121,6 +121,11 @@ _G.CreateFrame = function(kind, name, parent, template)
 end
 _G.UIParent = newWidget({name="UIParent"})
 
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that check and exposes no methods, so the panel's queue counter still
+-- falls back to #A.approvals exactly as these assertions expect.
+_G.ForeverCommsVoice = {}
+
 local A = {}
 for _, m in ipairs({"Core.lua", "Roster.lua", "Quests.lua", "UI.lua", "Options.lua"}) do
     assert(loadfile(base .. m))("ForeverGroupComms", A)

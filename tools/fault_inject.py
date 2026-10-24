@@ -163,6 +163,22 @@ FAULTS = [
      "let ChatLimit exceed the 250-byte chat limit",
      "    if #text <= 250 then return text end\n    local limit = 250",
      "    if #text <= 250 then return text end\n    local limit = 260"),
+
+    # item 46: the hard library dependency, both consumers
+    ("ForeverGroupComms", "Core.lua", "tests/safety.lua",
+     "let GroupComms degrade silently instead of refusing without the library",
+     "if not _G.ForeverCommsVoice then",
+     "if false then"),
+
+    ("ForeverGuildComms", "Core.lua", "tests/verify.lua",
+     "let GuildComms half-run instead of refusing without the library",
+     "if not _G.ForeverCommsVoice then",
+     "if false then"),
+
+    ("ForeverGuildComms", "VoiceBridge.lua", "tests/verify.lua",
+     "make VoiceBridge raise a second error about the same missing library",
+     "if not V then return end",
+     'if not V then error("ForeverGuildComms requires ForeverCommsVoice") end'),
 ]
 
 

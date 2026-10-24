@@ -17,6 +17,9 @@ _G.CreateFrame = function()
 end
 _G.ERR_GUILD_JOIN_S = "%s has joined the guild."
 _G.date = function() return "12:00" end
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that load-time guard; the real library is assigned a few lines below.
+_G.ForeverCommsVoice = {}
 local A = {}
 assert(loadfile(base .. "Core.lua"))("ForeverGuildComms", A)
 local V = {}

@@ -2,7 +2,11 @@ local _, A = ...
 -- Thin compatibility bridge: the shared addon is the sole owner of voice data,
 -- accent catalogues, language mappings and rotation state.
 local V = _G.ForeverCommsVoice
-if not V then error("ForeverGuildComms requires ForeverCommsVoice") end
+-- Core.lua already refused to load if the library is absent, and a Lua error in one TOC
+-- file does not stop the client loading the rest. So this file can still be reached in
+-- that state: return quietly rather than raising a second error about the same cause.
+-- Nothing downstream runs, because Core.lua never created the event dispatcher.
+if not V then return end
 A.voiceDefaults = V.voiceDefaults
 A.languages, A.languageByID = V.languages, V.languageByID
 A.localeTemplates, A.localeRoleNames, A.localeActivityTypes = V.localeTemplates, V.localeRoleNames, V.localeActivityTypes

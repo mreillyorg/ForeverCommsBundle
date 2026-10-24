@@ -56,6 +56,12 @@ _G.CreateFrame = function() return {RegisterEvent=function()end, SetScript=funct
 _G.SlashCmdList = {}
 _G.wipe = function(t) for k in pairs(t) do t[k] = nil end end
 
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that check and exposes no methods, so the fallback approval path below
+-- behaves exactly as it did before the guard was added. The richer stub installed later
+-- in this file replaces it when the shared-queue path is exercised.
+_G.ForeverCommsVoice = {}
+
 local A = {}
 for _, m in ipairs({"Core.lua", "Roster.lua"}) do
     assert(loadfile(base .. m))("ForeverGroupComms", A)
@@ -280,6 +286,37 @@ A:Notify("while disabled")
 assert(#A.notifications == 5, "a disabled addon stores no notifications")
 A.db.enabled = true
 
+-- ------------------------------------------- the hard library dependency
+
+-- Core.lua must refuse to load without the shared library rather than degrade. The TOC
+-- dependency already makes the client decline to load this addon when the library is
+-- missing, so this guard exists for the narrower case that check cannot see: the library
+-- loaded but failed partway, leaving the global unset.
+--
+-- Degrading was the previous behaviour and it was not safe. Without the library A:Stage
+-- uses the local approval list, whose A:Approve re-renders through A:Send instead of
+-- replaying the captured text, so with randomMessages on the message sent could differ
+-- from the one the player reviewed.
+_G.ForeverCommsVoice = nil
+local fresh = {}
+local chunk = assert(loadfile(base .. "Core.lua"))
+local loaded, err = pcall(chunk, "ForeverGroupComms", fresh)
+assert(not loaded, "Core.lua must refuse to load when the library is absent")
+assert(tostring(err):find("requires ForeverCommsVoice", 1, true),
+    "and must say why, got: " .. tostring(err))
+-- Failing this early must leave nothing half-built: no published namespace global, so the
+-- keybinding handlers find nil, and no event dispatcher, so no event can reach the addon.
+assert(fresh.Initialize == nil,
+    "an aborted load must not leave the addon initializable")
+assert(fresh.version == nil, "and must not have populated the namespace")
+
+-- Set the stub explicitly rather than restoring a saved value: the shared-queue block
+-- above already cleared the global, so there is nothing to restore.
+_G.ForeverCommsVoice = {}
+local reloaded = pcall(assert(loadfile(base .. "Core.lua")), "ForeverGroupComms", {})
+assert(reloaded, "Core.lua must load when the library is present")
+
 print("PASSED: 2s floor holds and refusals do not slide it, channel follows group type, " ..
       "stale serial blocked on both the queue closure and the fallback, queue sends the " ..
-      "previewed text verbatim, rank gate fails closed, Notify dedup window and cap")
+      "previewed text verbatim, rank gate fails closed, Notify dedup window and cap, " ..
+      "library dependency refuses to degrade")

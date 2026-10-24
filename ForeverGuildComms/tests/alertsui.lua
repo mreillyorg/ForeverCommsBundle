@@ -82,6 +82,9 @@ _G.CreateFrame = function(kind, name, parent, template)
     return w
 end
 
+-- Core.lua refuses to load without the library, which the TOC guarantees in game. A bare
+-- table satisfies that load-time guard; the real library replaces it a few lines below.
+_G.ForeverCommsVoice = {}
 local A = {}
 assert(loadfile(base .. "Core.lua"))("ForeverGuildComms", A)
 local V = {}

@@ -128,5 +128,32 @@ A:ClearApprovals()
 assert(#A.pendingApprovals == 0 and #_G.sent == backlogSent + 1,
     "clearing a backlog discards without sending")
 
+-- Core.lua must refuse to load without the shared library rather than half-run. The TOC
+-- dependency already makes the client decline to load this addon when the library is
+-- missing, so this guard covers the narrower case that check cannot see: the library
+-- loaded but failed partway, leaving the global unset.
+--
+-- The check used to live in VoiceBridge.lua, the second TOC file, by which point Core.lua
+-- had published the namespace global and created the event dispatcher -- so ADDON_LOADED
+-- still reached A:Initialize() and the addon ran until it failed at render time.
+_G.ForeverCommsVoice = nil
+local bare = {}
+local guildCore = assert(loadfile(base .. "Core.lua"))
+local loadedWithout, loadErr = pcall(guildCore, "ForeverGuildComms", bare)
+assert(not loadedWithout, "Core.lua must refuse to load when the library is absent")
+assert(tostring(loadErr):find("requires ForeverCommsVoice", 1, true),
+    "and must say why, got: " .. tostring(loadErr))
+-- Nothing may be left half-built: no published namespace, so the Bindings.xml handlers
+-- find nil, and no event dispatcher, so no event can reach the addon.
+assert(bare.Initialize == nil, "an aborted load must not leave the addon initializable")
+assert(bare.CanUse == nil, "and must not have populated the namespace")
+-- VoiceBridge must not raise a second error about the same cause.
+local bridgeOk = pcall(assert(loadfile(base .. "VoiceBridge.lua")), "ForeverGuildComms", bare)
+assert(bridgeOk, "VoiceBridge must return quietly, not error again, when the library is absent")
+_G.ForeverCommsVoice = V
+assert(pcall(assert(loadfile(base .. "Core.lua")), "ForeverGuildComms", {}),
+    "Core.lua must load when the library is present")
+
 print("PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, " ..
-      "automatic sending, approval floor, 30-entry backlog cap dropping the oldest")
+      "automatic sending, approval floor, 30-entry backlog cap dropping the oldest, " ..
+      "library dependency refuses to degrade")

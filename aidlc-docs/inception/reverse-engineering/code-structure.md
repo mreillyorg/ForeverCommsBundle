@@ -1,370 +1,192 @@
 # Code Structure
 
-**Analysis date**: 2026-10-19T13:30:00Z
-**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
+**Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
+**Analysis date**: 2026-10-25T02:30:00Z
+**Target commit**: `a64ac2a`
 
 ## Build System
 
-- **Type for the addons**: none. There is no compile, transpile or bundle step. Lua 5.1
-  source is loaded directly by the WoW client in TOC order.
-- **Type for releases**: two equivalent hand-written offline builders, new this span. No
-  external packager on the suite path, no network, no secrets, no third-party package.
-- **Configuration**:
-  | File | Role |
-  | --- | --- |
-  | `<Addon>/<Addon>.toc` | The only manifest the client reads: metadata plus an ordered file list. All three now declare `## IconTexture:` |
-  | `tools/package.py` | Primary builder, 97 lines, Python standard library only. `--runtime` for reduced archives |
-  | `tools/verify_package.py` | Archive and source-fact verifier, 52 lines |
-  | `package.ps1` / `package.cmd` | Windows builder, 72 + 11 lines, `System.IO.Compression` |
-  | `.github/workflows/package.yml` | **Active suite workflow** at the repository root |
-  | `<Addon>/.pkgmeta` | BigWigsMods exclusions, used only in the standalone-repository case. Now also exclude `Media/ProjectIcon.png` |
-  | `<Addon>/.github/workflows/package.yml` | Retained for the standalone case only; each carries a header comment saying so |
-  | `.gitattributes` | Repository-wide `eol=lf` normalization |
-  | `.gitignore` | Generic Lua ignore list at the root; a packager-specific one inside GuildComms |
+- **Type**: none for the Lua itself. Lua ships as source; the client loads it from TOC
+  manifests. There is no compile, transpile or bundle step.
+- **Release**: **BigWigsMods/packager `@v2`** driven by the root `.pkgmeta`, run from
+  `.github/workflows/package.yml`. `tools/package.py` is a local mirror reading the
+  **same** `.pkgmeta`, so the two cannot disagree about what ships.
+- **Key configuration files**:
 
-## Repository layout
+| File | Role |
+| --- | --- |
+| `<Addon>/<Addon>.toc` ×3 | Module load order, version, SavedVariables, dependencies |
+| `.pkgmeta` (root) | `package-as: ForeverCommsBundle` plus `move-folders` lifting the three addons to top level, plus the ignore list. **The single source of truth for what ships** |
+| `<Addon>/.pkgmeta` ×3 | For the standalone-repository case only |
+| `.luacheckrc` (root) | Linter configuration covering all three packages |
+| `.github/workflows/package.yml` | Checkout → install Lua 5.1 → **run all 28 harnesses** → BigWigs build → structure check → artifact → Release on a tag |
+| `<Addon>/.github/workflows/package.yml` ×3 | Standalone case only; each carries a header comment saying so |
 
-```text
-ForeverCommsBundle-Development/
-  .gitattributes              repo-wide LF policy
-  .gitignore                  generic Lua ignores; *.zip covers dist/ output
-  LICENSE
-  README.md                   24 lines: package table, install order, change list
-  PACKAGING.md                38 lines: suite release guide
-  package.cmd  package.ps1    offline Windows builder
-  .github/workflows/
-    package.yml               ACTIVE suite workflow
-  tools/
-    package.py                offline cross-platform builder (CI runs this)
-    verify_package.py         archive + source-fact verifier
-  install/
-    Install-ForeverComms.cmd  the one real installer
-    Install-ForeverComms.ps1  -Addons selection, dependency prepending, rollback
-  ForeverCommsVoice/          library addon, 7 modules + Media/
-  ForeverGuildComms/          guild addon, 9 modules + Bindings.xml + Media/
-  ForeverGroupComms/          group addon, 6 modules + Bindings.xml + Media/
-  aidlc-docs/                 documentation only, never loaded
-  .kiro/                      steering and AI-DLC rule details
-```
-
-All three packages now carry `Media/Icon.tga` (64 KB, three distinct images confirmed by
-hash) and `Media/ProjectIcon.png` (192 / 213 / 481 KB).
-
-## Key Modules
+## Module hierarchy
 
 ```mermaid
-flowchart LR
-    subgraph V["ForeverCommsVoice: V namespace"]
+graph LR
+    subgraph Voice["ForeverCommsVoice - TOC order"]
         direction TB
-        V1["Core.lua"] --> V2["Languages.lua"] --> V3["Accents.lua"] --> V4["RaceProfiles.lua"] --> V5["MessageVariants.lua"] --> V6["GroupPhrases.lua"] --> V7["Options.lua"]
+        V1[Core.lua] --> V2[Languages.lua] --> V3[Accents.lua] --> V4[RaceProfiles.lua]
+        V4 --> V5[MessageVariants.lua] --> V6[GroupPhrases.lua] --> V7[Queue.lua]
+        V7 --> V8[QueueUI.lua] --> V9[Options.lua]
     end
-    subgraph G["ForeverGuildComms: A namespace"]
+    subgraph Guild["ForeverGuildComms - TOC order"]
         direction TB
-        G1["Core.lua"] --> G2["VoiceBridge.lua"] --> G3["Roster.lua"] --> G4["Alerts.lua"] --> G5["Tabard.lua"] --> G6["UI.lua"] --> G7["Options.lua"] --> G8["TitanMenu.lua"] --> G9["Broker.lua"]
+        G1[Core.lua] --> G2[VoiceBridge.lua] --> G3[Roster.lua] --> G4[Alerts.lua]
+        G4 --> G5[Tabard.lua] --> G6[UI.lua] --> G7[Options.lua]
+        G7 --> G8[TitanMenu.lua] --> G9[Broker.lua]
     end
-    subgraph P["ForeverGroupComms: A namespace"]
+    subgraph Group["ForeverGroupComms - TOC order"]
         direction TB
-        P1["Core.lua"] --> P2["Roster.lua"] --> P3["Quests.lua"] --> P4["UI.lua"] --> P5["Options.lua"] --> P6["Broker.lua"]
+        P1[Core.lua] --> P2[Roster.lua] --> P3[Quests.lua] --> P4[UI.lua]
+        P4 --> P5[Options.lua] --> P6[TitanMenu.lua] --> P7[Broker.lua]
     end
-    G2 -.->|global| V1
-    P1 -.->|global| V1
 ```
 
-**Text alternative**: Each package loads its modules in a strict TOC order with `Core.lua`
-first. Arrows indicate load order, not call direction. The two cross-package edges are
-GuildComms' `VoiceBridge.lua` and GroupComms' `Core.lua`, both reaching the Voice
-namespace through the global `_G.ForeverCommsVoice`.
+Load order is dependency order. `Core.lua` is always first and declares every piece of
+state with a safe initial value, so a later file can never index nil.
 
-### Existing Files Inventory
+## Existing Files Inventory
 
-#### ForeverCommsVoice 0.2.1-beta — 9 shipped modules, 1,207 lines, 35 methods
+### ForeverCommsVoice — 1,221 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `ForeverCommsVoice.toc` | 13 | — | Interface 16001, `SavedVariablesPerCharacter: ForeverCommsVoiceCharDB`, no dependencies |
-| `Core.lua` | 178 | 8 | Publishes `_G.ForeverCommsVoice`. Defaults, profile normalize/read, legacy migration, option validation and writing, catalog registry, `Format` with UTF-8-safe 250-byte clamp, `Pick` shuffle bag, `Render` |
-| `Languages.lua` | 80 | 0 | 8 language descriptors, `languageByID`, `localeTemplates` for 4 guild kinds, `localeRoleNames`, `localeActivityTypes` |
-| `Accents.lua` | 49 | 0 | 29 accents registered through a file-local `register` helper; `accentOrder` fixes the presentation order |
-| `RaceProfiles.lua` | 108 | 6 | `raceAccents` map, `GetPlayerRace`, `GetAvailableAccents`, `ResolveAccent`, legacy `VoiceText`, `LocalizeRoleText`, `LocalizeActivityType` |
-| `MessageVariants.lua` | 225 | 1 | `localeVariants` for 8 languages, `accentVariants` for all 29 accents, `ChooseMessageTemplate` shuffle bag |
-| `GroupPhrases.lua` | 144 | 0 | `groupTemplates` for 8 languages across 13 kinds, `groupAccentVariants` for 29 accents, then the two `RegisterCatalog` calls that wire both scopes |
-| `Options.lua` | 76 | 3 | `/fcv` and `/commsvoice`, Settings canvas panel, `RefreshOptions` control list, the package's only `CreateFrame` event frame |
-| `tests/integration.lua` | 64 | — | Cross-package harness; loads all three addons |
-| `README.md` | 26 | — | Library documentation, API example, migration notes |
-| `.pkgmeta` | 6 | — | Ignores `.github`, `install`, `tests`, `README.md` |
-| `.github/workflows/package.yml` | 18 | — | `v*` tag, BigWigsMods/packager@v2 |
-| `install/*` | 316 | — | `.cmd` launcher, TOC-parsing PowerShell installer, 2-line README |
+| `Core.lua` | 251 | 9 | Namespace published as `_G.ForeverCommsVoice`; voice defaults; the profile getter, validator and sole writer; the legacy migration latch; the catalog registry; `V:Format` with the byte clamp; shuffle-bag `V:Pick`; `V:Render` as a dispatcher over per-scope resolvers plus `pickTemplate`, `flairApplies` and `applyFlair` |
+| `Languages.lua` | 81 | 0 | 8 language definitions and the guild locale template bank |
+| `Accents.lua` | 51 | 0 | 29 accent registrations via a local `register` helper: id, label, language, four guild templates, flair prefix |
+| `RaceProfiles.lua` | 76 | 5 | Race-to-accent map, availability filtering, role and activity localization |
+| `MessageVariants.lua` | 200 | 0 | Accent and locale variant banks for guild wording |
+| `GroupPhrases.lua` | 144 | 0 | Group/dungeon catalog for 8 languages plus curated per-accent group wordings; registers both catalogs |
+| `Queue.lua` | 148 | 12 | The shared review queue: persisted settings with clamping, enqueue with a 100-entry bound, approve/skip/skip-all, per-record expiry on a `C_Timer` ticker |
+| `QueueUI.lua` | 136 | 4 | Movable scrollable overlay, countdown refresh |
+| `Options.lua` | 134 | 3 | Settings canvas panel, `/fcv`, and this addon's `ADDON_LOADED` frame |
+| `tests/*.lua` | 1,053 | — | 8 harnesses, none in the TOC |
+| `README.md` | 97 | — | User documentation, current at 0.2.2-beta, with release notes |
 
-#### ForeverGuildComms 0.6.2-beta — 9 shipped modules, 1,491 lines, 65 methods
+### ForeverGuildComms — 1,560 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `ForeverGuildComms.toc` | 19 | — | Interface 16001, `IconTexture`, both SavedVariables, `Dependencies: ForeverCommsVoice`, `OptionalDeps: Titan` |
-| `Core.lua` | 508 | 27 | Namespace, binding labels, defaults, timing clamps, bounded dedup cache, send queue, verify backlog, option writers, voice passthroughs, quick actions, `Initialize`, `/fgc`, the single 14-event frame |
-| `VoiceBridge.lua` | 26 | 7 | The only coupling to the shared library. Hard `error()` if absent; aliases eight data tables; forwards six methods; rewrites `VoiceText` as `V:Render("guild", ...)` |
-| `Roster.lua` | 121 | 7 | Throttled roster requests, `ReadRoster`, `AcceptRoster` diffing, `CaptureBaseline`, `OnRosterEvent` with the incomplete-read guard, `OnSystemGuildJoin`, `SetupRoster` |
-| `Alerts.lua` | 98 | 5 | `cleanChat`, craft and group request matchers, `AddAlert` capped at 30, debounced `ScanRecipes`, `MatchCraft`, `OnGuildChat` |
-| `Tabard.lua` | 65 | 2 | City tables by name and map ID, item-5976 check, two `StaticPopupDialogs`, `CheckTabard` ordering state machine, `ScheduleTabardCheck` |
-| `UI.lua` | 301 | 11 | Alerts window, approvals window, help composer, `RequestText` with the fingerprinted draft, `SendHelpRequest` with the 20-second limit |
-| `Options.lua` | 285 | 1 | 1,460-pixel scrolling Settings canvas; toggles, timing edit boxes, outgoing-mode radios, voice cyclers, four template editors, scroll anchors, `OnRefresh`/`OnCommit`/`OnDefault` |
-| `TitanMenu.lua` | 115 | 2 | `PopulateTitanMenu` nested tree, `OpenTitanMenu` with the MenuUtil probe |
-| `Broker.lua` | 38 | 2 | Optional LDB object and its text updater |
-| `Bindings.xml` | 12 | — | Three opt-in bindings. **Deliberately not in the TOC**; the client auto-loads it from the addon root |
-| `Media/Icon.tga` | 64 KB | — | Runtime texture used by the TOC, Broker, Options and the installer |
-| `Media/ProjectIcon.png` | 481 KB | — | 512x512 promotional art; excluded by `.pkgmeta` |
-| `tests/*.lua` | 826 | — | 11 harnesses, none in the TOC |
-| `README.md` | 133 | — | User documentation. Title still reads 0.4.3-beta |
-| `PACKAGING.md` | 91 | — | Release guide. Still states 0.4.3-beta and lists four modules that no longer exist here |
+| `Core.lua` | 554 | 31 | Defaults and timing limits; `A:FillDefaults`; `A:CanFillRole`; `A:Key`/`A:IsSelf`; `A:ChatLimit`; dedup with periodic pruning; `A:SendGuild` through `pcall`; `A:QueueGuild` → `A:DrainQueue` spacing; `A:StageApproval`; the approval floor; settings writers shared by Settings and Titan; the single 14-event dispatcher; `/fgc` |
+| `VoiceBridge.lua` | 24 | 6 | Forwarders to the library |
+| `Roster.lua` | 123 | 7 | Roster request throttle, read, baseline capture, diff with self-exclusion, the suspicious-read guard, localized guild-join parsing, 60-second ticker |
+| `Alerts.lua` | 99 | 5 | `cleanChat` escape stripping, craft and group request detection, recipe cache scan, the 30-entry private alert list |
+| `Tabard.lua` | 70 | 2 | Capital-city detection, tabard checks, `StaticPopupDialogs` |
+| `UI.lua` | 229 | 11 | Alerts window with 7 fixed paged rows; help composer with a fingerprinted preview draft so the Send button sends exactly what is shown |
+| `Options.lua` | 294 | 1 | Settings canvas panel; `OnDefault` preserves `outgoingMode` and leaves the shared profile alone |
+| `TitanMenu.lua` | 129 | 2 | Nested context menu |
+| `Broker.lua` | 38 | 2 | Optional LibDataBroker object |
+| `Bindings.xml` | 14 | — | Three keybindings. **Not in the TOC** — the client auto-loads it |
+| `tests/*.lua` | 1,439 | — | 13 harnesses, none in the TOC |
+| `README.md` | 212 | — | User documentation, current at 0.6.3-beta, with release notes |
+| `PACKAGING.md` | 91 | — | Per-package release guide, current at 0.6.3-beta |
 
-#### ForeverGroupComms 0.3.3-beta — 7 shipped modules, 1,108 lines, 52 methods
+### ForeverGroupComms — 1,146 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `ForeverGroupComms.toc` | 14 | — | Interface 16001, `SavedVariables: ForeverGroupCommsDB`, `Dependencies: ForeverCommsVoice`, `OptionalDeps: Titan`. No per-character table and no `IconTexture` |
-| `Core.lua` | 253 | 20 | Namespace, binding labels, 9 defaults, the built-in English `variants` fallback, `Render` with the Voice branch, `GroupChannel`, bounded `IsDuplicate`, `Notify`, `Send` with a 2-second floor, `Stage`/`Approve`, `Quick`, rank checks, `ReadyCheck`, `MarkTarget`, `Initialize`, `/fgp`, the single 10-event frame |
-| `Roster.lua` | 158 | 6 | `partyUnits`, `ScanRoster` with identity-change detection and `groupSerial`, greeting/welcome/level decisions, `RoleCounts`/`RoleSummary`/`RoleIssues`/`ReviewRoles`, `OnReadyCheckEvent` |
-| `Quests.lua` | 301 | 12 | Prefix `ForeverGrpComms`, dual quest-log API support, `packetize`/`parseIDs`, paced outbox, `ScheduleQuestSync`, `BroadcastQuests`, `ReplyCompletions`, `OnAddonMessage`, `QuestRows`, `OtherQuestRows`, `ShareQuest`, `RequestQuest` |
-| `UI.lua` | 175 | 6 | Main panel with twelve quick actions, role summary, three suggestion rows; paged quest window with a view switch |
-| `Options.lua` | 64 | 1 | Eight toggles driven from a declarative table, plus a button into the Voice panel |
-| `Broker.lua` | 27 | 2 | Optional LDB object. Uses `INV_Misc_QuestionMark` — the package ships no icon of its own |
-| `Bindings.xml` | 11 | — | Three opt-in bindings, not in the TOC |
-| `tests/smoke.lua` | 105 | — | Single harness; loads Core, Roster, Quests only |
-| `README.md` | 41 | — | User documentation; version consistent with the TOC |
+| `Core.lua` | 280 | 21 | Defaults; local English variant bank; `A:Trim`; `A:Render` with the `useSharedVoice` branch; `A:GroupChannel`; dedup; `A:Notify` with cap; **`A:SendPrepared` as the single send funnel** carrying the 2-second floor and the serial check; `A:Stage`/`A:Approve`; `A:CanManageGroup`; ready check; target marking; the single 10-event dispatcher; `/fgp` |
+| `Roster.lua` | 162 | 6 | Group scan, `groupSerial` bump on identity change plus approval wipe and queue purge, greeting and level staging, role counts, issues and summary, ready-check tally |
+| `Quests.lua` | 303 | 12 | The quest-sync protocol: `parseIDs`, `packetize` with the 12-chunk refusal, prefix registration, `A:QueuePacket` with the 60-entry bound, `A:FlushPackets` with 1.15s pacing and token cancellation, debounced scheduling, broadcast with the 240-second unchanged-log skip, completion replies, inbound validation and reassembly, comparison rows, sharing and requesting |
+| `UI.lua` | 164 | 6 | Group panel and the quest comparison window with 9 fixed paged rows |
+| `Options.lua` | 87 | 2 | Settings canvas panel with `OnRefresh`, `OnDefault` and a documented absent `OnCommit`; `A:RefreshOptions` |
+| `TitanMenu.lua` | 114 | 4 | Nested context menu, `A:StatusSnapshot` |
+| `Broker.lua` | 36 | 2 | Optional LibDataBroker object |
+| `Bindings.xml` | 11 | — | Three keybindings. **Not in the TOC** |
+| `tests/*.lua` | 1,646 | — | 7 harnesses, none in the TOC |
+| `README.md` | 83 | — | User documentation, current at 0.3.4-beta, with release notes |
 
-### Totals
+### Repository root
 
-| Metric | Voice | Guild | Group | Bundle |
-| --- | --- | --- | --- | --- |
-| Shipped Lua modules | 9 | 9 | 7 | **25** |
-| Shipped Lua lines | 1,207 | 1,491 | 1,108 | **3,806** |
-| Public methods | 35 | 65 | 52 | **152** |
-| Registered events | 1 | 14 | 10 | **25** |
-| Event dispatchers | 1 | 1 | 1 | **3** |
-| Offline harnesses | 4 | 11 | 2 | **17** |
-| Harness lines | 243 | 828 | 144 | **1,215** |
-| Harnesses **failing** | **2** | **1** | 0 | **3** |
-| SavedVariables tables | 1 | 2 | 1 | **4** |
-| `Media/Icon.tga` | 1 | 1 | 1 | **3** |
-| `OnUpdate` handlers | **1** | 0 | 0 | **1** |
-
-### Non-package tooling
-
-| File | Lines | Language | CI status |
-| --- | --- | --- | --- |
-| `.github/workflows/package.yml` | 39 | YAML | **Active** — BigWigs, then `check_bigwigs_bundle.py`. No test step |
-| `.pkgmeta` (root) | 37 | YAML | **Active, new** — `package-as` + `move-folders` + 24 ignores |
-| `tools/check_bigwigs_bundle.py` | 28 | Python | **Active, new** |
-| `tools/run_tests.py` | 120 | Python | Orphaned from CI; the documented local command |
-| `tools/package.py` | 97 | Python | Orphaned; still named as the build command in `PACKAGING.md` |
-| `tools/verify_package.py` | 89 | Python | Orphaned; its version check currently **fails** on live drift |
-| `package.ps1` / `package.cmd` | 72 / 11 | PowerShell / Batch | Orphaned |
-| `run-tests.cmd` | 15 | Batch | Launcher over `run_tests.py` |
-| `install/Install-ForeverComms.ps1` / `.cmd` | 153 / 12 | PowerShell / Batch | The one real installer |
-| `<Addon>/install/Install-<Addon>.ps1` x3 | 13 each | PowerShell | Shims |
-| `PACKAGING.md` / `README.md` | 35 / 24 | Markdown | Document two release paths |
-
-### New modules this span
-
-| Module | Lines | Methods | Responsibility |
-| --- | --- | --- | --- |
-| `ForeverCommsVoice/Queue.lua` | 148 | 13 | The shared click-to-send review backlog. `GetQueueSettings`, `SetQueueOption`, `PendingCount`, `PendingList`, `FindQueueItem`, `QueueChanged`, `EnsureQueueTicker`, `Enqueue`, `Skip`, `SkipAll`, `Approve`, `Expire`, `Print`. Transient by design — the header comment records that callbacks and session-scoped guild identities must not survive a reload. Bounded at 100 entries, oldest dropped |
-| `ForeverCommsVoice/QueueUI.lua` | 136 | 4 | The movable shared list: `BuildQueueUI`, `RefreshQueueCountdowns`, `RefreshQueueUI`, `ShowQueue` |
-| `ForeverGroupComms/TitanMenu.lua` | 114 | 4 | `ReviewPanel`, `StatusSnapshot`, `PopulateTitanMenu`, `OpenTitanMenu`. Menu parity with GuildComms. **No harness loads it** |
+| File | Purpose |
+| --- | --- |
+| `README.md` | Bundle overview, install, shared queue, Titan menus, testing, release notes |
+| `PACKAGING.md` | Bundle release guide; the four version locations per package |
+| `SUGGESTED-CHANGES.md` | **44-item remediation ledger.** Records the decision and reasoning for every item, including the one rejected |
+| `.pkgmeta` | What ships |
+| `.luacheckrc` | Linter config |
+| `.gitattributes`, `.gitignore` | Line endings; ignores `.release/` |
+| `tools/*.py` | `run_tests`, `package`, `check_bigwigs_bundle`, `verify_package`, `fault_inject` |
+| `package.ps1` / `package.cmd` / `run-tests.cmd` | Windows launchers |
+| `install/` | Combined installer |
+| `.kiro/steering/*.md` | 9 steering files |
 
 ## Design Patterns
 
 ### Shared-namespace module pattern
-- **Location**: all 22 modules.
-- **Purpose**: one table per addon, no module system, no new globals beyond the three
-  addon tables, the `SLASH_*` entries and named frames.
-- **Implementation**: `local _, A = ...` (or `local ADDON, V = ...` in a Core file).
-  State is declared up front with a safe initial value so later files never index nil.
-  The convention is now applied identically across three packages; GroupComms uses `A`
-  for its own namespace, so the same identifier means different tables in different
-  packages — which is why the harnesses pass the addon name explicitly to `loadfile`.
+
+- **Location**: every shipped `.lua` file.
+- **Purpose**: one table per addon, no globals beyond the published namespace.
+- **Implementation**: `local _, A = ...` (or `local ADDON, A = ...` in `Core.lua`).
+  `Core.lua` publishes `_G.<AddonName> = A`. Behaviour attaches as `function A:Method()`.
+  File-local helpers stay `local function` and are unreachable from outside.
 
 ### Single event dispatcher per addon
-- **Location**: bottom of each `Core.lua`; Voice's lives at the bottom of `Options.lua`.
-- **Purpose**: one place to see every event, one place to enforce the initialization gate.
-- **Implementation**: `CreateFrame("Frame")`, a block of `RegisterEvent` calls, one
-  `OnEvent` with `if not A.initialized then return end` and guarded dispatch to module
-  methods. GuildComms initializes on `PLAYER_LOGIN`; GroupComms and Voice initialize on
-  `ADDON_LOADED` for their own addon name.
 
-### Adapter / bridge
-- **Location**: `ForeverGuildComms/VoiceBridge.lua`.
-- **Purpose**: let 1,500 lines of existing GuildComms code keep calling the same method
-  names after the implementation moved into another addon.
-- **Implementation**: alias Voice's data tables onto `A` so Options.lua and TitanMenu.lua
-  need no edits, forward six methods verbatim, and translate the one method whose contract
-  changed — `VoiceText` becomes a `Render` call that passes the custom template, the
-  randomize flag and the preview flag as options.
+- **Location**: bottom of `Core.lua` for both consumers; bottom of `Options.lua` for Voice.
+- **Purpose**: one place where events arrive, one initialization gate, no scattered frames.
+- **Implementation**: one `CreateFrame("Frame")`, `RegisterEvent` calls, a single
+  `OnEvent` handler with `if not A.initialized then return end` and guarded routing.
 
-### Graceful degradation vs hard dependency
-- **Location**: `VoiceBridge.lua` line 4 compared with `ForeverGroupComms/Core.lua`
-  `A:Render`.
-- **Purpose**: the two consumers made opposite choices deliberately.
-- **Implementation**: GuildComms calls `error("ForeverGuildComms requires
-  ForeverCommsVoice")` — its entire message layer is delegated, so a silent fallback
-  would be worse than a load failure. GroupComms keeps a complete English copy of its
-  phrase table and falls back to it whenever the global is missing or the user turns
-  `useSharedVoice` off, which is also the mechanism behind the documented opt-out.
+### Validating single writer
 
-### Scoped catalog registry
-- **Location**: `V:RegisterCatalog`, called twice at the end of `GroupPhrases.lua`.
-- **Purpose**: one render pipeline serving two very different message families.
-- **Implementation**: `V.catalogs["guild"]` and `V.catalogs["group"]`, both
-  language-keyed. `V:Render` branches on scope for accent handling: guild messages use
-  single accent templates plus a variant bank, group messages use accent variant lists
-  directly, and the flair prefix is suppressed for `help` and for group combat kinds.
+- **Location**: `V:SetOption`, `V:SetQueueOption`, `A:SetOption`, `A:SetVoiceOption`.
+- **Purpose**: a setting cannot be set to an invalid value from any entry point.
+- **Implementation**: each validates, clamps or rejects, writes, then refreshes dependent
+  UI. Settings panels and Titan menus call them rather than writing `db` directly;
+  `A:SetVoiceOption` delegates to `V:SetOption` so the library stays the sole profile writer.
 
-### Shuffle bag with cross-bag memory
-- **Location**: `V:Pick` in Core.lua and `V:ChooseMessageTemplate` in MessageVariants.lua.
-- **Purpose**: vary wording without immediate repeats.
-- **Implementation**: a Fisher-Yates permutation per signature, consumed one entry per
-  call; on reshuffle, if the new first entry equals the last one served, swap positions 1
-  and 2. Session-local by design. **These are two near-identical implementations of the
-  same algorithm** — see `code-quality-assessment.md`.
+### Serial and epoch invalidation
 
-### Review-before-send
-- **Location**: GuildComms `StageApproval`/`ApproveMessage`; GroupComms `Stage`/`Approve`.
-- **Purpose**: the user, not a timer, authorizes social chat.
-- **Implementation**: GuildComms gates on `db.outgoingMode == "verify"` and re-checks the
-  guild identity at click time, discarding the entry if the guild changed. GroupComms
-  stages by default — `autoGreeting` and `autoLevel` both default to `false` — and stamps
-  each suggestion with `groupSerial`, refusing to send one that belongs to a prior group.
+- **Location**: `groupSerial` in GroupComms; `questEpoch` in `Quests.lua`; the guild name
+  captured in `A:StageApproval`.
+- **Purpose**: work prepared for one group or guild must never execute against another.
+- **Implementation**: the identity is captured into the staged record or closure, then
+  compared again at send time. A mismatch returns `false, "stale"`, which the shared queue
+  consumes to drop the item rather than retry it.
 
-### Serial / epoch invalidation of deferred work
-- **Location**: GroupComms `groupSerial`, `rosterRequest`, `syncSeq`, `outboxToken`,
-  `questEpoch`.
-- **Purpose**: a timer that fires after the world changed must not act on stale data.
-- **Implementation**: capture the counter in the closure, compare on fire, return if it
-  moved. Five independent counters guard roster rescans, outbound packets, sync
-  scheduling, suggestion sends and completion replies.
+### Debounce with a latch or stamp
 
-### Debounce with a boolean latch
-- **Location**: `ScheduleRecipeScan`, `ScheduleTabardCheck`, `baselineTimer`, `DrainQueue`,
-  `FlushPackets`.
-- **Purpose**: collapse event storms into one run.
-- **Implementation**: a boolean or token set before `C_Timer.After`, cleared inside the
-  callback.
+- **Location**: `baselineTimer`, `ScheduleRecipeScan`, `ScheduleTabardCheck`,
+  `ScheduleQuestSync`, `rosterRequest`, `outboxBusy`/`outboxToken`.
+- **Purpose**: collapse event storms into one run, and cancel superseded work.
+- **Implementation**: `C_Timer.After` plus either a boolean latch or a monotonic stamp
+  re-checked inside the callback. **Zero `OnUpdate` handlers** remain in the bundle.
 
-### Bounded caches
-- **Location**: GuildComms `PruneEventsSeen`; GroupComms `IsDuplicate` inline sweep and
-  the `questParts` sweep in `OnAddonMessage`.
-- **Purpose**: a long session must not grow a dedup table without limit.
-- **Implementation**: GuildComms retains keys for `timingLimits.loginCooldown.max`
-  (3600s), sweeping at most once per minute on activity plus a 300-second idle ticker.
-  GroupComms retains notification keys for 1200s and packet-reassembly state for 60s,
-  both swept at most once per minute.
+### Bounded transient store
 
-### Shared backlog with a callback contract
-- **Location**: `ForeverCommsVoice/Queue.lua`, new this span; consumed from both
-  applications' `Core.lua`.
-- **Purpose**: both consumers maintained their own click-to-send review list. There is now
-  one, in the library, and GuildComms' `UI.lua` shrank 87 lines as a result.
-- **Implementation**: a consumer calls `V:Enqueue{source, kind, label, text, send}` where
-  `send` is a function the library will `pcall` on approval. The callback returns `true`
-  for sent; any other return is a failed send, and a second return value of `"stale"`
-  tells the queue to drop the item because the consumer can no longer honour it — which is
-  how a guild change is handled without the library knowing what a guild is. Items carry
-  monotonic `V.reviewNextID` values and every operation keys on `item.id`, replacing the
-  positional row binding both consumers previously used. `V:Approve` re-checks `expiresAt`
-  before calling the callback, so an expired item cannot be resurrected by a click that
-  races the expiry sweep.
-- **Deviation**: the sweep runs from a `SetScript("OnUpdate")` handler throttled to 0.5s,
-  which `.kiro/steering/lua-style.md` explicitly forbids in favour of `C_Timer`. It is the
-  only `OnUpdate` in the bundle.
+- **Location**: review queue (100), approval list (30), alerts (30), notifications
+  (`maxNotifications`, clamped 5–40), addon outbox (60), reassembly parts (60-second TTL).
+- **Purpose**: a long session or a hostile peer cannot grow memory without limit.
+- **Implementation**: either refuse at the bound or drop the oldest. A dropped queue entry
+  never has its callback invoked, which `queue.lua` asserts directly.
 
-### Single-writer delegation across the package boundary
-- **Location**: `A:SetVoiceOption` in GuildComms `Core.lua`, new shape this span.
-- **Purpose**: `A.char.voice` and `ForeverCommsVoiceCharDB.voice` are the same table object
-  at runtime, so two independently implemented validators could diverge and either addon
-  could mutate the other's live settings.
-- **Implementation**: the method shrank from 27 lines of validation and direct mutation to
-  a 7-line delegation to `V:SetOption`, with a comment stating that the library owns
-  validation, mutation and dependent UI refresh. The library's own back-probe into
-  `_G.ForeverGuildComms` is what keeps the consumer's panel current, which makes that
-  previously-optional probe load-bearing.
-- **Corollary**: `panel.OnDefault` no longer resets the shared values at all, because
-  Restore Defaults is scoped to the addon whose panel it is.
+### Fail-closed feature detection
 
-### Validation inside the build, not beside it
-- **Location**: `manifest()` in `tools/package.py`, the per-addon loop in `package.ps1`,
-  and `Get-RuntimeFiles` in `install/Install-ForeverComms.ps1`.
-- **Purpose**: a malformed release should fail to build rather than ship.
-- **Implementation**: all three derive their file list from the TOC and refuse an entry
-  that is not `^[A-Za-z0-9_-]+\.(lua|xml)$`, a missing file, a duplicate entry, a wrong
-  `IconTexture` path, a missing icon or project icon, a consumer without
-  `## Dependencies: ForeverCommsVoice`, and any archive member containing `..` or a
-  leading `/`. The Python builder additionally skips symlinks; the PowerShell builder
-  rejects any source path outside the repository root.
-
-### Dependency satisfied by construction
-- **Location**: `tools/package.py` `main()`, `package.ps1`'s archive loop, and the
-  `-Addons` handling in `install/Install-ForeverComms.ps1`.
-- **Purpose**: make a dependency-less installation unreachable rather than merely warned
-  about.
-- **Implementation**: each consumer's release archive contains a complete
-  `ForeverCommsVoice/` tree, and the installer prepends `ForeverCommsVoice` to any
-  selection naming a consumer, then reorders to canonical dependency order. The three
-  per-addon installers are 13-line shims, so there is one code path to get right.
-
-### UTF-8-safe byte clamp, implemented three times
-- **Location**: `V:Format` in Voice Core.lua, `A:ChatLimit` in GuildComms Core.lua,
-  `A:Trim` in GroupComms Core.lua.
-- **Purpose**: a translated string can exceed WoW's 250-byte chat cap, and a naive
-  `sub(1,250)` can split a multibyte character.
-- **Implementation**: walk backwards from byte 251 while the byte is a UTF-8
-  continuation byte. All three copies are character-for-character equivalent.
-
-### Declarative widget construction
-- **Location**: `Label`/`Button`/`Check` in GuildComms UI.lua; `MakeLabel`/`MakeButton`
-  in GuildComms Options.lua; `text`/`button`/`makeFrame` in GroupComms UI.lua;
-  `label`/`cycle` in Voice Options.lua; the `options` table in GroupComms Options.lua.
-- **Purpose**: keep panel code readable without a UI framework.
-- **Implementation**: file-local constructors returning a configured widget, plus a
-  `controls` list of refresh closures so one `RefreshOptions` call re-reads every control.
-
-### Feature detection before every API call
-- **Location**: pervasive.
-- **Purpose**: the Forever client is a beta that may add or omit APIs.
-- **Implementation**: `if C_GuildInfo and C_GuildInfo.GuildRoster then ... end`,
-  `(C_PartyInfo and C_PartyInfo.DoReadyCheck) or DoReadyCheck`,
-  `SetRaidTarget or SetRaidTargetIcon`, dual quest-log API paths, `pcall` around every
-  protected call that can error.
+- **Location**: every non-trivial client API; see `dependencies.md` for the table.
+- **Purpose**: a beta client may not expose what the code expects.
+- **Implementation**: `if C_X and C_X.Y then`. Where the answer gates a privileged action,
+  absence means deny — `A:CanManageGroup` returns false rather than assuming permission.
 
 ## Critical Dependencies
 
-### ForeverCommsVoice
-- **Version**: 0.1.0-beta, in-repository.
-- **Usage**: declared as `## Dependencies:` by both behaviour addons; reached at runtime
-  through `_G.ForeverCommsVoice`.
-- **Purpose**: single source of wording data and the shared per-character voice profile.
-- **Risk**: there is no version negotiation. Neither consumer inspects `V.version` before
-  calling `V:Render`, and the client's `## Dependencies:` check verifies presence, not
-  version. A future breaking change to `Render`'s options table would surface as a
-  runtime error rather than a load-time refusal.
+### ForeverCommsVoice (internal)
 
-### WoW Forever 1.60.1 client API — Interface 16001
-- **Version**: 16001 in all three TOCs.
-- **Usage**: every function call that is not pure Lua.
-- **Purpose**: the runtime.
-- **Risk**: beta. Mitigated by feature detection and `pcall`, not eliminated.
+- **Version**: 0.2.2-beta, in-repository.
+- **Usage**: both consumers declare it in `## Dependencies` and will not load without it.
+- **Purpose**: all wording plus the shared review queue.
 
-### LibDataBroker-1.1
-- **Version**: whatever Titan Panel embeds, typically 9.3.5's copy.
-- **Usage**: `LibStub("LibDataBroker-1.1", true)` in both `Broker.lua` files; both bail
-  out silently when absent.
-- **Purpose**: the optional panel indicator.
-- **License**: not vendored, so not applicable.
+### WoW Forever client API
 
-### Blizzard MenuUtil
-- **Usage**: `MenuUtil.CreateContextMenu` in GuildComms `OpenTitanMenu`, with a printed
-  notice and a Settings-page fallback when missing.
-- **Purpose**: the nested right-click menu.
+- **Version**: 1.60.1, Interface `16001`, identical in all three TOCs.
+- **Usage**: the entire runtime.
+- **Purpose**: frames, chat, roster, quests, timers, settings, bindings.
 
-### Lua 5.1 standard library
-- **Usage**: `string`, `table`, `math`, `pairs`/`ipairs`, `pcall`, `tonumber`/`tostring`,
-  and the WoW-provided `wipe` and `date`.
-- **Purpose**: everything else. No LuaJIT extensions are used.
+### Titan Panel / LibDataBroker-1.1
+
+- **Version**: whatever the user has.
+- **Usage**: `LibStub("LibDataBroker-1.1", true)` at runtime only.
+- **Purpose**: an optional broker button. Nothing is vendored and nothing breaks without it.

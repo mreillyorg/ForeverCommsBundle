@@ -1,220 +1,162 @@
 # Business Overview
 
-**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.2.1-beta,
-ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta.
-**Analysis date**: 2026-10-19T13:30:00Z (sixth reverse-engineering pass, second multi-package pass)
-**Change in this span**: a remediation release. No new business transaction was added; the
-packaging and install path was rebuilt, two functional defects were fixed, and the shared
-voice profile gained a single writer. See `code-quality-assessment.md`.
+**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.2.2-beta,
+ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta.
+**Analysis date**: 2026-10-25T02:30:00Z (eighth reverse-engineering pass, fourth
+multi-package pass)
+**Target commit**: `a64ac2a`
 
 ## Business Context Diagram
 
 ```mermaid
-flowchart TB
-    Player["Player / Guild officer"]
-    subgraph Bundle["ForeverCommsBundle"]
-        Voice["ForeverCommsVoice<br/>shared voice library"]
-        Guild["ForeverGuildComms<br/>guild social addon"]
-        Group["ForeverGroupComms<br/>party and dungeon addon"]
-    end
-    Client["WoW Forever 1.60.1 client<br/>Interface 16001"]
-    GuildChat["Guild chat channel"]
-    GroupChat["Party / Raid / Instance chat"]
-    AddonChan["Addon message channel<br/>prefix ForeverGrpComms"]
-    Guildmates["Guildmates"]
-    Party["Party and raid members"]
-    Titan["Titan Panel / LibDataBroker<br/>optional"]
+graph TB
+    Player["Player<br/>runs the addons"]
+    Guildmates["Guildmates<br/>receive guild chat"]
+    Party["Party / raid members<br/>receive group chat"]
+    Peers["Party members also running GroupComms<br/>exchange quest ids"]
+    Bundle["Forever Comms bundle<br/>3 addons in the WoW client"]
+    Chat["Guild / Party / Raid chat"]
 
-    Player -->|slash commands, windows, keybinds| Guild
-    Player -->|slash commands, windows, keybinds| Group
-    Player -->|"/fcv language and accent"| Voice
-    Guild -->|Render guild templates| Voice
-    Group -->|Render group templates| Voice
-    Guild --> Client
-    Group --> Client
-    Voice --> Client
-    Client --> GuildChat
-    Client --> GroupChat
-    Client --> AddonChan
-    GuildChat --> Guildmates
-    GroupChat --> Party
-    AddonChan --> Party
-    Guild -.optional.-> Titan
-    Group -.optional.-> Titan
+    Player -->|configures, clicks Send| Bundle
+    Bundle -->|worded messages| Chat
+    Chat --> Guildmates
+    Chat --> Party
+    Bundle <-->|opt-in quest ids| Peers
+    Bundle -->|private alerts and reminders| Player
 ```
-
-**Text alternative**: The player drives two behaviour addons, GuildComms and GroupComms.
-Both delegate message wording to a third addon, ForeverCommsVoice, which owns the
-per-character language and accent profile. All three run inside the WoW Forever client.
-GuildComms writes to guild chat; GroupComms writes to party/raid/instance chat and
-additionally exchanges quest IDs with peers over the addon message channel. Titan Panel
-and LibDataBroker are detected at runtime and are optional for both behaviour addons.
 
 ## Business Description
 
-- **Business Description**: A bundle of three World of Warcraft Forever addons that help a
-  player stay socially present and coordinated without typing the same things repeatedly.
-  **ForeverGuildComms** handles the guild-wide social layer: greeting guildmates on login,
-  welcoming new members, congratulating other members' level-ups, surfacing private alerts
-  for crafting and group requests seen in guild chat, reminding the player about the guild
-  tabard in capital cities, and composing one explicit "ask for help" request.
-  **ForeverGroupComms** handles the small-group layer: greeting a new party, confirming
-  roles, sending coordination calls, initiating native ready checks, marking targets, and
-  comparing quest logs with other users of the addon so dungeon quests can be shared.
-  **ForeverCommsVoice** is not a user-facing feature in its own right; it is the shared
-  wording engine that gives both addons eight curated languages, 29 roleplay accents and
-  non-repeating message variation from one per-character profile.
+**Business Description**: the bundle reduces the social and coordination effort of
+playing on a small WoW Forever server. It notices things worth saying — a guildmate
+coming online, someone levelling, a party forming, a dungeon quest nobody has — and
+offers to say them in the player's chosen language and roleplay voice. The player stays
+in control of what actually reaches a shared channel.
 
-  The restructure in this pass is a **library extraction**, not a feature change for
-  GuildComms. Four GuildComms modules that owned language, accent, race and variant data
-  were lifted into the new shared addon, and GuildComms now reaches them through a
-  25-line adapter. The payoff is that the new GroupComms addon inherits all eight
-  languages and all 29 accents without duplicating them.
+The product is deliberately narrow about that control. Three constraints shape every
+feature:
 
-- **Business Transactions**:
+1. **Nothing is said on the player's behalf without either an explicit setting or an
+   explicit click.** The default for anything that posts unattended is the conservative
+   one.
+2. **No player action is ever automated.** The addons never equip gear, accept an invite,
+   whisper, auto-reply, queue for content or accept a quest. The tabard feature opens the
+   character panel and stops there.
+3. **The player is never congratulated on their own achievement**, which is why
+   self-exclusion is checked by GUID first and then by three name forms.
 
-  **ForeverCommsVoice (shared)**
-  | # | Transaction | Description |
-  | --- | --- | --- |
-  | V1 | Resolve shared voice profile | Read/normalize `ForeverCommsVoiceCharDB.voice`; clamp language, accent, race filter and strength to valid values |
-  | V2 | Migrate legacy guild voice settings | One-time adoption of an existing `ForeverGuildCommsCharDB.voice` into the shared table, latched by `migratedFromGuild` so later logins never overwrite shared edits |
-  | V3 | Render a scoped message | Pick the catalog for scope `guild` or `group`, honour a consuming addon's custom template verbatim, apply language, apply accent, optionally vary, then interpolate and byte-clamp |
-  | V4 | Select a non-repeating variant | Shuffle-bag selection per scope/kind/language/accent signature, exhausting every wording before reshuffling and avoiding a cross-bag immediate repeat |
-  | V5 | Offer compatible accents | Filter the 29 accents by the selected language and, optionally, by the character's race |
-  | V6 | Administer shared voice settings | `/fcv` and a Settings canvas panel; writes propagate to GuildComms' panel and help-request preview. **As of 0.1.1 this is the sole writer of the shared profile** — GuildComms' `A:SetVoiceOption` delegates here rather than validating and mutating the table itself |
-  | V7 | **Hold a message for review** | **New in 0.2.1.** `V:Enqueue` accepts a message plus a send callback from either consumer, assigns a monotonic id, bounds the backlog at 100 and starts an expiry watcher. The queue is deliberately never persisted, because it holds function references and session-scoped identities |
-  | V8 | **Approve or discard a held message** | Expiry is re-checked before the consumer's callback runs, so a click racing the sweep cannot resurrect a stale message. The callback returns `true` for sent; a `"stale"` reason lets the consumer discard work it can no longer honour, such as after a guild change |
-  | V9 | **Expire held messages** | Items past `autoSkipSeconds` (default 20, `0` disables) are dropped unsent. Driven from an `OnUpdate` handler throttled to 0.5s — the bundle's only one, and against its own style rule |
-  | V10 | **Administer and display the shared queue** | Six per-character settings and one movable list window, shared by both consumers, with per-source counts feeding both indicators and both Titan menus |
+**Business Transactions**
 
-  **ForeverGuildComms (guild social)**
-  | # | Transaction | Description |
-  | --- | --- | --- |
-  | G1 | Capture guild roster baseline | First read after login, reload or guild change records state and sends nothing |
-  | G2 | Greet a guildmate on login | Offline-to-online transition only, cooldown `loginCooldown`, default 300s |
-  | G3 | Welcome a new guild member | Parsed from the localized `ERR_GUILD_JOIN_S` system line, 300s cooldown |
-  | G4 | Congratulate another member's level-up | Online-to-online, strictly higher numeric level, 1800s cooldown; the player's own level-up is always excluded |
-  | G5 | Verify a staged guild message | In `verify` mode each greeting waits in a private window for an explicit Send or Dismiss |
-  | G6 | Drain the automatic send queue | Spacing of at least `max(3, messageSpacing)` seconds between automatic sends, re-checking guild identity before each one |
-  | G7 | Alert on a craft request | Guild chat line containing both a request phrase and an exact cached recipe or output name; private only |
-  | G8 | Alert on a group request | Guild chat LFG/LFM/LF patterns, suppressed when the line already matched a craft request; private only |
-  | G9 | Scan learned recipes | Debounced read of the open profession window into a per-character cache |
-  | G10 | Remind about the guild tabard | One prompt per city stay on entering a capital without item 5976; optional prompt on leaving while wearing it. Opens the character panel, never equips |
-  | G11 | Compose and send a help request | Explicit button press, fingerprinted draft so Send posts exactly the previewed wording, one request per 20 seconds |
-  | G12 | Administer guild settings | Settings canvas panel and a nested Titan menu writing through one `A:SetOption` |
-  | G13 | Publish the guild indicator | Optional LibDataBroker object with online count, alert count and review count |
-  | G14 | Run a keybound quick action | Three opt-in bindings; none of them sends guild chat |
+Guild layer (ForeverGuildComms):
 
-  **ForeverGroupComms (party and dungeon)**
-  | # | Transaction | Description |
-  | --- | --- | --- |
-  | P1 | Scan the group roster | Enumerate party or raid units, read assigned roles and levels, bump a `groupSerial` whenever the member set changes |
-  | P2 | Greet a new group | Staged for review by default; `autoGreeting` makes it immediate |
-  | P3 | Welcome a member who joined mid-run | Staged or automatic, keyed per member and group serial |
-  | P4 | Congratulate a member's level-up | Requires a stable GUID and a strictly higher level, 180s cooldown, staged by default |
-  | P5 | Review roles privately | Flags unassigned roles, and in a non-raid party a tank or healer count other than one |
-  | P6 | Broadcast a role check | Explicit send of a role summary, collapsing to counts above 160 characters |
-  | P7 | Send a coordination call | Pull, mana, regroup, wait-for-healer, CC moon, focus skull, interrupts, quest reminder |
-  | P8 | Initiate a native ready check | Leader or raid assistant only, out of combat, via `C_PartyInfo.DoReadyCheck` |
-  | P9 | Tally ready-check responses privately | Counts ready, not ready and unconfirmed; never announced to chat |
-  | P10 | Mark a target | Skull or moon on a hostile selected unit, leader or assistant only |
-  | P11 | Advertise active quest IDs | Chunked `Q` packets over the addon channel, suppressed when the quest signature has not changed within 240s |
-  | P12 | Answer a peer's quest advertisement | Whispered `R` packet listing which of the IDs **the peer disclosed** this client has completed |
-  | P13 | Compare quest logs | Classify each of the player's quests per member as missing, has, completed or unknown |
-  | P14 | Share a quest | Manual button that asks WoW's own push API; the game validates eligibility |
-  | P15 | Request a quest the player lacks | Reverse comparison, then a chat request naming the quest |
-  | P16 | Administer group settings | Settings canvas panel with eight toggles plus a shortcut into the Voice panel |
-  | P17 | Publish the group indicator | Optional LibDataBroker object with member count and pending suggestion count |
+| # | Transaction | Trigger | Output |
+| --- | --- | --- | --- |
+| 1 | Greet a returning guildmate | Roster diff, offline → online | Guild chat, spaced or staged |
+| 2 | Welcome a new member | Localized guild-join system message | Guild chat, spaced or staged |
+| 3 | Congratulate another member's level-up | Roster diff, online → online, level increased | Guild chat, spaced or staged |
+| 4 | Alert on a craft request | Guild chat matching a request phrase **and** a cached known recipe | Private alert only |
+| 5 | Alert on an LFG/LFM request | Guild chat matching a group request pattern | Private alert only |
+| 6 | Remind about the guild tabard | Entering or leaving a capital city | Popup; opens the character panel |
+| 7 | Ask the guild for help | Player fills the composer and clicks Send | One guild message, rate-limited to one per 20 seconds |
+| 8 | Review a staged message | Player opens the queue and clicks | The exact previewed text, floored at 2 seconds between approvals |
+| 9 | Cache learned recipes | Opening a profession window | Per-character cache, no chat |
+| 10 | Report status | `/fgc status` | Console only |
 
-- **Business Dictionary**:
+Group layer (ForeverGroupComms):
 
-  | Term | Meaning |
-  | --- | --- |
-  | **Scope** | `guild` or `group` — selects which phrase catalog `V:Render` uses |
-  | **Catalog** | A language-keyed table of message templates registered with `V:RegisterCatalog` |
-  | **Kind** | A message type within a catalog: guild has `login`, `join`, `level`, `help`; group has 13 including `greet`, `roles`, `pull`, `skull`, `request` |
-  | **Voice profile** | The per-character language, accent, race filter and accent strength, stored once in `ForeverCommsVoiceCharDB.voice` |
-  | **Accent** | A curated roleplay or regional phrasebook with its own complete templates and an optional `flair` prefix. Writing style, not audio, and not Blizzard's in-game racial languages |
-  | **Accent strength** | Subtle uses the phrasebook only; Moderate prepends the flair; Expressive adds a further flourish |
-  | **Race filter** | Restricts the offered accents to those appropriate to `UnitRace("player")` |
-  | **Shuffle bag** | Session-local permutation of the available wordings, exhausted before reshuffling, with a guard against an immediate cross-bag repeat |
-  | **Baseline** | The first guild roster read of a session; updates state and deliberately sends nothing |
-  | **Outgoing mode** | GuildComms-wide choice of `automatic` or `verify` for roster-triggered messages |
-  | **Staged / suggestion** | A message held for an explicit click: GuildComms calls it an approval, GroupComms calls it a suggestion |
-  | **Group serial** | A counter bumped whenever the GroupComms member set changes; stale suggestions and in-flight packets are discarded by serial |
-  | **Private alert / notification** | Local chat-frame and window output only. Never emitted to any channel |
-  | **Quest epoch** | A monotonically increasing stamp on the player's advertised quest list; a completion reply is only accepted for the current epoch |
-  | **Q / R packet** | `Q` advertises the sender's active quest IDs to the group; `R` whispers back which of those IDs the responder has completed |
-  | **Fingerprinted draft** | The cached help-request wording, keyed by every input that affects it, so Send posts exactly what the preview showed |
+| # | Transaction | Trigger | Output |
+| --- | --- | --- | --- |
+| 11 | Greet a new party | Joining a group | Group chat, staged by default |
+| 12 | Welcome a joining member | Roster identity change | Group chat, staged by default |
+| 13 | Congratulate a grouped member's level-up | Level increase while grouped | Group chat, staged by default |
+| 14 | Confirm roles | Player clicks, or an identity change triggers a private alert | Group chat on click; private otherwise |
+| 15 | Coordination calls — pull, mana, regroup, wait for healer, interrupts, CC moon, focus skull | Player clicks | Group chat, unaccented and plain |
+| 16 | Start a ready check | Player clicks | Native client ready check, leader or raid assistant only |
+| 17 | Tally ready-check responses | `READY_CHECK_FINISHED` | Private notification only; never announced |
+| 18 | Mark a target | Player clicks | Raid marker, leader or raid assistant only |
+| 19 | Advertise active quest ids | Quest log change, debounced | Addon message to the group, opt-in |
+| 20 | Answer a completion query | Receiving a peer advertisement | Addon whisper, only for ids the peer disclosed |
+| 21 | Compare quest logs | Player opens the window | Local UI: shared / missing / completed / unknown |
+| 22 | Share a quest | Player clicks | Native push API, to the whole group |
+| 23 | Request a quest a peer has | Player clicks | One group chat message |
+| 24 | Remind about dungeon quests | Group identity change | Private notification only |
+
+Shared layer (ForeverCommsVoice):
+
+| # | Transaction | Trigger | Output |
+| --- | --- | --- | --- |
+| 25 | Word a message | A consumer calls `V:Render` | A worded, byte-clamped string. Never sent by the library |
+| 26 | Vary wording without repeating | `V:Pick` shuffle bags | A template, exhausting a bank before repeating |
+| 27 | Hold a message for approval | A consumer calls `V:Enqueue` | A queued record with a monotonic id |
+| 28 | Approve a held message | Player clicks | The consumer's own callback, once |
+| 29 | Expire a held message | Per-record timeout | **Silently skipped. Never sent** |
+| 30 | Adopt legacy voice settings | First load after upgrade | One-time copy, latched |
+| 31 | Edit the shared profile | `/fcv` or either consumer's panel | A validated write through the single writer |
+
+**Business Dictionary**
+
+| Term | Meaning |
+| --- | --- |
+| **Scope** | Which catalog a message is worded from: `guild` or `group` |
+| **Kind** | Which message: `login`, `join`, `level`, `help`, `greet`, `welcome`, `pull`, `skull`, … |
+| **Voice profile** | The per-character language, accent, race filter and strength. One table, shared by both consumers, one writer |
+| **Accent** | A curated English-language roleplay phrasebook. Not a phonetic claim about real people and not Blizzard's in-game racial languages |
+| **Strength** | How heavily an accent is applied: Subtle (wording only), Moderate (adds a catchphrase), Expressive (catchphrase + emphasis) |
+| **Flair** | The catchphrase prefix an accent contributes, e.g. `By the forge! ` |
+| **Expressive punctuation** | At Expressive only, a final `.` becomes `!` and a final `!` becomes `!!`. Applies to guild messages except `help`, and to group `greet`/`welcome`/`level` only |
+| **Staged / staged for review** | Worded and held in the shared queue, awaiting a click. Nothing has been sent |
+| **Automatic vs Verify** | GuildComms' outgoing mode. Automatic posts with spacing; Verify requires a click for every message |
+| **Baseline** | The first roster read after login or a guild change. Updates state and sends nothing |
+| **Suspicious read** | A roster read that is empty, or collapses below 70% of the known count in a guild of more than 10. Discarded without touching state |
+| **`groupSerial`** | A counter bumped whenever party membership identity changes. Stamps staged messages and queued packets so none can reach a different group |
+| **`questEpoch`** | A counter identifying the local quest advertisement a completion reply must match |
+| **Stale** | A staged message whose captured identity no longer matches. Dropped, never retargeted |
+| **Private** | Shown only to the player: console, the alert list, or a notification. Never chat |
 
 ## Component Level Business Descriptions
 
-### ForeverCommsVoice (shared library addon)
-- **Purpose**: Own every piece of wording data and the logic that turns a message kind
-  into final text, so two consuming addons share one per-character voice profile instead
-  of duplicating eight languages and 29 accents.
-- **Responsibilities**: Normalize and persist the shared voice profile; perform the
-  one-time migration out of GuildComms' per-character table; hold the guild and group
-  phrase catalogs, the accent phrasebooks, the race-to-accent map, the locale variants and
-  the accent variants; resolve which accent applies; run the shuffle bags; render and
-  byte-clamp the final string; present its own `/fcv` Settings panel.
-- **Explicit non-responsibility**: it never sends chat, never registers a chat or combat
-  event, and never decides *when* a message should go out. Consuming addons own delivery.
+### ForeverCommsVoice
 
-### ForeverGuildComms (guild social addon)
-- **Purpose**: Keep a guild feeling populated and responsive with low effort, while
-  keeping every automatic post inside strict anti-spam rules.
-- **Responsibilities**: Guild roster baseline and diffing; the three automatic guild
-  messages; the automatic queue and the verify-before-send backlog; private parsing of
-  guild chat for craft and group requests; the per-character recipe cache; tabard
-  reminders; the help composer; settings across a Settings panel, a Titan menu and three
-  keybindings; the optional guild indicator.
+- **Purpose**: own how an addon-generated message is worded, and own the single backlog of
+  messages waiting on the player's click.
+- **Responsibilities**: the per-character voice profile and its only writer; 8 languages;
+  29 accent phrasebooks; the race-to-accent map and filtering; the guild and group phrase
+  catalogs; non-repeating variant selection; the accent-strength rules including which
+  message kinds they reach; the 250-byte UTF-8-safe chat clamp; the shared review queue
+  with its bound, per-record expiry and movable overlay.
+- **Explicitly not responsible for**: sending anything, reading chat, or taking any
+  automatic action. It has no concept of a guild or a party beyond a scope label.
 
-### ForeverGroupComms (party and dungeon addon)
-- **Purpose**: Reduce the repetitive typing of a dungeon run and make it obvious which
-  party members are missing which quests, without taking any action on the player's behalf.
-- **Responsibilities**: Group roster and role reading; staged or automatic group greetings
-  and congratulations; the coordination message set; native ready-check initiation and a
-  private response tally; target marking; the quest ID exchange protocol and both
-  directions of quest comparison; manual quest sharing; its own settings panel and
-  indicator.
+### ForeverGuildComms
 
-## Product constraints that survive the restructure
+- **Purpose**: handle the guild-facing social moments so the player does not have to watch
+  the roster.
+- **Responsibilities**: noticing login, join and level transitions without acting on a
+  partial roster read; excluding the player from their own congratulations; spacing
+  automatic guild messages; holding messages for review when asked; detecting craft and
+  LFG requests in guild chat and keeping those alerts private; caching learned recipes per
+  character; reminding about the tabard without touching gear; composing one explicit help
+  request.
 
-These are deliberate and are still enforced in code:
+### ForeverGroupComms
 
-- No automation of player actions. No gear equipping, no auto-accept, no auto-whisper, no
-  auto-queue. The tabard feature opens the character panel; quest sharing asks WoW's own
-  push API after a click; ready checks and target marks require leader or assistant rank
-  and an explicit trigger.
-- No congratulations for the player's own level-up. `A:IsSelf` in GuildComms checks GUID
-  first, then normalized and realm-qualified names; GroupComms excludes `playerKey`.
-- GuildComms scans **only** `CHAT_MSG_GUILD` for alerts.
-- No hard library dependencies. LibDataBroker is reached through
-  `LibStub("LibDataBroker-1.1", true)` in both behaviour addons.
-- Alerts and notifications are private.
+- **Purpose**: handle party and dungeon coordination, and answer "does everyone have the
+  quest?" without anyone typing it.
+- **Responsibilities**: tracking group identity so nothing leaks between parties; staging
+  social messages for review by default; keeping coordination calls plain and unaccented
+  so they are followable under pressure; gating ready checks and target marking on real
+  group rank; exchanging only active quest ids with consenting peers, and answering
+  completion only for ids already disclosed; keeping the ready-check tally and quest
+  reminders private.
 
-**One constraint changed scope, and the steering now says so.** The documented non-goal
-"no addon-to-addon comms" belongs to GuildComms, and GuildComms still has none. GroupComms
-introduces an opt-in quest-sync protocol as a headline feature, gated behind the
-`questSync` setting, restricted to active quest IDs with no titles or progress, and
-answering completion queries only for IDs a peer already disclosed. `.kiro/steering/product.md`
-was rewritten in commit `76ca527` to scope the non-goal to GuildComms and record the
-protocol's disclosure limits as product constraints in their own right, so the previously
-reported contradiction is closed.
+## Where the product stands
 
-**The library's remit widened this span, and the non-goal it was built on still holds.**
-`ForeverCommsVoice` was described in earlier passes as owning wording and nothing else —
-"it never sends, and never decides when a message is delivered". With the review queue it
-now owns *when the user is asked* about a message, and it holds the send callbacks. The
-boundary is intact: the library still never calls `SendChatMessage`, and every send
-executes inside the consumer's own callback behind that consumer's own gates. But the
-statement needs the narrower phrasing — the library decides nothing about **delivery**,
-while it now mediates **review**.
+The eight-pass history has moved this from one flat addon to a three-package bundle whose
+offline behaviour is now well covered: 28 harnesses, 4,138 lines of test against 3,927
+lines of shipped Lua, a linter reporting zero errors, and a mutation check confirming all
+28 of its deliberately injected faults are caught.
 
-**One constraint was clarified rather than changed.** "No hard library dependencies" means
-no hard *third-party* dependency. LibDataBroker remains probed at runtime with
-`LibStub(..., true)` and both applications work fully without it; nothing is vendored.
-`ForeverCommsVoice` is a hard dependency and is first-party. As of this span the install
-path enforces the relationship instead of merely declaring it: every individual source
-archive bundles the library, and the installer prepends it to any consumer-only selection.
+The business risk is unchanged and is not a code risk: **no part of this bundle has ever
+run in the client it is written for.** Every behaviour above is implemented against the
+documented Forever 1.60.1 API and verified against mocks. Until the in-game checklist is
+walked, the honest status is that the product is well-built and unproven.

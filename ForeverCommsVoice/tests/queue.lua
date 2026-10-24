@@ -98,4 +98,38 @@ v:Enqueue({source="group",text="Group only",send=function()return true end})
 g:ClearApprovals()
 assert(v:PendingCount("guild")==0 and v:PendingCount("group")==1)
 assert(#sent==2)
-print("PASSED: shared guild/group queue, click approval, FIFO, source counts, hidden expiry, per-record TTL, stale identity, selective clear, no auto-send")
+-- Backlog cap on the SHARED queue. With the library installed this is the live ceiling
+-- for both addons, so it matters more than the 30-entry standalone list GuildComms uses
+-- as a fallback (asserted in ForeverGuildComms/tests/verify.lua). The queue holds 100
+-- and drops the oldest, so a flood cannot grow it without bound or push out the newest.
+v:SkipAll()
+assert(v:PendingCount()==0,"precondition: an empty queue")
+assert(v:SetQueueOption("autoSkipSeconds",0),"no expiry while filling the queue")
+local ids={}
+for i=1,100 do
+  ids[i]=v:Enqueue({source="guild",text="Flood "..i,send=function()return true end})
+  assert(ids[i],"entry "..i.." was accepted")
+end
+assert(v:PendingCount()==100,"100 entries fit, got "..v:PendingCount())
+assert(v:PendingList()[1].text=="Flood 1","oldest first")
+assert(v:PendingList()[100].text=="Flood 100","newest last")
+local overflow=v:Enqueue({source="guild",text="Flood 101",send=function()return true end})
+assert(overflow,"the overflowing entry is still accepted")
+assert(v:PendingCount()==100,"the queue stays capped at 100, got "..v:PendingCount())
+assert(v:PendingList()[1].text=="Flood 2","the oldest entry was dropped")
+assert(v:PendingList()[100].text=="Flood 101","the newest entry was kept")
+assert(not v:FindQueueItem(ids[1]),"the dropped id is no longer findable")
+-- A dropped entry must never fire its callback; dropping is not sending.
+local fired=false
+v:SkipAll()
+for i=1,101 do
+  v:Enqueue({source="group",text="Drop "..i,
+    send=function() fired=true; return true end})
+end
+assert(v:PendingCount()==100 and not fired,
+  "overflowing the queue discards silently and never invokes a send callback")
+v:SkipAll()
+assert(v:SetQueueOption("autoSkipSeconds",20))
+print("PASSED: shared guild/group queue, click approval, FIFO, source counts, hidden " ..
+      "expiry, per-record TTL, stale identity, selective clear, no auto-send, " ..
+      "100-entry cap dropping the oldest without firing it")

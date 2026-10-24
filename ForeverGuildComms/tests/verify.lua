@@ -86,4 +86,47 @@ A.lastGuildSend = 0
 A:ApproveMessage(1)
 assert(#_G.sent == sentBefore + 1 and #A.pendingApprovals == 0,
     "the same click succeeds once the floor has passed")
-print("PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, automatic sending, approval floor")
+
+-- Backlog cap on the standalone approval list. This is the path taken when the shared
+-- Voice queue is absent, which is the case here: no Queue.lua is loaded, so V.Enqueue
+-- is nil and StageApproval falls through to A.pendingApprovals.
+--
+-- A long absence can stage more greetings than anyone will read. The list is capped at
+-- 30 and drops the OLDEST, so what survives is the most recent and therefore the most
+-- likely to still be worth sending.
+assert(_G.ForeverCommsVoice.Enqueue == nil,
+    "this block must exercise the standalone list, not the shared queue")
+A:ClearApprovals()
+assert(#A.pendingApprovals == 0, "precondition: an empty backlog")
+A.db.outgoingMode = "verify"
+for i = 1, 30 do A:QueueGuild("Message " .. i, "login:member" .. i, 300) end
+assert(#A.pendingApprovals == 30, "30 staged messages all fit, got " .. #A.pendingApprovals)
+assert(A.pendingApprovals[1].text == "Message 1", "oldest is first")
+assert(A.pendingApprovals[30].text == "Message 30", "newest is last")
+assert(A:ApprovalCount() == 30, "the count shown in the UI follows the list")
+
+A:QueueGuild("Message 31", "login:member31", 300)
+assert(#A.pendingApprovals == 30, "the backlog stays capped, got " .. #A.pendingApprovals)
+assert(A.pendingApprovals[1].text == "Message 2",
+    "the oldest entry is the one dropped, got " .. A.pendingApprovals[1].text)
+assert(A.pendingApprovals[30].text == "Message 31", "and the newest is kept")
+
+for i = 32, 40 do A:QueueGuild("Message " .. i, "login:member" .. i, 300) end
+assert(#A.pendingApprovals == 30, "the cap holds under sustained staging")
+assert(A.pendingApprovals[1].text == "Message 11",
+    "the window slid forward, got " .. A.pendingApprovals[1].text)
+assert(A.pendingApprovals[30].text == "Message 40", "newest retained")
+
+-- A capped backlog is still a working one: approving from it sends and shrinks it.
+A.lastGuildSend = 0
+local backlogSent = #_G.sent
+A:ApproveMessage(1)
+assert(#_G.sent == backlogSent + 1 and #A.pendingApprovals == 29,
+    "approving from a full backlog sends one message and shrinks the list")
+assert(_G.sent[#_G.sent] == "Message 11", "it sent the entry at the index clicked")
+A:ClearApprovals()
+assert(#A.pendingApprovals == 0 and #_G.sent == backlogSent + 1,
+    "clearing a backlog discards without sending")
+
+print("PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, " ..
+      "automatic sending, approval floor, 30-entry backlog cap dropping the oldest")

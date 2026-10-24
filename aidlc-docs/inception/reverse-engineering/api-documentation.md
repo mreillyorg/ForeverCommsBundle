@@ -1,7 +1,7 @@
 # API Documentation
 
-**Analysis date**: 2026-10-19T11:30:00Z
-**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Analysis date**: 2026-10-19T13:30:00Z
+**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
 
 ## REST APIs
 
@@ -13,7 +13,31 @@ This is the one genuinely public contract in the project: the surface
 `ForeverCommsVoice` exposes to its two consumers. Everything else is internal to a single
 addon.
 
-### `_G.ForeverCommsVoice`
+**New in 0.2.1**: the library exposes a second shared capability, a click-to-send review
+queue, alongside the rendering surface. Both are consumed by both applications.
+
+### `_G.ForeverCommsVoice` — review queue, new this span
+
+| Method | Signature | Contract |
+| --- | --- | --- |
+| `V:Enqueue` | `(data) -> id or nil` | **The queue entry point.** Requires `data.source` of `"guild"` or `"group"`, a non-empty `data.text`, and a `data.send` function; returns nil on any validation failure. `data.timeout` overrides the configured auto-skip, clamped 0..3600 where 0 means never expire. Prunes expired items first, assigns a monotonic `id`, drops the oldest if the backlog is at 100, starts the expiry watcher, notifies consumers, and shows the window when `showOnNew` is set |
+| `V:Approve` | `(id) -> boolean` | Re-checks expiry **before** calling the consumer's `send`, so a click racing the sweep cannot resurrect a stale message. `pcall`s the callback. Treats `true` as sent and removes the item; a second return value of `"stale"` also removes it, letting a consumer discard work it can no longer honour — a guild change, for example — without the library knowing why |
+| `V:Skip` / `V:SkipAll` | `(id)` / `(source)` -> boolean | Discard one item, or all items optionally filtered by source. Never sends |
+| `V:Expire` | `(timestamp) -> boolean` | Removes every item past `expiresAt`; returns whether anything changed |
+| `V:PendingCount` / `V:PendingList` | `(source)` -> number / array | Count or list, optionally filtered to `"guild"` or `"group"`. Both consumers use the count for their indicators and menus |
+| `V:FindQueueItem` | `(id) -> index, item` | ID lookup; the reason no consumer binds a UI row to a list position any more |
+| `V:QueueChanged` | `()` | Fan-out. Refreshes the shared UI, then probes `_G.ForeverGuildComms` for `UpdateApprovalsUI` and `UpdateBroker`, and `_G.ForeverGroupComms` for `RefreshUI` |
+| `V:EnsureQueueTicker` | `()` | Lazily creates the expiry watcher. **Uses `SetScript("OnUpdate")`** throttled to 0.5s, against the project's own `C_Timer` rule — the only `OnUpdate` in the bundle |
+| `V:GetQueueSettings` | `() -> table` | Reads and clamps `ForeverCommsVoiceCharDB.queue`: `visibleRows` 1..10, `autoSkipSeconds` 0..3600, `sourceDisplay` `text`/`icon`, `showOnNew` boolean, `x`/`y` within ±10000 |
+| `V:SetQueueOption` | `(key, value) -> boolean` | Validating writer for the six queue settings |
+| `V:BuildQueueUI` / `V:RefreshQueueUI` / `V:RefreshQueueCountdowns` / `V:ShowQueue` | — | The movable shared list window |
+| `V:Print` | `(message)` | Tagged output. **Defined in `Queue.lua`**, though every other package keeps `Print` in `Core.lua` |
+
+**Queue item shape**: `{id, source, kind, label, text, send, created, timeout, expiresAt}`.
+`send` is a function reference supplied by a consumer, which is why the queue is
+deliberately never persisted.
+
+### `_G.ForeverCommsVoice` — rendering
 
 | Method | Signature | Contract |
 | --- | --- | --- |
@@ -310,6 +334,28 @@ the asking peer already disclosed.
 - **Note on defaults**: the two settings that would post to chat without a click —
   `autoGreeting` and `autoLevel` — both default to `false`. `questSync` defaults to
   `true`, which enables the addon message exchange on first load.
+
+### `ForeverCommsVoiceCharDB` — queue settings, new this span
+
+```lua
+{
+    voice = {language="en", accent="none", raceFilter=true, accentStrength="subtle"},
+    migratedFromGuild = true,
+    queue = {visibleRows=2, autoSkipSeconds=20, sourceDisplay="text",
+             showOnNew=true, x=0, y=0},
+}
+```
+- **Validation**: every numeric field passes one `integer()` helper with NaN and infinity
+  guards; `sourceDisplay` collapses to `"text"` unless exactly `"icon"`; `showOnNew` must
+  be boolean; `x`/`y` reset to 0 beyond ±10000.
+- **Note**: `autoSkipSeconds` defaults to **20**, so a queued message is discarded 20
+  seconds after being staged unless the user clicks. `0` disables expiry. This is a safe
+  direction for a chat addon — it drops rather than sends — but it is a new way for a
+  pending message to disappear without the user acting, and neither consumer's README
+  documents the default.
+- The queue **list** itself is never persisted; only these settings are. The module header
+  comment says "Never persisted", which is true of `reviewQueue` but reads as covering the
+  whole module.
 
 ### Runtime-only state
 

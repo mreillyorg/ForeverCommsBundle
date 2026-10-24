@@ -1,4 +1,7 @@
-# Forever Guild Comms 0.6.1-beta
+# Forever Guild Comms 0.6.2-beta
+
+WoW: Forever 1.60.1 / Interface 16001 addon by Michael Reilly.
+Requires **ForeverCommsVoice**, which is bundled with every download.
 
 ### Maintenance fixes in 0.4.3-beta
 
@@ -18,11 +21,9 @@ These three bindings use WoW's standard `Bindings.xml`, which is **automatically
 
 All three actions remain available through TitanPanel and their existing slash-command paths. Existing character keybinding choices are managed by WoW, not by the addon's SavedVariables.
 
-WoW: Forever 1.60.1 / Interface 16001 addon by Michael Reilly.
-
 ## Install (integrated Windows installer)
 
-1. **Extract All** from `ForeverGuildComms-0.4.3-beta.zip` into any convenient folder. Do not launch scripts directly from inside a compressed ZIP.
+1. **Extract All** from the downloaded ZIP into any convenient folder. Do not launch scripts directly from inside a compressed ZIP. Every download includes `ForeverCommsVoice` alongside this addon.
 2. Open **`ForeverGuildComms\install`** and double-click **`Install-ForeverGuildComms.cmd`**. Installation instructions are in `ForeverGuildComms\install\INSTALL-README.txt`.
 3. Choose your WoW Forever client folder if it is not found automatically. You can supply the client (`_classic_beta_`), `Interface`, or `Interface\AddOns` directory.
 4. Restart WoW Forever or enter `/reload`, then open **Settings > AddOns > Forever Guild Comms** (or `/fgc options`).
@@ -88,6 +89,8 @@ Previously queued Verify messages **remain in the review list** if you switch ba
 
 Enable **Vary built-in message wording** in Settings → Outgoing guild messages or TitanPanel → Outgoing guild messages. Default: **on**. Setting it off reproduces the original single-template behaviour.
 
+> **Note on upgrading.** This is the one setting in the addon whose default *changes what you already post*. Every other optional feature defaults to preserving existing behaviour — `outgoingMode` stays `automatic`, `accent` stays `none` — but because `randomizeMessages` is on by default, greetings that previously used one fixed sentence begin rotating through the curated variants after you upgrade. The wording still honours your chosen language and accent, and your own edited templates are never varied. If you had settled on specific wording, turn this off to restore it.
+
 - Neutral English has four variants for each outgoing message type (one original + three alternatives). Other supported neutral languages have three each.
 - Every supported accent and race style has at least two curated message versions for each type; several popular voices have three.
 - Each language/accent and message type uses a session-local shuffle bag. The addon does not repeat the same template until every choice in that bag has been used, and avoids the same template immediately before/after a reshuffle.
@@ -103,7 +106,7 @@ The built-in login, join, level-up and Ask for Help messages use **curated offli
 - **Human/regional styles:** Australian, British, American, Scottish-inspired, Irish-inspired, Canadian, New Zealand, South African, Mexican Spanish, Cuban Spanish, Spain Spanish, Québécois French, Bavarian-inspired German, Brazilian and European Portuguese, and Southern Italian-inspired.
 - **WoW RP styles:** Khaz Modan / Wildhammer / Dark Iron Dwarf, Gnomeregan, Kaldorei, Orcish, Darkspear Troll, Mulgore Tauren, Forsaken, Skyborne, Goblin, Sin'dorei and Draenei. These are invented English-language RP phrasebooks, *not* Blizzard's in-game racial languages.
 - **Race filter:** ON by default. Only suggests accents appropriate to your character's `UnitRace`; turn it off to use other races' styles. On a client race we don't recognise, **Auto** falls back to neutral messages.
-- **Strength:** Subtle uses the phrasebook; Moderate adds an RP greeting to automated greetings; Expressive adds an emphatic flourish. Help requests stay concise and keep `[LFG]` at the front.
+- **Strength:** **Subtle (wording only)** uses the accent's phrasebook and adds **nothing** in front of the message — it is the accent's own sentences, not a decorated version of the neutral ones. **Moderate (adds a catchphrase)** prefixes the racial or regional interjection, for example `By the forge! `. **Expressive (catchphrase + emphasis)** does the same and then amplifies the closing punctuation, turning a final `.` into `!` and a final `!` into `!!`. Help requests stay concise and keep `[LFG]` at the front in every mode. This setting is **shared with ForeverGroupComms**, where it also affects group greetings, welcomes and level congratulations — but no dungeon or combat directive. The full table is in the accent strength section of the [ForeverCommsVoice README](../ForeverCommsVoice/README.md).
 - **Custom messages:** existing user-edited templates always override built-in translations and accents **without being modified**. Reset a field to the exact built-in default to enable localized phrases for that message again. This protects intentional wording, `{variables}`, names, and WoW hyperlinks.
 - **Per-character:** preferences are in `ForeverGuildCommsCharDB`; guild-wide on/off controls and existing templates still use the previous saved settings.
 - **No guild-chat rewriting:** manually typed chat and other addons' messages are completely untouched. A future opt-in feature could add typed-chat transformations separately without changing this module's scope.
@@ -148,6 +151,7 @@ Translation here applies to addon *outgoing* messages only. It does not translat
 - Initial guild roster is treated as a baseline: it never sends messages for everyone already online on login or `/reload`. Very early transitions while initializing may be missed on purpose rather than risk spam.
 - Guild welcomes require Blizzard's localized guild-join system message; automatically posted greetings are rate-limited. Messages sent via deliberate Send clicks are not delayed.
 - Craft alerts are *not* a guaranteed craftability promise: recipe matching checks what you have learned, not whether you currently have materials, tools or sufficient bag space. You must open your tradeskill panels once after installing; if you unlearn a profession, `/fgc clearrecipes` and rescan to remove stale recipes.
+- The recipe cache is keyed by profession name, which the addon reads through `C_TradeSkillUI.GetProfessionChildSkillLineID` and `GetProfessionInfoBySkillLineID`. If this beta client does not expose those, every scan falls back to a single bucket named `Current Profession`, so opening a second profession **overwrites** the first instead of adding to it. `/fgc recipes` reports the cached total, so a count that drops after opening another profession is the symptom. Workaround: reopen the profession you want matched most, or `/fgc clearrecipes` and rescan.
 - Group-alert matching is text-based and may pick up ambiguous `LF` messages. It only scans **guild chat** and never automatically whispers.
 - Tabard detection currently checks the original Guild Tabard item ID (5976) and a set of capital city maps/English zone names. Other tabard items and localized capitals can be added in a later revision.
 - Titan integration uses Titan Panel's embedded LibDataBroker library; if no broker is detected, the addon remains functional without the Titan button. Its right-click menu uses Blizzard `MenuUtil` (expected in the Forever client); if the API is missing, right-click opens the Settings page instead. In-game testing on your particular Titan/Forever combination is still necessary.
@@ -178,7 +182,7 @@ Enable Lua errors in game with `/console scriptErrors 1`, then `/reload`. If any
 
 ## Shared language/voice engine (0.5.0-beta)
 
-**Requires ForeverCommsVoice 0.1.0-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
+**Requires ForeverCommsVoice 0.2.1-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
 
 For the first upgrade, install the three-addon **ForeverComms bundle** or at least install ForeverCommsVoice before updating GuildComms. The updated GuildComms will not load without its dependency. Continue to use `/fgc` for guild functionality.
 

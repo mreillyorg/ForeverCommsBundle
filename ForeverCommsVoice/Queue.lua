@@ -1,5 +1,9 @@
--- Transient, shared click-to-send review queue. Never persisted: callbacks and
--- session-specific guild/group identities must not survive login/reload.
+-- Shared click-to-send review queue for both consumer addons.
+--
+-- The queue CONTENTS are never persisted: each item holds a send callback supplied by
+-- another addon plus a session-specific guild or group identity, and neither may survive
+-- a login or reload. The queue SETTINGS are persisted, per character, under
+-- ForeverCommsVoiceCharDB.queue -- see V:GetQueueSettings.
 local _, V = ...
 V.reviewQueue = {}
 V.reviewNextID = 0
@@ -63,21 +67,19 @@ function V:QueueChanged()
     local group = _G.ForeverGroupComms
     if group and group.RefreshUI then group:RefreshUI() end
 end
+-- Expiry must run even while the window is hidden, so it needs its own clock rather
+-- than a UI refresh. A 0.5s ticker is accurate enough for a countdown display and
+-- avoids an OnUpdate handler, which the project's Lua style rules exclude for periodic
+-- work in favour of C_Timer.
 function V:EnsureQueueTicker()
-    if self.queueWatcher or not CreateFrame then return end
-    local watcher=CreateFrame("Frame")
-    local elapsed=0
-    watcher:SetScript("OnUpdate",function(_,dt)
-        if #V.reviewQueue==0 then return end
-        elapsed=elapsed+(dt or 0)
-        if elapsed>=0.5 then
-            elapsed=0
-            local changed=V:Expire()
-            if not changed and V.queueFrame and V.queueFrame.IsShown and V.queueFrame:IsShown()
-                and V.RefreshQueueCountdowns then V:RefreshQueueCountdowns() end
-        end
+    if self.queueWatcher then return end
+    if not (C_Timer and C_Timer.NewTicker) then return end
+    self.queueWatcher = C_Timer.NewTicker(0.5, function()
+        if #V.reviewQueue == 0 then return end
+        local changed = V:Expire()
+        if not changed and V.queueFrame and V.queueFrame.IsShown and V.queueFrame:IsShown()
+            and V.RefreshQueueCountdowns then V:RefreshQueueCountdowns() end
     end)
-    self.queueWatcher=watcher
 end
 function V:Enqueue(data)
     if type(data) ~= "table" or (data.source ~= "guild" and data.source ~= "group")
@@ -143,6 +145,4 @@ function V:Expire(timestamp)
     if removed then self:QueueChanged() end
     return removed
 end
-function V:Print(message)
-    if print then print("|cff55caffForeverCommsVoice|r: " .. tostring(message)) end
-end
+

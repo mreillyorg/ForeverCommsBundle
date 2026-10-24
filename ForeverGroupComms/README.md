@@ -1,4 +1,4 @@
-# Forever Group Comms 0.3.1-beta
+# Forever Group Comms 0.3.3-beta
 
 A companion to **ForeverGuildComms** using the shared **ForeverCommsVoice** addon, written for **WoW Forever 1.60.1 (Interface 16001)**.
 Author: Michael Reilly.
@@ -58,7 +58,9 @@ This is a separately maintained companion addon updated for ForeverCommsVoice. I
 
 ## Shared language/voice engine (0.2.0-beta)
 
-**Requires ForeverCommsVoice 0.2.0-beta.** The addon now calls the shared engine for group/dungeon messages; accents and language are configured per character with `/fcv` or Settings > AddOns > Forever Comms Voice. Eight languages receive curated group/dungeon messages and RP accents flavour casual messages. Combat directives keep a clear meaning. Disable `Use ForeverCommsVoice for group messages` in GroupComms Settings to restore the original English message rotation. Ready checks, target markers, group roles and quest-sync protocol remain independent of the voice library and are unchanged. Install the three-addon bundle for an easy upgrade; offline tests pass but live-game verification is still needed.
+**Requires ForeverCommsVoice 0.2.1-beta.** The addon now calls the shared engine for group/dungeon messages; accents and language are configured per character with `/fcv` or Settings > AddOns > Forever Comms Voice. Eight languages receive curated group/dungeon messages and RP accents flavour casual messages. Combat directives keep a clear meaning.
+
+The shared **Strength** setting reaches group messages, so it is worth knowing where: the catchphrase prefix and the Expressive punctuation change (final `.` becomes `!`, final `!` becomes `!!`) apply to **group greetings, welcomes and level congratulations only**. Every coordination and combat directive — pull, mana break, regroup, wait-for-healer, crowd control, skull focus, interrupts, plus the role check, quest check and quest request — is rendered exactly as written at every strength, full stops intact. See the accent strength section of the [ForeverCommsVoice README](../ForeverCommsVoice/README.md) for the complete table. Disable `Use ForeverCommsVoice for group messages` in GroupComms Settings to restore the original English message rotation. Ready checks, target markers, group roles and quest-sync protocol remain independent of the voice library and are unchanged. Install the three-addon bundle for an easy upgrade; offline tests pass but live-game verification is still needed.
 
 ## Shared review queue (v0.3.1-beta)
 

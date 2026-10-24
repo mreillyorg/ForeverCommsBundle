@@ -41,3 +41,36 @@ Queue presentation: a compact, movable, scrollable floating overlay (not a norma
 ## Titan Panel menus (0.6.2-beta)
 
 Right-click **Group Comms** for nested Group status, Greetings & congratulations, Dungeon coordination, Target marking, Quest sharing & checks and Quick actions. The status submenu reports live roster and role counts, chat channel, quest-sync state and Group review count. Both **Guild Comms** and **Group Comms** offer a top-level **Open Review Panel** action for the shared ForeverCommsVoice floating queue. Left-click and Shift-click retain their previous GroupComms actions.
+## Testing
+
+```text
+run-tests.cmd                 (Windows)
+python tools/run_tests.py     (any platform)
+```
+
+Runs every offline Lua harness across the three addons and prints a pass/fail summary.
+Needs Python 3 and a Lua **5.1** interpreter — the dialect the client embeds. No WoW
+client required. See `.kiro/steering/testing.md` for how an interpreter is located.
+
+## Building a release
+
+**[BigWigsMods/packager](https://github.com/BigWigsMods/packager) is the authoritative
+release path**, running in GitHub Actions on a `v*` tag.
+
+To build the same archive locally, without pushing a tag:
+
+```text
+package.cmd                   (Windows)
+python tools/package.py       (any platform)
+```
+
+The local builder reads the **same root `.pkgmeta`** BigWigs reads, so there is one source
+of truth for what ships. It writes `.release/ForeverCommsBundle-<version>.zip` and then
+validates it with the same `tools/check_bigwigs_bundle.py` that CI runs — three top-level
+addon folders, runtime files only, both `Bindings.xml`, no tests, installers or docs. A
+green local build means the release archive is correctly shaped.
+
+`python tools/package.py --source` additionally produces the installer-bearing source
+archives used for manual Windows installation. BigWigs does not produce those.
+
+Full details, including every build-time validation, are in [PACKAGING.md](PACKAGING.md).

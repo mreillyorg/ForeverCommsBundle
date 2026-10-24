@@ -62,10 +62,15 @@ Plus the root `PACKAGING.md` and root `README.md`, which list all three versions
 a release changes the dependency relationship — the consuming packages' "Requires
 ForeverCommsVoice x.y.z" README lines.
 
-`tools/verify_package.py` asserts that each TOC version appears in that package's README,
-so items 1 and 3 cannot silently diverge. The TOC-versus-`Core.lua` and installer `.cmd`
-checks are still manual. Both builders read the version from the TOC, so no archive name
-can be stale.
+**All four are checked automatically.** `tools/check_bigwigs_bundle.py` compares the TOC
+against `Core.lua`, the README and the installer `.cmd`, and additionally requires the
+version in the shipped TOC to match the repository, so a rewritten manifest cannot slip
+through. It runs on both the CI and local paths, so a bump that misses a location fails
+the build rather than shipping. Both builders read the version from the TOC, so no archive
+name can be stale.
+
+The check requires the *current* version to appear — it does not object to historical
+changelog headings like `## Shared review queue (v0.6.1-beta)`.
 
 Grep before claiming a bump is done:
 
@@ -169,49 +174,56 @@ both assume things about the checkout root, so the layout rules are:
 
 ### How this is actually implemented
 
-The rules above are met by replacing the external packager on the suite path rather than
-relocating three workflows:
+**BigWigsMods/packager is the authoritative release path for GitHub.** The local builder
+mirrors it so a release can be previewed without pushing a tag — it is not a second
+format, because it reads the **same root `.pkgmeta`** BigWigs reads.
 
 | Artifact | Role |
 | --- | --- |
-| `.github/workflows/package.yml` | The active suite workflow, at the repository root. Installs Lua 5.1, **runs all 13 harnesses**, builds, verifies, uploads artifacts, and attaches ZIPs to a Release on a tag |
+| `.github/workflows/package.yml` | The active suite workflow at the repository root. Installs plain `lua5.1`, **runs the whole harness suite**, then BigWigs, then `check_bigwigs_bundle.py`, uploads the artifact, and attaches the ZIP to a Release on a tag |
+| `.pkgmeta` (root) | `package-as: ForeverCommsBundle` plus `move-folders` lifting the three addons to top level, plus the ignore list. **The single source of truth for what ships** |
 | `tools/run_tests.py` | The single harness runner. CI and local use the same one |
-| `tools/package.py` | Offline builder, Python standard library only. `--runtime` for addon-manager archives. **The builder CI runs** |
-| `tools/verify_package.py` | Packaging verification. Archive membership, dependency bundling, installer presence, TOC-versus-README version agreement |
-| `package.ps1` / `package.cmd` | Offline Windows builder, equivalent contract, no `--runtime` |
-| `<Addon>/.github/workflows/package.yml` | BigWigs, retained for the standalone-repository case only. Each carries a header comment saying so |
+| `tools/check_bigwigs_bundle.py` | Release gate for **both** paths: archive structure, runtime completeness including `Bindings.xml`, and version consistency across all four locations |
+| `tools/package.py` | The local mirror of BigWigs. Reads the root `.pkgmeta`, writes `.release/`, then runs the checker. `--source` builds the installer-bearing archives instead |
+| `package.ps1` / `package.cmd` | Windows **launcher** over `tools/package.py`. Deliberately not a second implementation |
+| `tools/verify_package.py` | Verifies `--source` archives only, which BigWigs does not produce |
+| `<Addon>/.pkgmeta` and `<Addon>/.github/workflows/package.yml` | For the standalone-repository case only. Each workflow carries a header comment saying so |
 
-Because one `v*` tag now releases the suite as a unit, the tag-prefixing scheme described
-above is **not** currently needed — per-addon versions live in the archive filenames. Keep
-the prefixing rule in mind only if the packages are ever split into separate repositories.
+Because one `v*` tag releases the suite as a unit, the tag-prefixing scheme described
+above is **not** currently needed — per-addon versions live in each TOC and the archive
+takes GuildComms' version. Keep the prefixing rule in mind only if the packages are ever
+split into separate repositories.
 
-Two things to be careful of when editing this layer:
+Three things to be careful of when editing this layer:
 
-- **There are two builder implementations.** If you change what goes into an archive, change
-  both `tools/package.py` and `package.ps1`, then run `verify_package.py` against *each*
-  build. CI only exercises the Python one, while `package.cmd` — the entry point the
-  Windows documentation points at — runs the PowerShell one.
-- **Keep behavioural assertions in the Lua harnesses, not in `verify_package.py`.** An
-  earlier revision grepped Lua source from the verifier to prove two fixes were present,
-  which coupled release packaging to the text and indentation of two Lua functions. Now
-  that CI runs the harnesses before packaging, that belongs in `settings.lua` and
-  `integration.lua`.
+- **Change `.pkgmeta`, not the builder.** Both paths derive their file list from it. If you
+  add a runtime file, nothing needs editing; if you add something that must *not* ship, add
+  an ignore entry. `tools/package.py` cross-checks the TOC manifest against the `.pkgmeta`
+  exclusions and refuses to build if they disagree, and it refuses outright on a `.pkgmeta`
+  construct it does not implement rather than silently producing a different archive.
+- **`package.ps1` is a launcher.** Do not reintroduce inclusion logic there. An earlier
+  version kept parallel rules and drifted from `.pkgmeta`.
+- **Keep behavioural assertions in the Lua harnesses, not in the packaging checkers.** An
+  earlier revision grepped Lua source from `verify_package.py` to prove two fixes were
+  present, which coupled release packaging to the exact text and indentation of two Lua
+  functions. CI runs the harnesses first; `settings.lua` and `integration.lua` own those
+  facts.
 
-## Manual ZIP vs packager ZIP
+## Which archive is which
 
-- **Manual ZIP** (what a user downloads from the repository): includes the package, its
-  `install/` folder, `tests/`, `.pkgmeta` and the docs. The user runs
-  `install\Install-<Addon>.cmd`, or the root `install\Install-ForeverComms.cmd` for all
-  three.
-- **Packager ZIP** (from Actions): the `.toc`, its loadable Lua files, `Bindings.xml`,
-  `Media/Icon.tga` where present, and the README. Intended for addon managers.
+- **Release bundle** (BigWigs on a tag, or `package.cmd` locally): three top-level addon
+  folders containing only runtime files — TOCs, TOC-listed Lua, `Bindings.xml` and
+  `Media/Icon.tga`. This is what users install. Validated by
+  `tools/check_bigwigs_bundle.py`.
+- **Source archives** (`python tools/package.py --source` only): each consumer bundled with
+  `ForeverCommsVoice` plus the Windows installers under `install/`, and a suite archive
+  carrying the build tools and docs. BigWigs does not produce these; they exist for manual
+  Windows installation. Validated by `tools/verify_package.py`.
 
 ## Pre-release pass
 
-Per package being released:
-
-1. **`python tools/run_tests.py` reports `PASSED: 13   FAILED: 0`** — the whole suite, not
-   just the package you changed. Eight GuildComms harnesses load the Voice source, and
+1. **`python tools/run_tests.py` reports `FAILED: 0`** — the whole suite, not just the
+   package you changed. Eight GuildComms harnesses load the Voice source, and
    `ForeverCommsVoice/tests/integration.lua` loads all three packages, so a library change
    can break a consumer's suite. CI runs the same command before packaging, so a failure
    here is a failure there. See `testing.md`.

@@ -88,4 +88,39 @@ radios[2].OnClick(radios[2])
 assert(A.db.outgoingMode == 'verify' and radios[2].checked and not radios[1].checked, "verify radio must switch mode")
 radios[1].OnClick(radios[1])
 assert(A.db.outgoingMode == 'automatic', "automatic radio must switch mode back")
-print('PASSED: saved timing migration, UI numeric edits, bounds/defaults, templates, radio modes')
+-- Regression: Guild Restore Defaults must not mutate the shared Voice profile.
+-- A.char.voice and ForeverCommsVoiceCharDB.voice are the SAME table at runtime, so a
+-- reset here would silently change the language and accent GroupComms is using. This
+-- loads the real GroupComms and asserts its rendered output is byte-identical after.
+assert(V:SetOption("language","es"))
+assert(V:SetOption("raceFilter",false))
+assert(V:SetOption("accent","mexican"))
+assert(V:SetOption("accentStrength","expressive"))
+local shared = V:GetSettings()
+local G = {}
+assert(loadfile(base .. "../ForeverGroupComms/Core.lua"))("ForeverGroupComms", G)
+G.db = {enabled=true, useSharedVoice=true, randomMessages=false}
+local beforeGroupText = G:Render("greet")
+A.db.enabled = false
+panel.OnDefault()
+assert(A.db.enabled == A.defaults.enabled, "Guild settings were restored")
+assert(V:GetSettings() == shared and A.char.voice == shared, "shared profile object must stay stable")
+assert(G:Render("greet") == beforeGroupText, "GroupComms voice output changed after Guild defaults reset")
+assert(shared.language == "es" and shared.accent == "mexican" and shared.accentStrength == "expressive",
+    "Guild Restore Defaults must never reset Voice settings used by GroupComms")
+assert(A:CommsText("login",{name="Mira"},true):find("Mira",1,true),"guild still renders")
+-- Restore Defaults must not re-enable unattended posting for someone who chose to
+-- review every message, and must restore templates as a fresh deep copy.
+A.db.outgoingMode = "verify"
+A.db.templates.login = "Edited {name}"
+A.db.messageSpacing = 99
+panel.OnDefault()
+assert(A.db.outgoingMode == "verify", "Restore Defaults must preserve outgoingMode")
+assert(A.db.templates.login == A.defaults.templates.login, "templates restored")
+assert(A.db.templates ~= A.defaults.templates, "templates must be a copy, not the defaults table")
+assert(A.db.messageSpacing == A.defaults.messageSpacing, "other settings restored")
+A.db.templates.login = "Mutated {name}"
+assert(A.defaults.templates.login ~= "Mutated {name}", "restoring must not alias A.defaults")
+A.db.templates.login = A.defaults.templates.login
+assert(A.db.reviewAutoShow == true, "review auto-show defaults on")
+print('PASSED: timing migration, UI numeric edits, bounds/defaults, templates, radio modes, shared voice isolation, defaults scope')

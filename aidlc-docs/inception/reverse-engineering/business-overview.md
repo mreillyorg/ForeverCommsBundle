@@ -1,8 +1,8 @@
 # Business Overview
 
-**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.1.1-beta,
-ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta.
-**Analysis date**: 2026-10-19T11:30:00Z (sixth reverse-engineering pass, second multi-package pass)
+**Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.2.1-beta,
+ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta.
+**Analysis date**: 2026-10-19T13:30:00Z (sixth reverse-engineering pass, second multi-package pass)
 **Change in this span**: a remediation release. No new business transaction was added; the
 packaging and install path was rebuilt, two functional defects were fixed, and the shared
 voice profile gained a single writer. See `code-quality-assessment.md`.
@@ -82,6 +82,10 @@ and LibDataBroker are detected at runtime and are optional for both behaviour ad
   | V4 | Select a non-repeating variant | Shuffle-bag selection per scope/kind/language/accent signature, exhausting every wording before reshuffling and avoiding a cross-bag immediate repeat |
   | V5 | Offer compatible accents | Filter the 29 accents by the selected language and, optionally, by the character's race |
   | V6 | Administer shared voice settings | `/fcv` and a Settings canvas panel; writes propagate to GuildComms' panel and help-request preview. **As of 0.1.1 this is the sole writer of the shared profile** — GuildComms' `A:SetVoiceOption` delegates here rather than validating and mutating the table itself |
+  | V7 | **Hold a message for review** | **New in 0.2.1.** `V:Enqueue` accepts a message plus a send callback from either consumer, assigns a monotonic id, bounds the backlog at 100 and starts an expiry watcher. The queue is deliberately never persisted, because it holds function references and session-scoped identities |
+  | V8 | **Approve or discard a held message** | Expiry is re-checked before the consumer's callback runs, so a click racing the sweep cannot resurrect a stale message. The callback returns `true` for sent; a `"stale"` reason lets the consumer discard work it can no longer honour, such as after a guild change |
+  | V9 | **Expire held messages** | Items past `autoSkipSeconds` (default 20, `0` disables) are dropped unsent. Driven from an `OnUpdate` handler throttled to 0.5s — the bundle's only one, and against its own style rule |
+  | V10 | **Administer and display the shared queue** | Six per-character settings and one movable list window, shared by both consumers, with per-source counts feeding both indicators and both Titan menus |
 
   **ForeverGuildComms (guild social)**
   | # | Transaction | Description |
@@ -198,6 +202,15 @@ answering completion queries only for IDs a peer already disclosed. `.kiro/steer
 was rewritten in commit `76ca527` to scope the non-goal to GuildComms and record the
 protocol's disclosure limits as product constraints in their own right, so the previously
 reported contradiction is closed.
+
+**The library's remit widened this span, and the non-goal it was built on still holds.**
+`ForeverCommsVoice` was described in earlier passes as owning wording and nothing else —
+"it never sends, and never decides when a message is delivered". With the review queue it
+now owns *when the user is asked* about a message, and it holds the send callbacks. The
+boundary is intact: the library still never calls `SendChatMessage`, and every send
+executes inside the consumer's own callback behind that consumer's own gates. But the
+statement needs the narrower phrasing — the library decides nothing about **delivery**,
+while it now mediates **review**.
 
 **One constraint was clarified rather than changed.** "No hard library dependencies" means
 no hard *third-party* dependency. LibDataBroker remains probed at runtime with

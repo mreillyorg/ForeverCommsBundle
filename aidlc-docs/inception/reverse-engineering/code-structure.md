@@ -1,7 +1,7 @@
 # Code Structure
 
-**Analysis date**: 2026-10-19T11:30:00Z
-**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Analysis date**: 2026-10-19T13:30:00Z
+**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
 
 ## Build System
 
@@ -77,7 +77,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 
 ### Existing Files Inventory
 
-#### ForeverCommsVoice 0.1.1-beta — 7 shipped modules, 872 lines, 18 methods
+#### ForeverCommsVoice 0.2.1-beta — 9 shipped modules, 1,207 lines, 35 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -95,7 +95,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 | `.github/workflows/package.yml` | 18 | — | `v*` tag, BigWigsMods/packager@v2 |
 | `install/*` | 316 | — | `.cmd` launcher, TOC-parsing PowerShell installer, 2-line README |
 
-#### ForeverGuildComms 0.5.1-beta — 9 shipped modules, 1,534 lines, 64 methods
+#### ForeverGuildComms 0.6.2-beta — 9 shipped modules, 1,491 lines, 65 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -116,7 +116,7 @@ namespace through the global `_G.ForeverCommsVoice`.
 | `README.md` | 133 | — | User documentation. Title still reads 0.4.3-beta |
 | `PACKAGING.md` | 91 | — | Release guide. Still states 0.4.3-beta and lists four modules that no longer exist here |
 
-#### ForeverGroupComms 0.2.1-beta — 6 shipped modules, 982 lines, 47 methods
+#### ForeverGroupComms 0.3.3-beta — 7 shipped modules, 1,108 lines, 52 methods
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
@@ -135,30 +135,41 @@ namespace through the global `_G.ForeverCommsVoice`.
 
 | Metric | Voice | Guild | Group | Bundle |
 | --- | --- | --- | --- | --- |
-| Shipped Lua modules | 7 | 9 | 6 | **22** |
-| Shipped Lua lines | 872 | 1,534 | 982 | **3,388** |
-| Public methods | 18 | 64 | 47 | **129** |
+| Shipped Lua modules | 9 | 9 | 7 | **25** |
+| Shipped Lua lines | 1,207 | 1,491 | 1,108 | **3,806** |
+| Public methods | 35 | 65 | 52 | **152** |
 | Registered events | 1 | 14 | 10 | **25** |
 | Event dispatchers | 1 | 1 | 1 | **3** |
-| Offline harnesses | 1 | 11 | 1 | **13** |
-| Harness lines | 79 | 845 | 105 | **1,029** |
+| Offline harnesses | 4 | 11 | 2 | **17** |
+| Harness lines | 243 | 828 | 144 | **1,215** |
+| Harnesses **failing** | **2** | **1** | 0 | **3** |
 | SavedVariables tables | 1 | 2 | 1 | **4** |
 | `Media/Icon.tga` | 1 | 1 | 1 | **3** |
+| `OnUpdate` handlers | **1** | 0 | 0 | **1** |
 
 ### Non-package tooling
 
-| File | Lines | Language |
-| --- | --- | --- |
-| `tools/package.py` | 97 | Python |
-| `tools/verify_package.py` | 52 | Python |
-| `package.ps1` | 72 | PowerShell |
-| `package.cmd` | 11 | Batch |
-| `.github/workflows/package.yml` | 30 | YAML |
-| `install/Install-ForeverComms.ps1` | 153 | PowerShell |
-| `install/Install-ForeverComms.cmd` | 12 | Batch |
-| `<Addon>/install/Install-<Addon>.ps1` x3 | 13 each | PowerShell |
-| `PACKAGING.md` | 38 | Markdown |
-| `README.md` | 24 | Markdown |
+| File | Lines | Language | CI status |
+| --- | --- | --- | --- |
+| `.github/workflows/package.yml` | 39 | YAML | **Active** — BigWigs, then `check_bigwigs_bundle.py`. No test step |
+| `.pkgmeta` (root) | 37 | YAML | **Active, new** — `package-as` + `move-folders` + 24 ignores |
+| `tools/check_bigwigs_bundle.py` | 28 | Python | **Active, new** |
+| `tools/run_tests.py` | 120 | Python | Orphaned from CI; the documented local command |
+| `tools/package.py` | 97 | Python | Orphaned; still named as the build command in `PACKAGING.md` |
+| `tools/verify_package.py` | 89 | Python | Orphaned; its version check currently **fails** on live drift |
+| `package.ps1` / `package.cmd` | 72 / 11 | PowerShell / Batch | Orphaned |
+| `run-tests.cmd` | 15 | Batch | Launcher over `run_tests.py` |
+| `install/Install-ForeverComms.ps1` / `.cmd` | 153 / 12 | PowerShell / Batch | The one real installer |
+| `<Addon>/install/Install-<Addon>.ps1` x3 | 13 each | PowerShell | Shims |
+| `PACKAGING.md` / `README.md` | 35 / 24 | Markdown | Document two release paths |
+
+### New modules this span
+
+| Module | Lines | Methods | Responsibility |
+| --- | --- | --- | --- |
+| `ForeverCommsVoice/Queue.lua` | 148 | 13 | The shared click-to-send review backlog. `GetQueueSettings`, `SetQueueOption`, `PendingCount`, `PendingList`, `FindQueueItem`, `QueueChanged`, `EnsureQueueTicker`, `Enqueue`, `Skip`, `SkipAll`, `Approve`, `Expire`, `Print`. Transient by design — the header comment records that callbacks and session-scoped guild identities must not survive a reload. Bounded at 100 entries, oldest dropped |
+| `ForeverCommsVoice/QueueUI.lua` | 136 | 4 | The movable shared list: `BuildQueueUI`, `RefreshQueueCountdowns`, `RefreshQueueUI`, `ShowQueue` |
+| `ForeverGroupComms/TitanMenu.lua` | 114 | 4 | `ReviewPanel`, `StatusSnapshot`, `PopulateTitanMenu`, `OpenTitanMenu`. Menu parity with GuildComms. **No harness loads it** |
 
 ## Design Patterns
 
@@ -246,6 +257,24 @@ namespace through the global `_G.ForeverCommsVoice`.
   (3600s), sweeping at most once per minute on activity plus a 300-second idle ticker.
   GroupComms retains notification keys for 1200s and packet-reassembly state for 60s,
   both swept at most once per minute.
+
+### Shared backlog with a callback contract
+- **Location**: `ForeverCommsVoice/Queue.lua`, new this span; consumed from both
+  applications' `Core.lua`.
+- **Purpose**: both consumers maintained their own click-to-send review list. There is now
+  one, in the library, and GuildComms' `UI.lua` shrank 87 lines as a result.
+- **Implementation**: a consumer calls `V:Enqueue{source, kind, label, text, send}` where
+  `send` is a function the library will `pcall` on approval. The callback returns `true`
+  for sent; any other return is a failed send, and a second return value of `"stale"`
+  tells the queue to drop the item because the consumer can no longer honour it — which is
+  how a guild change is handled without the library knowing what a guild is. Items carry
+  monotonic `V.reviewNextID` values and every operation keys on `item.id`, replacing the
+  positional row binding both consumers previously used. `V:Approve` re-checks `expiresAt`
+  before calling the callback, so an expired item cannot be resurrected by a click that
+  races the expiry sweep.
+- **Deviation**: the sweep runs from a `SetScript("OnUpdate")` handler throttled to 0.5s,
+  which `.kiro/steering/lua-style.md` explicitly forbids in favour of `C_Timer`. It is the
+  only `OnUpdate` in the bundle.
 
 ### Single-writer delegation across the package boundary
 - **Location**: `A:SetVoiceOption` in GuildComms `Core.lua`, new shape this span.

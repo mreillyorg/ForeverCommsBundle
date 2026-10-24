@@ -35,9 +35,33 @@ local welcome = V:Render("guild", "join", {name="Rosa"},
 
 The library does not send chat, run automatic actions or change what the player types. Consuming addons own when/how a message is delivered.
 
+## Accent strength, and which messages it touches
+
+One per-character **Strength** setting applies to both addons. It has two separate effects, and the same rule decides whether *either* applies:
+
+- **Subtle (wording only)** — the accent's own phrasebook, with nothing added in front.
+- **Moderate (adds a catchphrase)** — prefixes the regional or racial interjection, for example `By the forge! `.
+- **Expressive (catchphrase + emphasis)** — the prefix, and then the closing punctuation is amplified: a final `.` becomes `!`, and a final `!` becomes `!!`.
+
+Both effects are limited to the same set of messages:
+
+| Scope | Messages affected | Messages left exactly neutral |
+| --- | --- | --- |
+| Guild | every message kind | `help` — keeps `[LFG]` at the front and its original punctuation so it stays scannable |
+| Group | `greet`, `welcome`, `level` | every coordination and combat directive: `pull`, `mana`, `regroup`, `heal`, `cc`, `skull`, `interrupt`, plus `roles`, `quests` and `request` |
+
+**Group social messages are in scope on purpose.** Setting Expressive changes the punctuation of your group greetings, welcomes and level congratulations, not just your guild messages. Dungeon instructions are deliberately excluded: at the same setting, `Focus skull first, please.` keeps its full stop while `May the stars guide our group.` becomes `May the stars guide our group!`, because an instruction has to stay plain to be followed under pressure.
+
+Two details worth knowing:
+
+- Some accents ship **curated group wordings** for `greet` and `level`. Those replace the sentence rather than decorating it, so they take no catchphrase prefix — otherwise `By the forge! ` would land in front of `By the forge! Good tae see ye all!`. Expressive still amplifies their final mark.
+- Punctuation is amplified **before** `{name}`, `{level}` and `{quest}` are substituted, so a player or quest name is never altered.
+
+`tests/expressive.lua` pins this whole table.
+
 ## Development
 
-From `ForeverCommsVoice`: `texlua tests/integration.lua` (requires the sibling `ForeverGuildComms` and `ForeverGroupComms` source folders). Syntax and integration checks were performed offline; the client UI and client-specific race IDs still require in-game testing.
+Run the whole bundle's suite from the repository root with `python tools/run_tests.py`, which discovers every harness. To run just this package's harnesses, from `ForeverCommsVoice`: `lua5.1 tests/integration.lua`, `lua5.1 tests/expressive.lua`, `lua5.1 tests/queue.lua`, `lua5.1 tests/queue_ui.lua`, `lua5.1 tests/syntax.lua`. `integration.lua` requires the sibling `ForeverGuildComms` and `ForeverGroupComms` source folders. Syntax and integration checks were performed offline; the client UI and client-specific race IDs still require in-game testing.
 
 ## Shared communication review queue
 

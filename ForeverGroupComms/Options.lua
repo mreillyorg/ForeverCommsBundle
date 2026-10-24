@@ -9,8 +9,10 @@ local options = {
     {"privateQuestReminder", "Private quest-sharing reminder", "On group roster changes, suggest checking dungeon quests without spamming group chat."},
     {"questSync", "Share active quest IDs with other Group Comms users", "Enables opt-in addon data exchange. Other users must also have this enabled for full detection."},
 }
+local controls = {}
 function A:BuildOptions()
     if self.settingsCategory then return end
+    wipe(controls)
     local f = CreateFrame("Frame")
     f.name = "Forever Group Comms"
     f:SetSize(550, 675)
@@ -35,6 +37,7 @@ function A:BuildOptions()
             if key == "questSync" and not old and A.db[key] then A:ScheduleQuestSync(true) end
             if A.RefreshUI then A:RefreshUI() end
         end)
+        controls[#controls+1] = function() cb:SetChecked(A.db[key] == true) end
         local label = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
         label:SetPoint("TOPLEFT", 48, y - 4)
         label:SetWidth(458)
@@ -54,6 +57,23 @@ function A:BuildOptions()
     openVoice:SetScript("OnClick", function()
         if _G.ForeverCommsVoice then _G.ForeverCommsVoice:OpenOptions() end
     end)
+    -- Canvas callbacks. Without OnRefresh the checkboxes keep whatever value they had
+    -- when the panel was built, so a setting changed from the Titan menu or a slash
+    -- command would display stale here.
+    function f.OnRefresh()
+        for _, refresh in ipairs(controls) do refresh() end
+    end
+    -- OnCommit is intentionally absent: every control writes to A.db on click, so there
+    -- is no deferred edit to flush. Add one if an edit box is ever introduced.
+    function f.OnDefault()
+        -- Scoped to this addon's own account settings. The shared language and accent
+        -- live in ForeverCommsVoiceCharDB and belong to /fcv, not here.
+        for key, value in pairs(A.defaults) do A.db[key] = value end
+        f.OnRefresh()
+        if A.RefreshUI then A:RefreshUI() end
+        if A.UpdateBroker then A:UpdateBroker() end
+    end
+    self.optionsPanel = f
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(f, f.name)
         Settings.RegisterAddOnCategory(category)
@@ -61,4 +81,7 @@ function A:BuildOptions()
     elseif InterfaceOptions_AddCategory then
         InterfaceOptions_AddCategory(f)
     end
+end
+function A:RefreshOptions()
+    if self.optionsPanel and self.optionsPanel.OnRefresh then self.optionsPanel.OnRefresh() end
 end

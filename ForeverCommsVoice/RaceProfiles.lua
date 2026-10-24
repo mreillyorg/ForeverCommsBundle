@@ -56,44 +56,11 @@ function A:ResolveAccent()
     if valid[chosen] then return self.accents[chosen] end
     return nil
 end
-function A:VoiceText(kind, vars, preview)
-    -- Settings are per-character; the built-in English text is always available.
-    local voice = self.char and self.char.voice or self.voiceDefaults
-    local ownTemplate = self.db and self.db.templates and self.db.templates[kind]
-    if not ownTemplate then return "" end
-    -- Editing a template always wins. Arbitrary user messages cannot reliably
-    -- be translated or accent-transformed without altering links/user intent.
-    if ownTemplate ~= self.defaults.templates[kind] then return self:Format(ownTemplate, vars) end
-    local lang = voice.language or "en"
-    local text = ((self.localeTemplates or {})[lang] or self.defaults.templates)[kind] or ownTemplate
-    local accent = self:ResolveAccent()
-    if accent and accent.text[kind] then
-        text = accent.text[kind]
-    end
-    -- Randomize the chosen built-in template, never custom text or a Settings
-    -- sample. The help composer caches this choice for its preview and Send.
-    if self.db.randomizeMessages and not preview and self.ChooseMessageTemplate then
-        text = self:ChooseMessageTemplate(kind, lang, accent, text)
-    end
-    if accent and accent.text[kind] then
-        -- Light optional personality; don't prepend an interjection to [LFG].
-        if kind ~= "help" and accent.flair then
-            if voice.accentStrength == "moderate" then
-                text = accent.flair .. text
-            elseif voice.accentStrength == "expressive" then
-                -- A stronger flourish without repeating the catchphrase or
-                -- modifying character names, links, or placeholder values.
-                text = accent.flair .. text
-                if text:sub(-1) == "!" then
-                    text = text .. "!"
-                elseif text:sub(-1) == "." then
-                    text = text:sub(1, -2) .. "!"
-                end
-            end
-        end
-    end
-    return self:Format(text, vars)
-end
+-- A:VoiceText used to live here. It was the pre-extraction ForeverGuildComms method,
+-- moved wholesale into the library, where it was unreachable: it reads self.db, which
+-- the library never assigns. V:Render replaced it. Removed once V:Render had regained
+-- the Expressive terminal-period conversion this method uniquely still contained --
+-- see ForeverCommsVoice/tests/integration.lua, which now guards that behaviour.
 function A:LocalizeRoleText(roles, fallback)
     local voice = self.char and self.char.voice or self.voiceDefaults
     local names = (self.localeRoleNames and self.localeRoleNames[voice.language]) or self.roleNames

@@ -1,22 +1,28 @@
 ---
 inclusion: auto
 name: testing
-description: How to run the thirteen offline Lua harnesses across the three Forever Comms packages, which modules they cover, and the in-game verification checklist. Use when running tests, adding tests, verifying addon behavior, or before releasing.
+description: How to run the offline Lua harness suite across the three Forever Comms packages, which modules they cover, and the in-game verification checklist. Use when running tests, adding tests, verifying addon behavior, or before releasing.
 ---
 
 # Testing
 
-Verification is a two-layer process: **thirteen offline Lua harnesses** spread across three
+Verification is a two-layer process: the **offline Lua harness suite** spread across three
 packages for logic, and a manual in-game pass for anything that needs a real client.
 
 **There is no test framework.** `assert` from the standard library is the entire
 mechanism: each harness dies on the first failure and prints a `PASSED: ...` summary
 otherwise.
 
-**The suite does run in CI.** `.github/workflows/package.yml` installs Lua 5.1 and runs
-`python tools/run_tests.py` **before** packaging, so a failing harness stops the build
-before anything is built or published. Behaviour is verified there; `tools/verify_package.py`
-covers packaging only and deliberately does **not** assert anything about addon behaviour.
+**The suite runs in CI.** `.github/workflows/package.yml` installs plain `lua5.1` and runs
+`python tools/run_tests.py` **before** the BigWigs packaging step, so a failing harness
+stops the build before anything is built or published.
+
+The split of responsibility is deliberate: behaviour is asserted by the harnesses, and
+`tools/check_bigwigs_bundle.py` covers packaging only — archive structure, runtime
+completeness and version consistency. Do **not** move behavioural assertions into the
+packaging checker. An earlier revision grepped Lua source from it to prove two fixes were
+present, which coupled release packaging to the exact text and indentation of two Lua
+functions; those facts belong in `settings.lua` and `integration.lua`, which CI runs first.
 
 ## Run the suite
 
@@ -68,12 +74,12 @@ This is new since the voice extraction and it is the most important operational 
 Therefore: a change to the library can break a consumer's suite, and the suite only works
 in the bundle checkout layout. A package extracted and tested on its own will fail to
 load. `FOREVER_VOICE_PATH` is the only override, and there is no equivalent for the two
-sibling paths in Voice's harness. **Always run all thirteen, not just the package you
+sibling paths in Voice's harness. **Always run the whole suite, not just the package you
 touched.**
 
 ## Offline harnesses
 
-Thirteen files, none listed in a TOC and none shipped.
+One directory per package, none listed in a TOC and none shipped. `tools/run_tests.py` discovers them, so the count is whatever is on disk rather than a number recorded here.
 
 ### ForeverCommsVoice
 
@@ -149,8 +155,12 @@ covering GroupComms' `UI.lua` and `Options.lua`.
 10. `A:IsSelf` realm handling, and the suspicious-roster-read guard.
 11. The byte clamp on a three- or four-byte UTF-8 sequence. Three copies exist, two
     untested.
-12. The Expressive punctuation branch. `voice.lua` sets Expressive and checks the flair
-    prefix only, which is how a dropped branch there went unnoticed.
+12. ~~The Expressive punctuation branch.~~ **Covered** by `ForeverCommsVoice/tests/expressive.lua`,
+    which pins the whole scope matrix: guild everything-but-`help`, group
+    `greet`/`welcome`/`level` only, every coordination and combat directive byte-identical
+    to its neutral template, and curated group wordings taking one catchphrase rather
+    than two. `voice.lua` still checks the flair prefix alone, which is how a dropped
+    branch there went unnoticed the first time.
 13. That the duplicated tables match: GroupComms' `variants` against
     `groupTemplates.en`, and GuildComms' `defaults.templates` against
     `V.defaults.templates`. The second is guarded only implicitly today.
@@ -272,7 +282,10 @@ Enable Lua errors first: `/console scriptErrors 1` then `/reload`.
 4. In `/fcv`, pick a non-English language and confirm both GuildComms' Settings preview and
    GroupComms' quick actions use it. Toggle the race filter and confirm the accent list
    narrows. Try Subtle, Moderate and Expressive on an accent whose templates end in a full
-   stop and confirm the three are actually distinguishable.
+   stop and confirm the three are actually distinguishable. Then check the scope boundary
+   in a party: at Expressive, a group greeting should end `!` while a pull or skull call
+   keeps its full stop. The strength setting is shared, so this is the step that catches
+   it reaching group messages it should not.
 5. Turn off **Use ForeverCommsVoice for group messages** in GroupComms and confirm group
    quick actions revert to the original English wording while GuildComms is unaffected.
 
@@ -352,14 +365,13 @@ part of the deliverable, not an afterthought.
 The tag now triggers testing **and** packaging, in that order, so a failing harness stops
 the release. Still confirm locally first — it is faster than a round trip through Actions:
 
-1. **`python tools\run_tests.py` reports `PASSED: 13   FAILED: 0`** — the whole suite, not
-   just the package being released, because the harnesses span package boundaries.
-2. **`python tools\package.py --output dist` then `python tools\verify_package.py dist`**
-   both exit 0. The verifier can be pointed at a `package.ps1` build too, and should be
-   whenever `package.ps1` changes, since CI only exercises the Python builder.
-3. All four version-string locations match for that package. `verify_package.py` asserts
-   the TOC version appears in the README; the TOC, `Core.lua` and installer `.cmd` are
-   still manual. See `release-packaging.md`.
+1. **`python tools\run_tests.py` reports `FAILED: 0`** — the whole suite, not just the
+   package being released, because the harnesses span package boundaries. CI runs the same
+   command, so a failure here is a failure there.
+2. **`package.cmd`, or `python tools\package.py`**, exits 0. It runs
+   `check_bigwigs_bundle.py` itself, which covers archive structure, runtime completeness
+   including `Bindings.xml`, and version consistency across all four locations — so there
+   is no separate manual version pass. See `release-packaging.md`.
 4. Every shipped `.lua` file is in its TOC in the right load order, and `Bindings.xml` is
    **not** (the client auto-loads it from the addon root).
 5. `.pkgmeta` still does not exclude `Bindings.xml` or `Media/Icon.tga`.

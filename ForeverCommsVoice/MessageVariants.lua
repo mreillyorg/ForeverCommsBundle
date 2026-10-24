@@ -188,42 +188,13 @@ A.accentVariants = {
     },
 }
 
--- Shuffle bag: exhaust every wording before reshuffling, while avoiding an
--- immediate repeat across two consecutive bags. Session-local by design.
+-- Shuffle-bag state, shared with V:Pick in Core.lua: exhaust every wording before
+-- reshuffling, while avoiding an immediate repeat across two consecutive bags.
+-- Session-local by design.
+--
+-- A:ChooseMessageTemplate used to live here. It was a second implementation of the same
+-- algorithm as V:Pick, writing into this same table under a DIFFERENT signature format
+-- (kind:language:accent against Pick's scope:kind:language:accent), and reachable only
+-- through a VoiceBridge forwarder that nothing called once A:VoiceText routed through
+-- V:Render. Both it and the forwarder are gone; V:Pick is the single implementation.
 A.messageVariantBags = {}
-function A:ChooseMessageTemplate(kind, language, accent, base)
-    local choices = {base}
-    local additions
-    if accent then
-        additions = self.accentVariants and self.accentVariants[accent.id]
-    else
-        additions = self.localeVariants and self.localeVariants[language]
-    end
-    for _, template in ipairs((additions and additions[kind]) or {}) do
-        if type(template) == "string" and template ~= "" and template ~= base then
-            choices[#choices + 1] = template
-        end
-    end
-    if #choices < 2 then return base end
-
-    local signature = table.concat({tostring(kind), tostring(language),
-        accent and accent.id or "none"}, ":")
-    local bag = self.messageVariantBags[signature]
-    if not bag or bag.count ~= #choices or bag.position > #bag.order then
-        local order = {}
-        for i = 1, #choices do order[i] = i end
-        for i = #order, 2, -1 do
-            local j = math.random(i)
-            order[i], order[j] = order[j], order[i]
-        end
-        if bag and bag.last and order[1] == bag.last then
-            order[1], order[2] = order[2], order[1]
-        end
-        bag = {order=order, position=1, count=#choices, last=bag and bag.last}
-        self.messageVariantBags[signature] = bag
-    end
-    local index = bag.order[bag.position]
-    bag.last = index
-    bag.position = bag.position + 1
-    return choices[index]
-end

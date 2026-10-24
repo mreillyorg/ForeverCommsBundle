@@ -23,6 +23,8 @@ A.defaults = {
     loginCooldown = 300,
     messageSpacing = 6,
     alertsSound = false,
+    reviewAutoShow = true, -- pop the review list when a message is staged
+
     templates = {
         login = "Welcome back, {name}!",
         join = "Welcome to the guild, {name}!",
@@ -63,9 +65,17 @@ A.alerts = {}
 A.onlineCount = 0
 A.guildCount = 0
 A.lastGuildSend = 0
+-- A click is explicit consent, so approvals are not subject to the automatic spacing
+-- queue. They do get a small floor, because a rapid run of clicks through a backlog
+-- would otherwise post several lines to guild chat in the same instant.
+A.approvalFloorSeconds = 2
+-- Holds entry RECORDS, not plain strings: {text, kind, guild, time}. The guild stamp is
+-- what lets DrainQueue discard a message queued for a guild the player has since left.
 A.pendingMessages = {}
 A.pendingApprovals = {}
 
+-- Recursive backfill, shared by load-time migration and Settings' Restore Defaults.
+-- Exposed on A as A:FillDefaults so Options.lua does not need a second shallow copy.
 local function fillDefaults(dest, defaults)
     for key, value in pairs(defaults) do
         if dest[key] == nil then
@@ -81,6 +91,14 @@ local function fillDefaults(dest, defaults)
     end
 end
 
+function A:FillDefaults(dest, defaults)
+    fillDefaults(dest, defaults or self.defaults)
+end
+function A:CanFillRole(role)
+    -- Which roles this character's class can offer in the help composer. Used both to
+    -- seed A.char.myRoles at login and to disable the checkboxes it cannot satisfy.
+    return (self.classRoles[self.playerClass] or {})[role] == true
+end
 function A:Print(s)
     print("|cff6bcbffForeverGuildComms|r: " .. tostring(s))
 end
@@ -197,6 +215,8 @@ function A:StageApproval(entry)
                     self:Print("Old guild approval skipped: guild changed or addon disabled.")
                     return false,"stale"
                 end
+                -- Not stale, just too soon: leave it queued so the click can be repeated.
+                if self:ApprovalThrottled() then return false end
                 if self:SendGuild(textAtCreation) then
                     self.lastGuildSend=self:Now()
                     return true
@@ -211,7 +231,21 @@ function A:StageApproval(entry)
     table.insert(self.pendingApprovals, entry)
     if self.UpdateApprovalsUI then self:UpdateApprovalsUI() end
     if self.UpdateBroker then self:UpdateBroker() end
-    if self.ShowApprovals then self:ShowApprovals() end
+    -- Opt-out: a busy login can stage several messages at once, and a window that
+    -- reopens on each one is intrusive. With the shared queue installed, its own
+    -- "auto-open on new messages" setting in /fcv governs instead of this one.
+    if self.db.reviewAutoShow ~= false and self.ShowApprovals then self:ShowApprovals() end
+end
+-- Shared floor for every explicit send-on-click path.
+function A:ApprovalThrottled()
+    local now = self:Now()
+    local since = now - (self.lastGuildSend or 0)
+    if self.lastGuildSend > 0 and since < self.approvalFloorSeconds then
+        self:Print(("Wait %d second(s) between approved messages.")
+            :format(math.max(1, math.ceil(self.approvalFloorSeconds - since))))
+        return true
+    end
+    return false
 end
 function A:ApprovalCount()
     local voice=_G.ForeverCommsVoice
@@ -230,6 +264,7 @@ function A:ApproveMessage(index)
         self:Print("Message discarded: your guild has changed.")
         return
     end
+    if self:ApprovalThrottled() then return end
     -- The Send button is the actual user confirmation. Do not schedule a
     -- delayed automatic send after a click.
     if self:SendGuild(entry.text) then
@@ -324,7 +359,7 @@ function A:VoiceOptionLabel(key, id)
         return self.accents and self.accents[id] and self.accents[id].label or tostring(id)
     end
     if key == "accentStrength" then
-        return ({subtle="Subtle", moderate="Moderate", expressive="Expressive"})[id] or tostring(id)
+        return ({subtle="Subtle (wording only)", moderate="Moderate (adds a catchphrase)", expressive="Expressive (catchphrase + emphasis)"})[id] or tostring(id)
     end
     return tostring(id)
 end
@@ -341,7 +376,8 @@ function A:VoiceChoices(key)
     if key == "language" then return self.languages or {{id="en", label="English"}} end
     if key == "accent" then return self:GetAvailableAccents() end
     if key == "accentStrength" then
-        return {{id="subtle", label="Subtle"}, {id="moderate", label="Moderate"}, {id="expressive", label="Expressive"}}
+        return {{id="subtle", label="Subtle (wording only)"}, {id="moderate", label="Moderate (adds a catchphrase)"},
+            {id="expressive", label="Expressive (catchphrase + emphasis)"}}
     end
     return {}
 end
@@ -443,7 +479,7 @@ function A:Initialize()
     self.playerClass = playerClass or ""
     for _, role in ipairs(self.roleOrder) do
         if self.char.myRoles[role] == nil then
-            self.char.myRoles[role] = (self.classRoles[self.playerClass] or {})[role] or false
+            self.char.myRoles[role] = self:CanFillRole(role)
         end
     end
     if self.BuildOptions then self:BuildOptions() end

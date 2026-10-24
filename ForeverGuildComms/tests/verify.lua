@@ -72,4 +72,18 @@ local timer2 = table.remove(_G.C_Timer.scheduled, 1)
 assert(timer2)
 timer2()
 assert(_G.sent[3] == "Guild B automatic", "automatic should send without click")
-print("PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, automatic sending")
+-- A click is consent, but working through a backlog must not post several lines in the
+-- same instant. The item stays queued so the click can simply be repeated.
+A.db.outgoingMode = "verify"
+A:QueueGuild("Floor check", "login:floor", 300)
+assert(#A.pendingApprovals == 1, "staged for review")
+local sentBefore = #_G.sent
+A.lastGuildSend = _G.GetTime()
+A:ApproveMessage(1)
+assert(#_G.sent == sentBefore and #A.pendingApprovals == 1,
+    "a too-soon approval must be refused without discarding the message")
+A.lastGuildSend = 0
+A:ApproveMessage(1)
+assert(#_G.sent == sentBefore + 1 and #A.pendingApprovals == 0,
+    "the same click succeeds once the floor has passed")
+print("PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, automatic sending, approval floor")

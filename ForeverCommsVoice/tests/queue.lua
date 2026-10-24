@@ -1,5 +1,10 @@
--- Run from the suite root: texlua ForeverCommsVoice/tests/queue.lua
-local root="ForeverCommsVoice/"
+-- Run from the addon root: lua5.1 tests/queue.lua
+-- Resolves its own package from arg[0] and the sibling consumers relative to it, matching
+-- every other harness in the suite. tools/run_tests.py runs each one with its package
+-- folder as the working directory.
+local base = (arg and arg[0] and arg[0]:match("^(.*[/\\])tests[/\\]queue%.lua$")) or "./"
+local root = base
+local siblings = base .. "../"
 local t=100
 local sent={}
 _G.GetTime=function()return t end
@@ -11,12 +16,18 @@ _G.IsInRaid=function()return false end
 _G.SendChatMessage=function(msg,channel) sent[#sent+1]={text=msg,channel=channel} end
 _G.wipe=function(tbl)for k in pairs(tbl)do tbl[k]=nil end end
 _G.SlashCmdList={}
-local watchers={}
 _G.CreateFrame=function()
   local obj={RegisterEvent=function()end}
-  function obj:SetScript(kind,fn)if kind=="OnUpdate" then watchers[#watchers+1]=fn end end
+  function obj:SetScript() end
   return obj
 end
+-- Expiry runs from a C_Timer ticker, not an OnUpdate handler. Capture the callback so
+-- the test can fire it deliberately instead of waiting half a second.
+local watchers={}
+_G.C_Timer={
+  NewTicker=function(_,callback) watchers[#watchers+1]=callback; return {Cancel=function()end} end,
+  After=function(_,callback) callback() end,
+}
 _G.UnitRace=function()return "Human","Human",1 end
 local v={}
 for _,m in ipairs({"Core.lua","Languages.lua","Accents.lua","RaceProfiles.lua","MessageVariants.lua","GroupPhrases.lua","Queue.lua"})do
@@ -32,11 +43,11 @@ assert(v:GetQueueSettings().visibleRows==4 and v:GetQueueSettings().sourceDispla
 assert(v:SetQueueOption("visibleRows",100) and v:GetQueueSettings().visibleRows==10)
 assert(not v:SetQueueOption("sourceDisplay","not-a-mode"))
 local g={}
-assert(loadfile('ForeverGuildComms/Core.lua'))('ForeverGuildComms',g)
+assert(loadfile(siblings..'ForeverGuildComms/Core.lua'))('ForeverGuildComms',g)
 g.db={enabled=true,outgoingMode="verify",messageSpacing=6}
 g.UpdateBroker=function()end
 local p={}
-assert(loadfile('ForeverGroupComms/Core.lua'))('ForeverGroupComms',p)
+assert(loadfile(siblings..'ForeverGroupComms/Core.lua'))('ForeverGroupComms',p)
 p.db={enabled=true,useSharedVoice=true,randomMessages=false,maxNotifications=20}
 p.activeGroup=true;p.groupSerial=1
 p.RefreshUI=function()end
@@ -60,9 +71,10 @@ t=t+6
 assert(v:Expire(t))
 assert(not v:FindQueueItem(a) and v:FindQueueItem(b))
 assert(#sent==2,"auto skip posted a chat message")
--- Hidden-window expiration must run from the independent watchdog.
+-- Hidden-window expiration must run from the independent ticker.
+assert(#watchers==1,"expiry must be driven by exactly one C_Timer ticker")
 t=t+60
-for _,fn in ipairs(watchers)do fn(nil,0.6)end
+for _,fn in ipairs(watchers)do fn()end
 assert(v:PendingCount()==0,"hidden queue did not expire")
 -- Disabled auto-skip, successful skip, and safe no-op for duplicate click.
 assert(v:SetQueueOption("autoSkipSeconds",0))

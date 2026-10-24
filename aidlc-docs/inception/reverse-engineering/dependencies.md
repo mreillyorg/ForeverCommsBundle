@@ -1,18 +1,18 @@
 # Dependencies
 
-**Analysis date**: 2026-10-19T11:30:00Z
-**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Analysis date**: 2026-10-19T13:30:00Z
+**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
 
 ## Internal Dependencies
 
 ```mermaid
 flowchart TB
     subgraph Shared["Shared library"]
-        Voice["ForeverCommsVoice 0.1.1-beta"]
+        Voice["ForeverCommsVoice 0.2.1-beta"]
     end
     subgraph Apps["Applications"]
-        Guild["ForeverGuildComms 0.5.1-beta"]
-        Group["ForeverGroupComms 0.2.1-beta"]
+        Guild["ForeverGuildComms 0.6.2-beta"]
+        Group["ForeverGroupComms 0.3.3-beta"]
     end
     subgraph Dist["Distribution"]
         Builders["package.py / package.ps1"]
@@ -72,15 +72,33 @@ any selection that names a consumer without it.
   nonetheless stricter than the code: GroupComms will not load without the library even
   though its runtime path tolerates the absence.
 
-### ForeverCommsVoice depends on ForeverGuildComms
-- **Type**: Runtime, optional, probe-only. Unchanged.
-- **Reason**: when `V:SetOption` changes a shared value, it probes
-  `_G.ForeverGuildComms` and calls `RefreshOptions` and `UpdateRequestPreview` so that
-  addon's controls and help preview are not stale.
-- **Now load-bearing**: because `A:SetVoiceOption` delegates here, this probe is the *only*
-  thing that refreshes GuildComms' panel after a voice change made from either surface.
-  GroupComms receives no equivalent callback — its panel re-reads on `OnShow` — and it
-  implements none of the three Settings canvas callbacks.
+### ForeverCommsVoice depends on both consumers
+- **Type**: Runtime, optional, probe-only — but **broader and more load-bearing this span.**
+- **Two probes now**:
+  - `V:SetOption` probes `_G.ForeverGuildComms` for `RefreshOptions` and
+    `UpdateRequestPreview`. Because `A:SetVoiceOption` delegates to the library, this is
+    the *only* thing refreshing GuildComms' panel after a voice change.
+  - `V:QueueChanged`, new, probes `_G.ForeverGuildComms` for `UpdateApprovalsUI` and
+    `UpdateBroker`, and `_G.ForeverGroupComms` for `RefreshUI`. This is how **both**
+    consumers learn the shared review backlog changed, so the library now fans out to both
+    rather than just one.
+- **Consequence**: the library's back-reference is no longer a convenience. Both
+  applications depend on it for UI correctness, and the dependency graph is cyclic at
+  runtime even though it remains acyclic at load time — the probes are all guarded and
+  happen only after both addons have initialised.
+- GroupComms still implements none of the three Settings canvas callbacks, so its options
+  panel can display stale values; the queue fan-out refreshes its main UI, not its panel.
+
+### Both applications depend on ForeverCommsVoice for message review — new this span
+- **Type**: Runtime, hard, in addition to the existing rendering dependency.
+- **Surface**: `V:Enqueue` from both consumers' `Core.lua`; `V:PendingCount` from
+  GroupComms' `TitanMenu.lua` and `UI.lua` and GuildComms' `Core.lua`.
+- **Shape**: the consumer supplies a `send` **function reference** that the library
+  `pcall`s on approval, plus a `"stale"` return contract letting the consumer discard work
+  it can no longer honour. This is the first time the library holds executable references
+  belonging to another addon, which is why the queue is deliberately never persisted.
+- **Risk**: a breaking change to the library now breaks wording **and** delivery review in
+  both consumers. There is still no version negotiation.
 
 ### Intra-package load-order dependencies
 `Core.lua` must load first in each package because it declares the namespace and the state

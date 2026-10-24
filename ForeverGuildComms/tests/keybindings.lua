@@ -20,10 +20,13 @@ local bindings=assert(io.open(base .. "Bindings.xml","r")):read("*a")
 assert(bindings:find('category="ADDONS"',1,true), "bindings should appear in WoW AddOns category")
 assert(bindings:find('header="FOREVERGUILDCOMMS"',1,true), "addon must have category header")
 assert(not bindings:find('default=',1,true), "hotkeys must be opt-in")
+-- Lua 5.1 (the client's dialect) compiles a string with loadstring; load takes a
+-- function. 5.2+ removed loadstring and moved the string form onto load.
+local compile = loadstring or load
 local map={}
 for name,body in bindings:gmatch('<Binding%s+name="([^"]+)"[^>]*>(.-)</Binding>') do
     assert(not map[name],"duplicate binding action")
-    map[name]=assert(load(body,'binding ' .. name))
+    map[name]=assert(compile(body,'binding ' .. name))
 end
 assert(map.FGC_OPEN_ALERTS and map.FGC_ASK_HELP and map.FGC_RESCAN_PROFESSION)
 assert(BINDING_HEADER_FOREVERGUILDCOMMS=="Forever Guild Comms")

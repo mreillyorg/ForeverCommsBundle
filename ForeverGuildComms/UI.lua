@@ -146,7 +146,7 @@ function A:BuildRequestUI()
     self.roleChecks = {}
     Label(f, "My roles (available for your class):", 22, -164, 410)
     for i, role in ipairs(self.roleOrder) do
-        local can = (self.classRoles[self.playerClass] or {})[role]
+        local can = self:CanFillRole(role)
         local checkbox = Check(f, self.roleNames[role], 23+(i-1)*155, -185,
             self.char.myRoles[role], function(checked)
                 A.char.myRoles[role] = checked

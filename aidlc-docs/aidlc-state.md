@@ -1,11 +1,11 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project Name**: ForeverCommsBundle — Forever Comms Voice **0.1.1-beta**, Forever Group
-  Comms **0.2.1-beta**, Forever Guild Comms **0.5.1-beta**
+- **Project Name**: ForeverCommsBundle — Forever Comms Voice **0.2.1-beta**, Forever Group
+  Comms **0.3.3-beta**, Forever Guild Comms **0.6.2-beta**
 - **Project Type**: Brownfield, multi-package
 - **Start Date**: 2026-10-18T23:45:00Z
-- **Current Stage**: INCEPTION - Reverse Engineering (fifth rerun complete, awaiting user approval)
+- **Current Stage**: INCEPTION - Reverse Engineering (sixth rerun complete, awaiting user approval)
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -16,16 +16,16 @@
   active root-level GitHub Actions workflow. No external packager on the suite path
 - **Project Structure**: Monorepo with three flat World of Warcraft addon packages,
   22 shipped modules, plus root-level build and install tooling
-- **Reverse Engineering Needed**: Completed six times; artifacts current as of 2026-10-19T11:30:00Z
+- **Reverse Engineering Needed**: Completed seven times; artifacts current as of 2026-10-19T13:30:00Z
 - **Workspace Root**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
 
 ## Packages
 
 | Package | Version | Type | Modules | Lines | Methods | Harnesses | SavedVariables |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `ForeverCommsVoice` | 0.1.1-beta | Shared library | 7 | 872 | 18 | 1 | `ForeverCommsVoiceCharDB` |
-| `ForeverGuildComms` | 0.5.1-beta | Application | 9 | 1,534 | 64 | 11 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
-| `ForeverGroupComms` | 0.2.1-beta | Application | 6 | 982 | 47 | 1 | `ForeverGroupCommsDB` |
+| `ForeverCommsVoice` | 0.2.1-beta | Shared library | 9 | 1,207 | 35 | 4 | `ForeverCommsVoiceCharDB` |
+| `ForeverGuildComms` | 0.6.2-beta | Application | 9 | 1,491 | 65 | 11 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
+| `ForeverGroupComms` | 0.3.3-beta | Application | 7 | 1,108 | 52 | 2 | `ForeverGroupCommsDB` |
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither, and is now the **sole writer** of the shared voice profile.

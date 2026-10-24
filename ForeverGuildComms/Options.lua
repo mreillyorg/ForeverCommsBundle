@@ -208,6 +208,8 @@ function A:BuildOptions()
     toggle("craftingAlerts", "Alert when a guildmate needs an item I can craft", "Open each profession to cache known recipes; exact item-name matching.")
     toggle("groupAlerts", "Alert on LFG / LFM / LF group requests", "Reads guild chat only. Use the Alerts window to whisper manually.")
     toggle("alertsSound", "Play sound for private alerts")
+    toggle("reviewAutoShow", "Open the review list when a message is staged",
+        "Off keeps it quiet during a busy login; reach it with /fgc verify. When ForeverCommsVoice's shared queue is installed, its own auto-open setting in /fcv applies instead.")
     section("Guild tabard")
     toggle("tabardInCity", "Remind me to wear my guild tabard in capital cities", "Supports classic Guild Tabard (item 5976); never equips automatically.")
     toggle("tabardOnExit", "Ask about removing the tabard when leaving a city", "Optional; opens the character equipment page for manual removal.")
@@ -220,7 +222,7 @@ function A:BuildOptions()
     voiceCycle("language", "Outgoing message language")
     voiceToggle("raceFilter", "Show only accents suggested for my race (" .. A:GetPlayerRace() .. ")")
     voiceCycle("accent", "Accent or RP speaking style")
-    voiceCycle("accentStrength", "Accent strength (Expressive adds more flavour)")
+    voiceCycle("accentStrength", "Accent strength")
     MakeLabel(content, "None = neutral wording. Auto = default for your race, where supported.",
         19, y, 500, "GameFontHighlightSmall")
     y = y - 33
@@ -266,16 +268,20 @@ function A:BuildOptions()
         if A.UpdateRequestPreview then A:UpdateRequestPreview() end
     end
     function panel.OnDefault()
-        -- Defaults are applied explicitly, then reflected in the controls.
-        for k, value in pairs(A.defaults) do
-            if type(value) == "table" then
-                A.db[k] = {}
-                for sub, v in pairs(value) do A.db[k][sub] = v end
-            else A.db[k] = value end
-        end
-        -- Restore Defaults belongs to GuildComms, NOT ForeverCommsVoice.
-        -- A.char.voice points to the shared per-character profile also used by
-        -- GroupComms; altering it here would silently change another addon.
+        -- Restore Defaults is scoped to GuildComms' own account settings, and two
+        -- things are deliberately excluded.
+        --
+        -- outgoingMode: resetting it to "automatic" would silently re-enable
+        -- unattended posting to guild chat for someone who had chosen to review every
+        -- message. Restoring defaults is not consent to that.
+        --
+        -- A.char.voice: it is the SAME table as ForeverCommsVoiceCharDB.voice, so
+        -- writing it here changes the language and accent GroupComms is using.
+        -- See ForeverGuildComms/tests/settings.lua, which asserts both.
+        local keepOutgoingMode = A.db.outgoingMode
+        for key in pairs(A.db) do A.db[key] = nil end
+        A:FillDefaults(A.db, A.defaults)   -- recursive, so templates are a fresh copy
+        A.db.outgoingMode = keepOutgoingMode
         panel.OnRefresh()
         if A.UpdateRequestPreview then A:UpdateRequestPreview() end
         if A.UpdateBroker then A:UpdateBroker() end

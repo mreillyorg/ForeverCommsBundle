@@ -90,8 +90,11 @@ def verify_archive(zip_path, scope):
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'dist'
     versions = addon_versions()
-    archives = {addon: f'{addon}-{versions[addon]}.zip' for addon in ADDONS}
-    archives['suite'] = f'ForeverComms-Bundle-{versions["ForeverGuildComms"]}.zip'
+    # Names produced by `tools/package.py --source`. The BigWigs-shaped bundle is a
+    # different artifact with a different contract; check that with
+    # tools/check_bigwigs_bundle.py instead.
+    archives = {addon: f'{addon}-{versions[addon]}-source.zip' for addon in ADDONS}
+    archives['suite'] = f'ForeverComms-Bundle-{versions["ForeverGuildComms"]}-source.zip'
     for scope, name in archives.items():
         count = verify_archive(out / name, scope)
         print(f'PASS: {name} ({count} members)')

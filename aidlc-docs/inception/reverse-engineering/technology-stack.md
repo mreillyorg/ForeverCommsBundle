@@ -1,7 +1,7 @@
 # Technology Stack
 
-**Analysis date**: 2026-10-19T11:30:00Z
-**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Analysis date**: 2026-10-19T13:30:00Z
+**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
 
 ## Programming Languages
 
@@ -101,11 +101,12 @@ present.
 
 ### What was and was not executed in this pass
 
-| Layer | Interpreter present | Executed | Result |
+| Layer | Available | Executed | Result |
 | --- | --- | --- | --- |
-| Python build and verify | **Yes** | **Yes** | `tools/package.py` exit 0, four archives; `tools/verify_package.py` exit 0, five PASS groups; `--runtime` exit 0. Archives independently inspected |
-| PowerShell build | Yes | No | The Python builder covers the same contract and is what CI runs |
-| Lua harnesses | **No** | **No** | `lua`, `lua5.1`, `luajit`, `texlua` and `lua54` are all absent from PATH. **None of the 13 is reported as passing**, including the two regression tests added this span |
+| **Lua harnesses** | **Yes** — Lua 5.1.5 at `C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe` | **Yes** | **Exit 1. PASSED: 14, FAILED: 3, TOTAL: 17.** `queue.lua` and `queue_ui.lua` resolve modules from the suite root against the project convention; `keybindings.lua` fails because its Lua 5.1 `loadstring` fix was reverted |
+| `tools/verify_package.py` | Yes | **Yes** | **Exit 1** — `ForeverGuildComms/README.md does not mention version 0.6.2-beta`. The version guard CI no longer runs, failing on drift that reappeared the moment it stopped running |
+| BigWigs release path | **No** | No | `BigWigsMods/packager@v2` is a GitHub Action and cannot run locally. `tools/check_bigwigs_bundle.py` was read but not run, as it needs the `.release/` output |
+| Python / PowerShell offline builders | Yes | No | Both are orphaned from CI this span; exercising them would verify a path no longer used |
 | Live client | n/a | No | Nothing has been tested against a live Forever client |
 
 ### Harness inventory
@@ -140,6 +141,6 @@ the bundle checkout layout more strongly than before.
 | Formatter | None. Style is maintained by convention and documented in `.kiro/steering/lua-style.md` |
 | Code coverage | None |
 | Dependency scanning | Not applicable; zero third-party packages are vendored or installed |
-| **CI build and packaging verification** | **Present as of this span.** Builds four archives and runs 5 verification groups on `workflow_dispatch` or a `v*` tag |
-| **CI test execution** | **Still absent.** No job runs any of the 13 Lua harnesses. Fifth consecutive pass as the top recommendation, though the job slot now exists |
-| Version consistency check | **Present.** The builders read versions from the TOCs, and `verify_package.py` asserts each appears in its README |
+| CI packaging verification | **Present**, now via BigWigs plus `check_bigwigs_bundle.py`, which checks archive structure, TOC presence, the dependency declarations and the absence of non-runtime content |
+| **CI test execution** | **Absent, and regressed.** A `run_tests.py` step existed at commit `63222ea` and was removed at `57f7cdc`. Sixth consecutive pass as the top recommendation, and the reason the current red suite went unnoticed |
+| Version consistency check | **Present but not wired in.** `verify_package.py` asserts each TOC version appears in its README and currently **fails**; nothing runs it. Seven version strings are stale |

@@ -31,8 +31,10 @@ function v:GetSettings()
  if not _G.ForeverCommsVoiceCharDB.voice then _G.ForeverCommsVoiceCharDB.voice={} end
  return _G.ForeverCommsVoiceCharDB.voice
 end
+-- Run from the addon root: lua5.1 tests/queue_ui.lua
+local base = (arg and arg[0] and arg[0]:match("^(.*[/\\])tests[/\\]queue_ui%.lua$")) or "./"
 for _,file in ipairs({'Queue.lua','QueueUI.lua'}) do
- assert(loadfile('ForeverCommsVoice/'..file))('ForeverCommsVoice',v)
+ assert(loadfile(base..file))('ForeverCommsVoice',v)
 end
 assert(v:GetQueueSettings().visibleRows==2 and v:GetQueueSettings().autoSkipSeconds==20, 'fresh queue defaults must be two rows and twenty seconds')
 v:ShowQueue(true)

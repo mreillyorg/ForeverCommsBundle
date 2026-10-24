@@ -120,6 +120,26 @@ above `A.eventRetentionSeconds`, `"15 bytes; WoW prefix limit is 16"`,
 proof the member clicked Not ready"`, and `"The Send button must send exactly the wording
 shown in the preview"`. Keep that density.
 
+### Withdrawn findings get a comment at the code site
+
+When a review finding turns out to be **wrong** and the code is correct as written, the
+withdrawal has to be recorded *in the code*, not only in a ledger or an assessment
+document. A reviewer or a reverse-engineering pass derives findings by reading source; if
+the source carries no marker, the same wrong finding gets raised again, and the second
+time someone may "fix" it.
+
+A docs-only record does not close the loop. Recording it in three places —
+`SUGGESTED-CHANGES.md`, the assessment document, and an `Avoid` entry here — still left
+the two `math.random` call sites unannotated, which was a real gap until comments were
+added at both. The pattern to follow:
+
+1. A comment at each affected site saying what is correct and what not to change. One
+   site carries the reasoning; the others cross-reference it rather than repeat it.
+2. A pointer from that comment to the decision record, so the evidence is findable.
+3. An `Avoid` entry here if the mistake generalizes beyond those sites.
+
+`V:Pick` in `ForeverCommsVoice/Core.lua` is the worked example.
+
 ## Avoid
 
 - New globals, `getglobal`, string keys built by concatenating unnormalized names.
@@ -134,3 +154,9 @@ shown in the preview"`. Keep that density.
 - Behavior reimplemented rather than moved when relocating code between packages. Diff
   the old and new implementations line by line; a dropped branch that no test covers is
   how the Expressive punctuation rule went missing during the voice extraction.
+- `math.randomseed`, in shipped code or harnesses. It **does not exist in the WoW
+  client**, which seeds the RNG itself at startup, so a seed call errors at load. The two
+  shuffle sites (`V:Pick` in ForeverCommsVoice `Core.lua`, `math.random(#list)` in
+  ForeverGroupComms `Core.lua`) are correct as written. Running the offline suite *will*
+  show the same shuffle order every time, because plain Lua 5.1 defaults to seed 1 — that
+  is the harness, not the game, and tests depend on it. Do not "fix" it.

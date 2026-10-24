@@ -21,6 +21,4 @@ function A:VoiceText(kind,vars,preview)
 end
 function A:LocalizeRoleText(roles,fallback) return V:LocalizeRoleText(roles,fallback) end
 function A:LocalizeActivityType(kind) return V:LocalizeActivityType(kind) end
-function A:ChooseMessageTemplate(kind,language,accent,base)
-    return V:ChooseMessageTemplate(kind,language,accent,base)
-end
+

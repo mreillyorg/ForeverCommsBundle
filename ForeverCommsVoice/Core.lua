@@ -1,6 +1,6 @@
 local ADDON, V = ...
 _G.ForeverCommsVoice = V
-V.name, V.version = ADDON, "0.2.0-beta"
+V.name, V.version = ADDON, "0.2.1-beta"
 V.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 V.defaults = {templates={
     login="Welcome back, {name}!",
@@ -13,6 +13,10 @@ V.roleOrder = {"tank", "healer", "damage"}
 V.catalogs = {}
 V.messageVariantBags = {}
 V.initialized = false
+
+function V:Print(message)
+    if print then print("|cff55caffForeverCommsVoice|r: " .. tostring(message)) end
+end
 
 local function normalize(settings)
     for k, value in pairs(V.voiceDefaults) do
@@ -114,6 +118,14 @@ function V:Pick(scope, kind, language, accent, base, additional, randomized)
     if not bag or bag.count ~= #choices or bag.position > #bag.order then
         local order = {}
         for i=1,#choices do order[i]=i end
+        -- Do NOT add math.randomseed here. It does not exist in the WoW environment,
+        -- so the call would error at load; the client seeds the generator at startup.
+        -- The offline harnesses DO run unseeded on a real Lua 5.1, which makes this
+        -- shuffle repeat identically across runs. That is deliberate and useful: it is
+        -- what lets tests/integration.lua assert shuffle behaviour at all. Seeing the
+        -- repetition in a test run is not a bug to fix. It was filed as one once: see
+        -- item 25 in SUGGESTED-CHANGES.md (decided SKIP) and the Avoid entry in
+        -- .kiro/steering/lua-style.md.
         for i=#order,2,-1 do local j=math.random(i); order[i],order[j]=order[j],order[i] end
         if bag and bag.last and order[1]==bag.last then order[1],order[2]=order[2],order[1] end
         bag = {order=order, position=1, count=#choices, last=bag and bag.last}
@@ -123,6 +135,93 @@ function V:Pick(scope, kind, language, accent, base, additional, randomized)
     bag.last, bag.position = index, bag.position+1
     return choices[index]
 end
+-- The two scopes resolve wording differently, so each has its own resolver and V:Render
+-- is a dispatcher. Returns the candidate list plus that scope's variant bank.
+
+-- Guild: an accent replaces the sentence outright, and its extra wordings live in a
+-- separate bank rather than in the localized list.
+local function guildCandidates(self, kind, catalog, lang, english, accent)
+    local localized = ((catalog[lang] or {})[kind]) or english
+    localized = type(localized)=="table" and localized or {localized}
+    local alternates
+    if accent then
+        alternates = (self.accentVariants[accent.id] or {})[kind]
+        local accented = (accent.text or {})[kind]
+        if accented then localized = {accented} end
+    end
+    return localized, alternates
+end
+
+-- Group: an accent's curated wordings ARE the candidate list, so variation happens
+-- within the list instead of against a separate bank.
+local function groupCandidates(self, kind, catalog, lang, english, accent)
+    local localized = ((catalog[lang] or {})[kind]) or english
+    localized = type(localized)=="table" and localized or {localized}
+    local alternates
+    if accent then
+        alternates = ((self.groupAccentVariants or {})[accent.id] or {})[kind]
+        if alternates and #alternates > 0 then localized = alternates end
+    end
+    return localized, alternates
+end
+
+local RESOLVERS = {guild = guildCandidates, group = groupCandidates}
+
+local function pickTemplate(self, scope, kind, lang, accent, template, localized, alternates)
+    if scope == "guild" then
+        -- Without an accent the neutral locale bank supplies the alternatives.
+        local bank = accent and alternates or ((self.localeVariants or {})[lang] or {})[kind]
+        if bank then return self:Pick(scope,kind,lang,accent,template,bank,true) end
+    end
+    local rest = {}
+    for i=2,#localized do rest[#rest+1]=localized[i] end
+    return self:Pick(scope,kind,lang,accent,template,rest,true)
+end
+
+-- Gates BOTH halves of applyFlair: the catchphrase prefix and the Expressive
+-- punctuation change. Anything this returns false for is rendered neutrally, whatever
+-- the strength setting says.
+--
+-- Guild messages take the catchphrase everywhere except [LFG], which stays scannable.
+-- Group messages take it only on the social kinds, never on a combat directive: a
+-- dungeon instruction has to stay plain to be followed under pressure.
+--
+-- The group entry is deliberate, not an oversight. Expressive therefore rewrites the
+-- final mark of group greet/welcome/level too, which is documented in the accent
+-- strength section of ForeverCommsVoice/README.md and pinned by tests/expressive.lua.
+local function flairApplies(scope, kind)
+    if scope == "guild" then return kind ~= "help" end
+    if scope == "group" then
+        return kind == "greet" or kind == "welcome" or kind == "level"
+    end
+    return false
+end
+
+local function applyFlair(template, accent, voice, curatedGroupAccent)
+    if not (accent and accent.flair) then return template end
+    -- Only moderate/expressive add a prefix. Subtle is the phrasebook alone.
+    if voice.accentStrength ~= "moderate" and voice.accentStrength ~= "expressive" then
+        return template
+    end
+    -- Avoid repeating a racial catchphrase already present in a curated party
+    -- template (e.g. two consecutive "By the forge!" prefixes).
+    if not curatedGroupAccent and template:sub(1,#accent.flair) ~= accent.flair then
+        template = accent.flair .. template
+    end
+    if voice.accentStrength == "expressive" then
+        -- Match legacy GuildComms: amplify terminal !, convert terminal .
+        -- BEFORE placeholder substitution so player/quest names are unchanged.
+        -- Runs even for a curated group wording that skipped the prefix above, so
+        -- "May the stars guide our group." becomes "...group!" with no catchphrase.
+        if template:sub(-1) == "!" then
+            template = template .. "!"
+        elseif template:sub(-1) == "." then
+            template = template:sub(1, -2) .. "!"
+        end
+    end
+    return template
+end
+
 function V:Render(scope, kind, vars, options)
     options = options or {}
     local voice = self:GetSettings()
@@ -136,52 +235,17 @@ function V:Render(scope, kind, vars, options)
         return self:Format(options.custom, vars)
     end
     local lang = voice.language or "en"
-    local localized = ((catalog[lang] or {})[kind]) or english
-    localized = type(localized)=="table" and localized or {localized}
     local accent = self:ResolveAccent()
-    local accentAlternates
-    if scope == "guild" and accent then
-        accentAlternates = (self.accentVariants[accent.id] or {})[kind]
-        local accentTemplate = (accent.text or {})[kind]
-        if accentTemplate then localized = {accentTemplate} end
-    elseif scope == "group" and accent then
-        accentAlternates = ((self.groupAccentVariants or {})[accent.id] or {})[kind]
-        if accentAlternates and #accentAlternates > 0 then localized = accentAlternates end
-    end
+    local resolve = RESOLVERS[scope]
+    if not resolve then return self:Format(options.fallback or base, vars) end
+    local localized, alternates = resolve(self, kind, catalog, lang, english, accent)
     local template = localized[1] or base
     if not options.preview and options.random ~= false then
-        if scope == "guild" and not accent then
-            accentAlternates = ((self.localeVariants or {})[lang] or {})[kind]
-        end
-        if scope == "guild" and accentAlternates then
-            template = self:Pick(scope,kind,lang,accent,template,accentAlternates,true)
-        else
-            local rest = {}
-            for i=2,#localized do rest[#rest+1]=localized[i] end
-            template = self:Pick(scope,kind,lang,accent,template,rest, true)
-        end
+        template = pickTemplate(self, scope, kind, lang, accent, template, localized, alternates)
     end
-    if accent and accent.flair and (scope == "guild" and kind ~= "help" or scope == "group" and (kind == "greet" or kind == "welcome" or kind == "level")) then
-        -- For guild messages, match original behaviour: only moderate/expressive
-        -- get prefix flavour. For group fallback greetings, subtle can still use
-        -- the accent-specific template when supplied.
-        if voice.accentStrength == "moderate" or voice.accentStrength == "expressive" then
-            -- Avoid repeating a racial catchphrase already present in a curated
-            -- party template (e.g. two consecutive "By the forge!" prefixes).
-            local hasCuratedGroupAccent = scope == "group" and accentAlternates and #accentAlternates > 0
-            if not hasCuratedGroupAccent and template:sub(1,#accent.flair) ~= accent.flair then
-                template = accent.flair .. template
-            end
-            if voice.accentStrength == "expressive" then
-                -- Match legacy GuildComms: amplify terminal !, convert terminal .
-                -- BEFORE placeholder substitution so player/quest names are unchanged.
-                if template:sub(-1) == "!" then
-                    template = template .. "!"
-                elseif template:sub(-1) == "." then
-                    template = template:sub(1, -2) .. "!"
-                end
-            end
-        end
+    if flairApplies(scope, kind) then
+        local curated = scope == "group" and alternates and #alternates > 0
+        template = applyFlair(template, accent, voice, curated)
     end
     return self:Format(template, vars)
 end

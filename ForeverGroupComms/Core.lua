@@ -69,6 +69,8 @@ function A:Render(kind, vars)
     if not list then return "" end
     local index = 1
     if self.db and self.db.randomMessages and #list > 1 then
+        -- Unseeded on purpose: math.randomseed is absent in the WoW client, which seeds
+        -- the RNG at startup. Full reasoning is in ForeverCommsVoice Core.lua, V:Pick.
         index = math.random(#list)
         if self.lastVariant[kind] == index then index = (index % #list) + 1 end
     end

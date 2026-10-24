@@ -1,7 +1,7 @@
 # System Architecture
 
-**Analysis date**: 2026-10-19T11:30:00Z
-**Target**: ForeverCommsVoice 0.1.1-beta, ForeverGroupComms 0.2.1-beta, ForeverGuildComms 0.5.1-beta
+**Analysis date**: 2026-10-19T13:30:00Z
+**Target**: ForeverCommsVoice 0.2.1-beta, ForeverGroupComms 0.3.3-beta, ForeverGuildComms 0.6.2-beta
 **Workspace root**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
 
 ## System Overview
@@ -39,7 +39,7 @@ probe when a shared setting changes.
 
 ```mermaid
 flowchart TB
-    subgraph VoicePkg["ForeverCommsVoice 0.1.1-beta - 7 modules, 872 lines"]
+    subgraph VoicePkg["ForeverCommsVoice 0.2.1-beta - 9 modules, 1207 lines"]
         VCore["Core.lua<br/>profile, migration, Format,<br/>Pick, Render, RegisterCatalog"]
         VLang["Languages.lua<br/>8 languages, locale templates,<br/>role and activity labels"]
         VAcc["Accents.lua<br/>29 accent phrasebooks"]
@@ -49,7 +49,7 @@ flowchart TB
         VOpt["Options.lua<br/>/fcv panel, ADDON_LOADED frame"]
     end
 
-    subgraph GuildPkg["ForeverGuildComms 0.5.1-beta - 9 modules, 1534 lines"]
+    subgraph GuildPkg["ForeverGuildComms 0.6.2-beta - 9 modules, 1491 lines"]
         GCore["Core.lua<br/>defaults, queue, approvals,<br/>dedup, slash, 14-event frame"]
         GBridge["VoiceBridge.lua<br/>25-line adapter to Voice"]
         GRoster["Roster.lua"]
@@ -62,7 +62,7 @@ flowchart TB
         GBind["Bindings.xml<br/>auto-loaded, not in TOC"]
     end
 
-    subgraph GroupPkg["ForeverGroupComms 0.2.1-beta - 6 modules, 982 lines"]
+    subgraph GroupPkg["ForeverGroupComms 0.3.3-beta - 7 modules, 1108 lines"]
         PCore["Core.lua<br/>defaults, Render with fallback,<br/>Send, Stage, 10-event frame"]
         PRoster["Roster.lua<br/>roster, roles, ready check"]
         PQuests["Quests.lua<br/>Q and R protocol, comparison"]
@@ -298,24 +298,31 @@ each of its own quests per member.
     **outside** `AddOns`, and rolls back on failure. `Set-StrictMode -Version 2.0`.
   - The three `<Addon>/install/Install-<Addon>.ps1` files are now 13-line shims that
     locate the shared installer and invoke it with their own name.
-- **Build and release**: rebuilt this span. Two equivalent offline builders produce four
-  archives with no external packager, no network and no secrets:
-  - `tools/package.py` (97 lines, standard library only) — cross-platform, and the one CI
-    runs. Supports `--runtime` for reduced addon-manager archives.
-  - `package.ps1` (72 lines) / `package.cmd` — the documented Windows entry point. No
-    `--runtime` mode.
+- **Build and release**: **replaced a second time this span.** The suite now releases
+  through BigWigsMods/packager rather than the offline builders:
+  - `.pkgmeta` at the repository root, new — `package-as: ForeverCommsBundle` with
+    `move-folders` lifting the three addons out of the wrapper directory to top level, plus
+    a 24-entry ignore list stripping `.github`, `install`, `tools`, `tests`, docs and the
+    promotional icons.
+  - `tools/check_bigwigs_bundle.py` (28 lines), new — opens every `.release/*.zip` and
+    asserts exactly the three expected top-level folders, each TOC present, both consumer
+    `## Dependencies: ForeverCommsVoice` lines intact, and no `tests/`, `install/` or
+    `.github/` content. The right guard for the `move-folders` technique.
 
-  Both read versions from the TOCs, validate each manifest before building, and bundle
-  `ForeverCommsVoice` into each consumer's archive. `tools/verify_package.py` (52 lines)
-  checks the archives and asserts source-level facts about this span's fixes.
-- **CI/CD**: a real root workflow now exists — `.github/workflows/package.yml`,
-  "Build Forever Comms suite", on `workflow_dispatch` or a `v*` tag. It runs
-  `tools/package.py`, then `tools/verify_package.py`, uploads all four ZIPs as a workflow
-  artifact, and on a tag attaches them to a GitHub Release using the built-in token with
-  `contents: write`. BigWigsMods is no longer on the suite path, so the single unprefixed
-  `v*` namespace is now correct: one tag releases the suite and per-addon versions live in
-  the archive filenames. The three nested per-package workflows are retained for the
-  standalone-repository case and each now carries a header comment saying so.
-  **Verified by execution**: both builders and the verifier were run during this pass and
-  passed. The 13 Lua harnesses are still not run by any job.
+  **Four tools are now orphaned but still present and still documented**:
+  `tools/package.py`, `tools/verify_package.py`, `package.ps1`/`package.cmd` and
+  `tools/run_tests.py`. `PACKAGING.md` still instructs the reader to build with
+  `package.cmd` or `python tools/package.py`, neither of which CI runs.
+- **CI/CD**: `.github/workflows/package.yml`, "Package Forever Comms bundle (BigWigs)",
+  on `workflow_dispatch` or a `v*` tag. Checkout with full tag history, BigWigs packager
+  with `-d`, `check_bigwigs_bundle.py`, artifact upload, and a Release on a tag using the
+  built-in token with `contents: write`. One `v*` tag still releases the suite as a unit.
+  The three nested per-package workflows remain for the standalone-repository case.
+
+  **The Lua test step was removed.** It existed at commit `63222ea` and is gone at
+  `57f7cdc`, so no job verifies behaviour. This is why the suite is currently red at
+  3 of 17 without anything noticing — see `code-quality-assessment.md`.
+
+  **Not verifiable locally**: BigWigs is a GitHub Action, so unlike the previous span's
+  offline builders the release path could not be executed during this pass.
 - **Networking**: not applicable.

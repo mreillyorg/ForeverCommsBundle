@@ -1,72 +1,69 @@
-# Windows PowerShell 5.1+ offline packaging. Zero external tools or online services.
+# Local Forever Comms release build for Windows.
+#
+# BigWigsMods/packager is the authoritative release path for GitHub. This builds the
+# equivalent archive locally so a release can be previewed and checked without pushing
+# a tag.
+#
+# This is a launcher, not a second implementation. The builder is tools/package.py, which
+# reads the same root .pkgmeta that BigWigs reads, so there is one source of truth for
+# what ships. An earlier version of this script kept its own parallel inclusion rules and
+# drifted from .pkgmeta; that is deliberately not repeated.
+#
+# Requires Python 3. If that is unacceptable, run the build through GitHub Actions
+# instead -- the workflow needs nothing installed locally.
 [CmdletBinding()]
-param([string]$OutputDir = 'dist')
+param(
+    [string]$OutputDir,
+    [switch]$Source,
+    [string]$Version
+)
 $ErrorActionPreference = 'Stop'
-$root = $PSScriptRoot
-if (-not [System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir = Join-Path $root $OutputDir }
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$addons = @('ForeverCommsVoice','ForeverGuildComms','ForeverGroupComms')
-$versions = @{}
-function New-Archive([string]$name, [string[]]$sources) {
-    $destination = Join-Path $OutputDir $name
-    if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
-    $zip = [System.IO.Compression.ZipFile]::Open($destination,[System.IO.Compression.ZipArchiveMode]::Create)
+
+$python = $null
+foreach ($candidate in @('python', 'python3', 'py')) {
+    $found = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($found) { $python = $found.Source; break }
+}
+if (-not $python) {
+    Write-Host 'Python 3 was not found on PATH.' -ForegroundColor Red
+    Write-Host 'Install it from https://www.python.org/downloads/ (tick "Add to PATH"),'
+    Write-Host 'or let the GitHub Actions workflow build the release instead.'
+    exit 1
+}
+
+$builder = Join-Path $PSScriptRoot 'tools\package.py'
+if (-not (Test-Path -LiteralPath $builder -PathType Leaf)) {
+    Write-Host "Missing builder: $builder" -ForegroundColor Red
+    Write-Host 'Extract the ENTIRE suite before building.'
+    exit 1
+}
+
+$arguments = @($builder)
+if ($Source) { $arguments += '--source' }
+if ($OutputDir) { $arguments += @('--output', $OutputDir) }
+if ($Version) { $arguments += @('--version', $Version) }
+
+& $python @arguments
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Packaging failed. See the errors above.' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
+# Validate the bundle against the same contract the CI workflow applies.
+# check_bigwigs_bundle.py reads .release relative to the current directory, so skip it
+# when the output was redirected rather than reporting a misleading result.
+if (-not $Source -and -not $OutputDir) {
+    Push-Location $PSScriptRoot
     try {
-        foreach ($file in @($sources | Sort-Object -Unique)) {
-            $path = [System.IO.Path]::GetFullPath($file)
-            if (-not $path.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw "Unsafe path: $path" }
-            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing input: $path" }
-            $entry = $path.Substring($root.Length + 1).Replace('\','/')
-            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip,$path,$entry,[System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        & $python (Join-Path $PSScriptRoot 'tools\check_bigwigs_bundle.py')
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Bundle structure check failed.' -ForegroundColor Red
+            exit $LASTEXITCODE
         }
     }
-    finally { $zip.Dispose() }
-    Write-Host "Created $destination" -ForegroundColor Green
+    finally { Pop-Location }
 }
-function Expand-Sources([string[]]$folders) {
-    $all = @()
-    foreach ($folder in $folders) {
-        $full = Join-Path $root $folder
-        if (-not (Test-Path -LiteralPath $full -PathType Container)) { throw "Missing folder: $full" }
-        $all += @(Get-ChildItem -LiteralPath $full -File -Recurse -Force | Where-Object { $_.Name -ne '.DS_Store' } | Select-Object -ExpandProperty FullName)
-    }
-    return $all
+elseif ($OutputDir) {
+    Write-Host "Skipped the structure check: it reads .release, not $OutputDir." -ForegroundColor Yellow
 }
-foreach ($addon in $addons) {
-    $toc = Join-Path (Join-Path $root $addon) ($addon + '.toc')
-    if (-not (Test-Path $toc -PathType Leaf)) { throw "Missing TOC: $toc" }
-    $version = (Select-String -LiteralPath $toc -Pattern '^## Version:\s*(\S+)' | Select-Object -First 1).Matches.Groups[1].Value
-    if (-not $version) { throw "Missing version in $toc" }
-    $versions[$addon] = $version
-    if (-not (Test-Path (Join-Path $root "$addon\Media\Icon.tga"))) { throw "Missing icon: $addon" }
-    $tocText = Get-Content -LiteralPath $toc -Encoding UTF8
-    $expectedIcon = 'Interface\AddOns\' + $addon + '\Media\Icon'
-    if (-not (@($tocText | Where-Object { $_.Trim() -ieq ('## IconTexture: ' + $expectedIcon) }).Count -eq 1)) {
-        throw "IconTexture missing or invalid for $addon"
-    }
-    $modules = 0
-    foreach ($raw in $tocText) {
-        $line = $raw.Trim().TrimStart([char]0xFEFF)
-        if (-not $line -or $line.StartsWith('#')) { continue }
-        if ($line -notmatch '^[A-Za-z0-9_-]+\.(lua|xml)$') { throw "Unsafe TOC file entry: $line" }
-        if (-not (Test-Path -LiteralPath (Join-Path (Join-Path $root $addon) $line) -PathType Leaf)) {
-            throw "Missing $addon runtime file: $line"
-        }
-        $modules++
-    }
-    if ($modules -eq 0) { throw "No Lua/XML entries in $addon" }
-    if ($addon -ne 'ForeverCommsVoice' -and $tocText -notcontains '## Dependencies: ForeverCommsVoice') {
-        throw "Missing ForeverCommsVoice dependency in $addon"
-    }
-    if (-not (Test-Path -LiteralPath (Join-Path $root "$addon\Media\ProjectIcon.png"))) { throw "Missing project icon: $addon" }
-}
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
-foreach ($addon in $addons) {
-    $folders = @($addon, 'install')
-    if ($addon -ne 'ForeverCommsVoice') { $folders += 'ForeverCommsVoice' }
-    New-Archive ($addon + '-' + $versions[$addon] + '-source.zip') (Expand-Sources $folders)
-}
-$all = Expand-Sources ($addons + @('install','tools','.github'))
-foreach ($single in @('README.md','PACKAGING.md','package.ps1','package.cmd')) { $all += Join-Path $root $single }
-New-Archive ('ForeverComms-Bundle-' + $versions.ForeverGuildComms + '-source.zip') $all
+Write-Host 'Done.' -ForegroundColor Green

@@ -1,0 +1,125 @@
+# Suggested changes
+
+Every open suggestion from the reverse-engineering passes, flattened into one list so each
+can be accepted or rejected individually.
+
+Source: `aidlc-docs/inception/reverse-engineering/code-quality-assessment.md`
+As of: 2026-10-19, commit `57f7cdc` — Voice 0.2.1-beta, GuildComms 0.6.2-beta, GroupComms 0.3.3-beta
+
+**How to use**: write `DO`, `SKIP` or `LATER` in the Decision column, or just tell me the
+numbers.
+
+Current state, updated as items land: **the suite is green — 18 of 18 harnesses pass** and
+CI runs it before the BigWigs build. luacheck 1.2.0 reports 0 errors. Items 1–24 and 26–30
+are done; 25 and 31–44 are open. The original "red, 3 of 17 failing, no CI" state was
+items 1–3.
+
+---
+
+## A. Broken right now
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 1 | Fix `ForeverCommsVoice/tests/queue.lua` and `queue_ui.lua` to use the package-root preamble instead of resolving from the suite root | Trivial | 2 of the 3 current test failures. They use a different convention from every other harness | **DONE** — both derive `base` from `arg[0]`; `queue.lua` reaches the consumers via `base .. "../"` |
+| 2 | Restore `local compile = loadstring or load` in `ForeverGuildComms/tests/keybindings.lua` | Trivial | The 3rd failure. `load(string)` is Lua 5.2+ syntax, so this harness cannot run on the client's 5.1 dialect | **DONE** — `local compile = loadstring or load`; harness executes again |
+| 3 | Restore the `run_tests.py` step to `.github/workflows/package.yml`, before the BigWigs build | Trivial | Nothing currently runs the harnesses. Recoverable from commit `63222ea`. Would have caught items 1, 2, 4 and 5 | **DONE** — installs plain `lua5.1`, runs the suite before the BigWigs build |
+| 4 | Restore the two deleted regression tests — the Expressive block in `integration.lua`, the Restore Defaults block in `settings.lua` | Low | Both 0.5.1 fixes are live but unguarded. Recoverable verbatim from `63222ea` | **DONE** — both restored; fault injection confirms each fails when its fix is reverted |
+| 5 | Fix 7 stale version strings: Voice `Core.lua` (0.2.0 vs TOC 0.2.1), GuildComms README (0.6.1), GroupComms README (0.3.1), all 3 installer `.cmd` pairs | Low | Already-present drift. Also `ForeverGuildComms/README.md` still says "Requires ForeverCommsVoice 0.1.0-beta" | **DONE** — 11 strings across 6 files; all four locations now agree per package, plus both "Requires ForeverCommsVoice" lines |
+| 6 | Re-run the TOC-versus-README version check in CI, or port it from `verify_package.py` into `check_bigwigs_bundle.py` | Low | The check exists and currently fails; nothing runs it | **DONE** — ported into `check_bigwigs_bundle.py` and widened from 2 locations to all 4. Runs on both the CI and local paths |
+
+## B. Release pipeline
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 7 | Decide which release path is authoritative — BigWigs, `tools/package.py`, or `package.ps1` — and retire or clearly demote the others | Low | Three paths exist, one runs in CI, and `PACKAGING.md` line 5 told readers to use one that didn't | **DONE** — BigWigs is authoritative for GitHub. `tools/package.py` is the local mirror, reading the same root `.pkgmeta` so there is one source of truth. `package.ps1` now delegates to it rather than keeping parallel rules. Both validate with the same `check_bigwigs_bundle.py` |
+| 8 | Update `PACKAGING.md` and root `README.md` to match whichever path wins | Low | Follows from 7 | **DONE** — `PACKAGING.md` rewritten around the one-path/two-runners model and now documents all three check groups including the four version locations; root `README.md` gained Testing and Building a release sections; the pre-tag list no longer asks for a manual version pass |
+| 9 | Assert `Bindings.xml` reaches the release archive in `check_bigwigs_bundle.py` | Trivial | Both consumer addons ship one and it is deliberately not in the TOC, so nothing TOC-driven would notice it missing | **DONE** — the checker now derives the full runtime set from each TOC and additionally requires `Bindings.xml` and `Media/Icon.tga`, verified by tampering with a built archive |
+
+## C. Steering / docs accuracy
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 10 | Rewrite the CI and release sections of `.kiro/steering/testing.md` and `release-packaging.md` for the BigWigs pipeline. **Keep the Interpreter section verbatim** | Low | Both claimed CI runs the harnesses and that `package.py` is the CI builder | **DONE** — both rewritten for the BigWigs pipeline; harness count no longer hardcoded; Interpreter section untouched |
+| 11 | Fix the three `ForeverCommsVoice/install/` texts that say the library depends on itself | Trivial | Template-generated without a case for the library. First thing a user of the base dependency reads | **DONE** — `INSTALL-README.txt` rewritten, plus the shim banner and its header comment. Self-reference scan across all install texts now clean |
+| 12 | Note in `ForeverGuildComms/README.md` that `randomizeMessages` defaults to on and changes existing wording on upgrade | Trivial | The default is documented; the departure from the project's own convention is not | **DONE** — upgrade note added to the message-variety section |
+| 13 | Note the profession-name fallback in the GuildComms README limitations | Trivial | Craft alerts silently collapse all professions into one bucket when the skill-line APIs are missing | **DONE** — added to README limitations with the symptom and the workaround |
+| 14 | Clarify in the voice option label that Subtle applies no flair prefix | Trivial | The label implies a light touch, not absence | **DONE** — now "Subtle (wording only)", "Moderate (adds a catchphrase)", "Expressive (catchphrase + emphasis)" in all four places plus the README. `titanmenu.lua` caught the change and was updated |
+| 15 | Move the GuildComms README keybindings section below the byline | Trivial | The byline is currently orphaned mid-document | **DONE** — byline moved directly under the title; also dropped a stale 0.4.3 ZIP name from the install steps |
+
+## D. Code quality
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 16 | Move `Queue.lua`'s expiry sweep from `SetScript("OnUpdate")` to `C_Timer.NewTicker` | Low | The only `OnUpdate` in the bundle, against an explicit rule in `lua-style.md` | **DONE** — `C_Timer.NewTicker` on a 2-second period, held on `V.queueTicker` and cancelled when the queue drains. Zero `OnUpdate` scripts left anywhere in the bundle |
+| 17 | Make `panel.OnDefault` preserve `outgoingMode`, and use `fillDefaults` instead of a one-level copy | Trivial | Restore Defaults can still silently re-enable unattended public messaging | **DONE** — `panel.OnDefault` now goes through the new `A:FillDefaults` and re-applies the saved `outgoingMode`, so Restore Defaults can no longer turn unattended public sending back on. Guarded by a new "defaults scope" block in `settings.lua` |
+| 18 | Move `V:Print` from `Queue.lua` to `ForeverCommsVoice/Core.lua` | Trivial | A core helper living in a feature module | **DONE** — `V:Print` now sits in `ForeverCommsVoice/Core.lua` beside the other shared helpers |
+| 19 | Delete the dead `V:VoiceText` and `V:ChooseMessageTemplate` plus its `VoiceBridge` forwarder | Low | ~55 lines unreachable. Safe now that the Expressive logic is back in `V:Render` | **DONE** — removed `V:VoiceText` (`RaceProfiles.lua`), `V:ChooseMessageTemplate` (`MessageVariants.lua`) and the `VoiceBridge` forwarder. The `messageVariantBags` table and all its data stay, as does VoiceBridge's own live `A:VoiceText` |
+| 20 | Split `V:Render` into scope-specific resolvers behind a thin dispatcher | Medium | One dense function whose correctness depends on `and`/`or` precedence plus a comment. Also the root cause of item 24 | **DONE** — `V:Render` is now a dispatcher over a `RESOLVERS` table with `guildCandidates` and `groupCandidates`, plus `pickTemplate`, `flairApplies` and `applyFlair`. Checked with a throwaway sweep of 3,774 renders covering every scope/kind/language/accent/strength: no blanks, no unfilled placeholders, nothing over 250 bytes, combat kinds unaccented, unknown scope falls back |
+| 21 | Extract `A:CanFillRole` and reuse it in `A:Initialize` and `BuildRequestUI` | Low | Duplicated role-availability logic | **DONE** — `A:CanFillRole` extracted and now called from both `A:Initialize` and `UI.lua` |
+| 22 | Add a floor between consecutive approvals in GuildComms | Low | The one remaining unspaced send path. GroupComms already applies a 2-second floor to every post | **DONE** — `A.approvalFloorSeconds = 2` with `A:ApprovalThrottled()`, wired into both `ApproveMessage` and the queue's `send` callback. New "approval floor" guard in `verify.lua`. No new cooldown key: this is spacing on an existing user-initiated path, not a new automatic message |
+| 23 | Make the GuildComms review window's auto-show optional | Low | It pops on every staged message during a busy login period | **DONE** — new `A.defaults.reviewAutoShow = true` plus a Settings toggle. It gates only the legacy fallback window; Voice's own `showOnNew` still governs the shared-queue path, so no cross-addon setting writes |
+| 24 | Decide the Expressive scope question: restrict the terminal-period conversion to guild, or document and test the group case | Low | It currently also affects group `greet`/`welcome`/`level`, which was never stated | **DONE — documented and tested, group behaviour kept.** Decision: Expressive continues to reach group `greet`/`welcome`/`level`; the alternative (restricting the conversion to guild) was rejected. Documented in four places: a scope table in `ForeverCommsVoice/README.md` as the authoritative home, a pointer plus the group-specific consequence in the GroupComms README, a "shared with GroupComms" clause in the GuildComms README, and comments on `flairApplies`/`applyFlair` recording that the group entry is deliberate. Pinned by a new 18th harness, `ForeverCommsVoice/tests/expressive.lua`, asserting the whole matrix: guild everything-but-`help`, group social kinds only, all 10 coordination and combat kinds byte-identical to their neutral templates at Expressive, curated group wordings taking one catchphrase rather than two, and `expressive == moderate .. "!"` where the template already ends in `!`. Fault injection confirms the harness catches both the rejected option and a flair leak into combat directives. Also extended the in-game checklist in `testing.md` with the party-scope boundary check |
+| 25 | Seed `math.random`, or comment that seeding is deliberately omitted | Trivial | Two shuffle bags, no seed, no explanation | **SKIP — the finding was wrong.** `math.randomseed` does not exist in the WoW client; the client seeds the RNG itself at startup ([warcraft.wiki.gg, API:fastrandom](https://warcraft.wiki.gg/wiki/API:fastrandom)). A seed call would therefore error at load, or need a feature-detect guard around an API documented not to exist. Both shuffle sites (`V:Pick` in Voice `Core.lua`, `math.random(#list)` in GroupComms `Core.lua`) are already correct. The determinism that prompted this is real but confined to the offline harness, where plain Lua 5.1 defaults to seed 1: two fresh runs produce the identical sequence (`36, 90, 83`) and the identical first five greetings. In the harness that is a benefit, and it is what lets `integration.lua` assert shuffle behaviour at all. **Do not re-raise.** The hazard is the opposite of the one filed: a future contributor who notices the repeating sequence while running tests and "fixes" it with `math.randomseed(os.time())` would break the addon at load for every user. Anchored in four places so it cannot be re-derived: a comment at `V:Pick` in `ForeverCommsVoice/Core.lua` carrying the reasoning and pointing back here, a cross-referencing comment at the GroupComms site, an `Avoid` entry in `.kiro/steering/lua-style.md`, and a withdrawn-finding note in `code-quality-assessment.md`. The first two matter most: a docs-only record left both call sites unannotated, so a pass reading source alone would have raised it again. That lesson is now a convention in the Comments section of `lua-style.md` |
+| 26 | Comment that `A.pendingMessages` holds records rather than strings | Trivial | Easy contract trip-up for the next reader | **DONE** — comment at the declaration naming the record fields |
+| 27 | Clarify the `Queue.lua` header comment: the queue **list** is never persisted, but its six settings are | Trivial | "Never persisted" currently reads as covering the whole module | **DONE** — header now distinguishes the queue list (never persisted) from its six settings (persisted) |
+| 28 | Give `check_bigwigs_bundle.py` the `check()` pattern used by `verify_package.py` instead of bare `SystemExit` | Trivial | Stylistic divergence between sibling tools | **DONE** — `BundleError` plus `check()`, `fail()` and a `__main__` guard. Fault injection confirms a seeded version mismatch is still reported under `python -O`, which a bare `assert` would have swallowed |
+| 29 | Implement the three Settings canvas callbacks in `ForeverGroupComms/Options.lua` | Low | The only panel that can display stale values | **DONE** — `OnRefresh` rebinds every checkbox from `A.db` via a per-control closure list, `OnDefault` restores this addon's own defaults only (shared language and accent stay with `/fcv`), and `OnCommit`'s deliberate absence is commented. Added `A:RefreshOptions` for the Titan menu to call |
+| 30 | Add `.luacheckrc` at the root covering all three packages | Low | No linter for any language. Would flag the unused `A:SameGroup` and guard against accidental globals | **DONE and run** — root `.luacheckrc`: `std = lua51`, the 28 globals the bundle may create, 58 read-only client APIs, `max_line_length` off (the message data tables run past 300 characters), `self = false`, and `global = false` for the mock-installing harnesses. Verified with luacheck 1.2.0: **0 errors, 29 warnings across 42 files, and no undefined or accidental globals**, which confirms the declared globals list. Writing it also found a live bug before luacheck was even installed: `ForeverCommsVoice/Options.lua` gated `ADDON_LOADED` on a bare `ADDON`, nil outside `Core.lua`, so the Voice Settings panel was never registered until the user typed `/fcv`. Now compares `V.name`. Two corrections to the premise: luacheck does **not** flag the unused `A:SameGroup`, because it cannot see unused table fields — only locals; and `self = false` was needed because the implicit `self` of `function A:Thing()` produced 38 of the first run's 56 warnings. The 29 that remain are all cosmetic (15 widget handlers whose `function(self)` shadows the method's `self`, 14 unused arguments and locals) — see item 43 |
+
+## E. Test coverage
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 31 | Restore TOC derivation and `Bindings.xml` handler compilation in `ForeverGuildComms/tests/syntax.lua` | Trivial | Reverted to a hand-maintained 9-element list. The other two packages have the better version | |
+| 32 | Add a harness for `ForeverGroupComms/TitanMenu.lua`, reusing GuildComms' `titanmenu.lua` mock | Medium | New 114-line module, zero coverage, and a working mock for the same API already exists | |
+| 33 | Add harnesses for `ForeverGroupComms/UI.lua` and `Options.lua`, and `ForeverCommsVoice/Options.lua` | Medium | 5 modules / 468 lines are loaded by no harness | |
+| 34 | Test GroupComms' chat-safety rails: the 2-second `Send` floor, `groupSerial` rejection in `Approve`, the `CanManageGroup` gates, `Notify` dedup | Medium | The safety model of a chat-writing addon is unasserted | |
+| 35 | Test `parseIDs` and the `OnAddonMessage` header rejections | Low | The only parser reading another player's data has no negative tests | |
+| 36 | Test the `questSync` opt-out and the outbox bounds (60-entry cap, 1.15s pacing, 12-chunk refusal, `outboxToken` cancellation) | Low | An opt-out that is never asserted can silently stop working | |
+| 37 | Assert the duplicated tables match: GuildComms `defaults.templates` vs `V.defaults.templates`, and GroupComms `variants` vs `groupTemplates.en` | Low | Both are load-bearing. If the first pair drifts, every user's unmodified template is treated as custom and translation silently stops | |
+| 38 | Test the GuildComms approval backlog cap (30, oldest dropped), a 3–4 byte UTF-8 `ChatLimit` case, and the Expressive punctuation branch | Low | Three small gaps; the third is how item 24 went unnoticed originally | **PARTLY DONE** — the third gap is closed by `tests/expressive.lua` (item 24). The backlog cap and the multi-byte UTF-8 clamp are still untested; leaving this open for those two |
+| 39 | Test `A:IsSelf` realm handling and the suspicious-roster-read guard | Low | Both carried untested since 0.1.0 | |
+| 40 | Drive `UpdateAlertsUI` / `UpdateApprovalsUI` paging in a harness | Medium | Part of the authorization path for public messages | |
+
+## F. Needs a live client
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 41 | Confirm the tabard login-ordering fix in-game | Low | Fixed defensively in 0.4.3 but the event ordering has never been observed | |
+| 42 | Walk the in-game checklist in `.kiro/steering/testing.md` — 32 steps across the bundle | Medium | Nothing has ever been tested against a live Forever client | |
+
+---
+
+## G. Raised by the linter, once it could actually run (item 30)
+
+luacheck 1.2.0 reports **0 errors and 29 warnings across 42 files**, with no undefined or
+accidental globals. Nothing here is a bug; all of it is cosmetic. Listed so the first
+`luacheck .` a contributor runs is either clean or deliberately not clean.
+
+| # | Change | Effort | Why | Decision |
+| --- | --- | --- | --- | --- |
+| 43 | Clear the 29 cosmetic luacheck warnings, or silence the categories deliberately | Low | 15 are widget handlers whose `function(self)` shadows the enclosing method's `self` (correct code — they reach the namespace through `A.` — but genuinely misreadable). 14 are unused arguments and locals: `typeBtn` in `UI.lua:140`, `index` in `Queue.lua:120`, `member` in `Roster.lua:153`, and unused `event` parameters on `OnEvent` handlers. Renaming the shadowing parameters to `button`/`frame` and the unused ones to `_` would make a clean run the baseline | |
+| 44 | Add a `luacheck` step to `.github/workflows/package.yml` alongside the `run_tests.py` step | Trivial | The config exists and passes, but nothing runs it. The upstream project publishes a GitHub Action, so this is a few lines. Decide first whether warnings should fail the build (item 43) or merely be reported | |
+
+---
+
+## Already done — listed so they aren't re-raised
+
+- Packaging works; the suite runs from one command; an interpreter is located and recorded
+- Per-addon installers install `ForeverCommsVoice` first; archives bundle it
+- Expressive terminal-period conversion restored in `V:Render`
+- `panel.OnDefault` no longer resets the shared voice profile
+- `A:SetVoiceOption` delegates to `V:SetOption`; the library is the sole writer
+- Approval/suggestion rows keyed by monotonic id, via the shared queue
+- Voice and GroupComms have TOC-derived syntax harnesses
+- Voice and GroupComms have icons, `IconTexture` and project art
+- `verify_package.py` has a `__main__` guard, explicit checks, and no Lua source greps
+- `autoSkipSeconds` and its default are documented in the Voice and root READMEs
+
+## Suggested order, if useful
+
+**1–6 first.** They are mostly trivial, they restore the position reached two commits ago,
+and item 3 is what prevents this class of regression recurring. **7–10** stop the
+documentation contradicting the code. Everything after that is genuine improvement rather
+than repair, and 31–40 are the items that would have to grow before this is releasable
+with confidence.

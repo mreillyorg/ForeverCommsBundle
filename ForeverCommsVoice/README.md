@@ -1,4 +1,4 @@
-# ForeverCommsVoice 0.2.1-beta
+# ForeverCommsVoice 0.2.2-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -12,7 +12,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.0-beta and/or GroupComms 0.3.0-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.3-beta and/or GroupComms 0.3.4-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 
@@ -69,3 +69,29 @@ New in v0.2.1-beta: `Queue.lua` and `QueueUI.lua` provide a single movable, scro
 
 
 Queue presentation: a compact, movable, scrollable floating overlay (not a normal Blizzard window). Fresh character defaults are **2 visible rows** and **20 seconds** auto-skip; existing saved queue preferences remain unchanged. `/fcv queue` opens the overlay.
+
+## What changed in 0.2.2-beta
+
+**Fixed: the Settings panel now appears as soon as the addon loads.** It previously
+registered only after you typed `/fcv`, so Forever Comms Voice was missing from
+Settings > AddOns on a fresh login. If you had been using `/fcv` to reach it, you no
+longer need to. Nothing about your saved profile changes.
+
+**Clearer accent strength labels.** The three choices now say what they do:
+**Subtle (wording only)**, **Moderate (adds a catchphrase)** and
+**Expressive (catchphrase + emphasis)**. The behaviour is unchanged — only the labels
+were ambiguous, particularly Subtle, which adds no prefix at all.
+
+**New documentation: which messages accent strength touches.** See the section above.
+Expressive reaches group greetings, welcomes and level congratulations as well as guild
+messages, and never touches a dungeon or combat directive. That was always true and was
+never written down.
+
+Internal changes with no intended effect on wording: the review queue's expiry sweep now
+runs from a half-second timer instead of every frame; `V:Render` was split into per-scope
+resolvers; and two unreachable functions were removed. The refactor was checked by
+rendering every combination of scope, kind, language, accent and strength — 3,774
+messages — and confirming none came out blank, none had an unfilled placeholder, none
+exceeded the chat byte limit and no combat directive picked up an accent. That is a
+property check, not a byte-for-byte comparison against the previous version, so if you
+spot wording that looks wrong, please report it.

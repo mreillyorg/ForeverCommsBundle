@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.2.1-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.6.2-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.3.3-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.2.2-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.6.3-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.3.4-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -24,7 +24,7 @@ Copy the **three** addon directories directly into `_classic_beta_\Interface\Add
 
 The voice library changes **only addon-generated messages**, never arbitrary typed chat. Settings are stored per character, and migrated legacy voice preferences from GuildComms are copied **once**. Guild custom templates remain unaltered. Group quest syncing is unaffected by the shared voice engine. Offline tests ran; UI behavior and messaging require confirmation in the actual WoW Forever client.
 
-## Shared message review queue (new in this release)
+## Shared message review queue (0.6.1-beta)
 
 ForeverCommsVoice owns one movable, scrollable approval window for both addons.
 GuildComms in **Verify with a click** mode sends its greetings and level congratulations to this queue, replacing the old Guild-only approval window. GroupComms sends its staged group greetings and level suggestions to the same queue, replacing the small suggestion list on the Group panel. Automatic Guild/Group sending modes and manual quick-action buttons retain their prior behaviour.
@@ -51,6 +51,30 @@ python tools/run_tests.py     (any platform)
 Runs every offline Lua harness across the three addons and prints a pass/fail summary.
 Needs Python 3 and a Lua **5.1** interpreter — the dialect the client embeds. No WoW
 client required. See `.kiro/steering/testing.md` for how an interpreter is located.
+
+None of it replaces in-game testing. Nothing in this bundle has been run against a live
+Forever server, and each addon's README lists what that leaves unverified.
+
+## What changed in this release
+
+ForeverCommsVoice **0.2.2-beta**, ForeverGuildComms **0.6.3-beta**,
+ForeverGroupComms **0.3.4-beta**. Each addon's README has the detail; the user-visible
+changes are:
+
+- **Voice:** the Settings panel now appears as soon as the addon loads, instead of only
+  after you typed `/fcv`. Accent strength labels now say what each level does, and the
+  README documents exactly which messages each level affects.
+- **Guild Comms:** a new toggle for whether the review list opens by itself when a
+  message is staged (on by default). Approvals are now spaced at least two seconds
+  apart, so clicking through a backlog cannot post several lines at once. Restore
+  Defaults no longer resets your outgoing mode, which previously could switch you back
+  to posting without confirmation.
+- **Group Comms:** the Settings panel now refreshes when reopened, so a change made from
+  the Titan menu is displayed correctly, and Restore Defaults no longer touches the
+  shared language and accent.
+
+No saved settings are renamed or removed, so upgrading keeps your existing configuration.
+Both new Guild Comms settings default to the behaviour you already had.
 
 ## Building a release
 

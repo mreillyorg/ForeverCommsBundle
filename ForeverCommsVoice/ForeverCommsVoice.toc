@@ -3,7 +3,7 @@
 ## Notes: Shared translations, racial speaking styles and accents for Forever Guild/Group Comms.
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverCommsVoice\Media\Icon
-## Version: 0.2.1-beta
+## Version: 0.2.2-beta
 ## SavedVariablesPerCharacter: ForeverCommsVoiceCharDB
 Core.lua
 Languages.lua

@@ -1,4 +1,4 @@
-# Forever Guild Comms 0.6.2-beta
+# Forever Guild Comms 0.6.3-beta
 
 WoW: Forever 1.60.1 / Interface 16001 addon by Michael Reilly.
 Requires **ForeverCommsVoice**, which is bundled with every download.
@@ -174,7 +174,17 @@ Translation here applies to addon *outgoing* messages only. It does not translat
 
 ## Build and tests
 
-Run `texlua tests/syntax.lua`, then `texlua tests/smoke.lua`, `texlua tests/settings.lua`, `texlua tests/verify.lua`, `texlua tests/timing.lua`, and `texlua tests/titanmenu.lua`. The new Titan test uses a mocked Blizzard menu and Data Broker frame to check menu hierarchy, settings synchronization, mode safety, preset updates, quick actions, and fallback behaviour. These tests **do not replace in-game testing**.
+Run the whole bundle's suite from the repository root with `python tools/run_tests.py`
+(or `run-tests.cmd` on Windows), which discovers every harness across all three addons.
+To run just this package's, from `ForeverGuildComms`: `lua5.1 tests/syntax.lua` and then
+any of `smoke`, `settings`, `verify`, `timing`, `titanmenu`, `roster`, `alertsui`,
+`variations`, `voice`, `tabard_dedup`, `keybindings` and `icon`. Several of them load the
+sibling `ForeverCommsVoice` source, so keep the three folders together.
+
+Coverage includes the roster diff and self-exclusion rules, the suspicious-roster-read
+guard, the approval flow and its backlog cap, the alerts window paging, the Titan menu
+hierarchy, and a mocked Blizzard menu and Data Broker frame. These tests **do not replace
+in-game testing** — nothing in this bundle has been run against a live server.
 
 ## Feedback and debugging
 
@@ -182,10 +192,36 @@ Enable Lua errors in game with `/console scriptErrors 1`, then `/reload`. If any
 
 ## Shared language/voice engine (0.5.0-beta)
 
-**Requires ForeverCommsVoice 0.2.1-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
+**Requires ForeverCommsVoice 0.2.2-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
 
 For the first upgrade, install the three-addon **ForeverComms bundle** or at least install ForeverCommsVoice before updating GuildComms. The updated GuildComms will not load without its dependency. Continue to use `/fgc` for guild functionality.
 
 ## Shared review queue (v0.6.1-beta)
 
 **Verify with a click** now stages guild greetings and congratulations in ForeverCommsVoice's shared review list, alongside GroupComms messages. The old Guild-only approval frame has been removed. Use `/fgc verify` or `/fcv queue` to open it. Source column, visible rows, timeouts and auto-open are controlled under `/fcv`. A timeout only skips a message. `Restore Defaults` still does **not** modify the shared voice/queue profile.
+
+## What changed in 0.6.3-beta
+
+**Requires ForeverCommsVoice 0.2.2-beta.**
+
+**New setting: "Open the review list when a message is staged."** On by default, which
+keeps the existing behaviour. Turn it off if the review list popping up during a busy
+login is intrusive; you can still reach it with `/fgc verify` at any time. When
+ForeverCommsVoice's shared queue is installed it uses its own auto-open setting under
+`/fcv` instead, so this toggle governs the fallback window only.
+
+**New: a short pause between approved messages.** Clicking Send through a backlog used
+to post several lines to guild chat in the same instant. Approvals are now spaced at
+least two seconds apart; a click that arrives too soon prints a short wait notice and
+**leaves the message queued**, so you simply click again. This affects how quickly
+consecutive approvals go out, not whether they go out.
+
+**Fixed: Restore Defaults no longer re-enables unattended posting.** It used to reset the
+outgoing mode back to Automatic. If you had deliberately chosen **Verify with a click**,
+restoring defaults silently returned you to posting to guild chat without confirmation.
+Your outgoing mode is now preserved. Restore Defaults also leaves the shared language and
+accent alone, since those are shared with Group Comms.
+
+**Clearer accent strength labels**, matching ForeverCommsVoice: **Subtle (wording only)**,
+**Moderate (adds a catchphrase)**, **Expressive (catchphrase + emphasis)**. Wording is
+unchanged; see the ForeverCommsVoice README for exactly which messages each level affects.

@@ -1,42 +1,46 @@
-name: Build Forever Comms suite
+name: Package Forever Comms bundle (BigWigs)
+
 on:
   workflow_dispatch:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
+
 permissions:
   contents: write
+
 jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout with tag history
+        uses: actions/checkout@v4
         with:
-          python-version: '3.12'
-      # The WoW client embeds Lua 5.1, so test against exactly that dialect.
-      # Not LuaJIT and not 5.3/5.4: both are supersets that would let a harness
-      # come to depend on something the client does not have.
-      - name: Install Lua 5.1
+          fetch-depth: 0
+
+      - name: Build installable bundle with BigWigsMods/packager
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -d
+
+      - name: Check release structure
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lua5.1
-          lua5.1 -v
-      # Behaviour first: a failing harness must stop the build before anything
-      # is packaged or published.
-      - name: Run all offline Lua harnesses
-        run: python tools/run_tests.py
-      - name: Build all four source ZIPs without external packagers
-        run: python tools/package.py --output dist
-      - name: Verify archive contents and dependency packaging
-        run: python tools/verify_package.py dist
-      - name: Publish run artifacts (works without a tag)
+          set -euo pipefail
+          python3 tools/check_bigwigs_bundle.py
+
+      - name: Upload ZIP as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: forever-comms-packages
-          path: dist/*.zip
+          name: forever-comms-bigwigs-bundle
+          path: .release/*.zip
           if-no-files-found: error
-      - name: Attach packages to GitHub Release for tags
+
+      - name: Publish tag as GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/*.zip --generate-notes --verify-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" .release/*.zip --generate-notes --verify-tag

@@ -1,6 +1,4 @@
-> **Current release: 0.5.1-beta.** Individual source ZIPs include ForeverCommsVoice 0.1.1-beta and install it first. GuildComms Settings > Restore Defaults no longer resets shared Voice preferences. See the suite's `PACKAGING.md` for offline packaging.
-
-# Forever Guild Comms 0.5.1-beta
+# Forever Guild Comms 0.6.1-beta
 
 ### Maintenance fixes in 0.4.3-beta
 
@@ -24,19 +22,30 @@ WoW: Forever 1.60.1 / Interface 16001 addon by Michael Reilly.
 
 ## Install (integrated Windows installer)
 
-1. **Extract All** from `ForeverGuildComms-0.5.1-beta.zip` into any convenient folder. Do not launch scripts directly from inside a compressed ZIP.
+1. **Extract All** from `ForeverGuildComms-0.4.3-beta.zip` into any convenient folder. Do not launch scripts directly from inside a compressed ZIP.
 2. Open **`ForeverGuildComms\install`** and double-click **`Install-ForeverGuildComms.cmd`**. Installation instructions are in `ForeverGuildComms\install\INSTALL-README.txt`.
 3. Choose your WoW Forever client folder if it is not found automatically. You can supply the client (`_classic_beta_`), `Interface`, or `Interface\AddOns` directory.
 4. Restart WoW Forever or enter `/reload`, then open **Settings > AddOns > Forever Guild Comms** (or `/fgc options`).
 5. If Titan Panel is installed, enable the **Guild Comms** Data Broker plugin.
 
-The integrated installer now uses the common `install/Install-ForeverComms.ps1` implementation. It installs/updates **ForeverCommsVoice first**, stages the TOC-listed runtime files (and keybindings/icons), replaces the selected addon directory, and backs up the previous directory to `Interface\AddOnBackups`. The previous SavedVariables remain untouched. To get both addons, use the updated manual source ZIP; to get all three, use the full bundle.
+The integrated installer reads `ForeverGuildComms.toc` and copies **only the `.toc`, loadable Lua files, the separately auto-loaded `Bindings.xml`, and `Media/Icon.tga`**. Files that are already identical are skipped. It never copies the README, tests, or `install` directory into the AddOns folder, and it does not replace your entire addon directory. Before overwriting addon files, it backs up those specific previous files to `Interface\AddOnBackups`. It leaves all character settings and SavedVariables untouched.
 
-**Manual installation:** Copy **both** `ForeverCommsVoice` and `ForeverGuildComms` from the extracted archive into `World of Warcraft\_classic_beta_\Interface\AddOns\`, without nesting either folder under another directory.
+**Manual installation:** Copy the `ForeverGuildComms` subfolder from the extracted archive into `World of Warcraft\_classic_beta_\Interface\AddOns\`. The required folder is `AddOns\ForeverGuildComms\ForeverGuildComms.toc`. Manual copying also copies the included documentation, tests and `install` folder unless you omit them yourself; neither is loaded by WoW.
 
 ## BigWigsMods/packager releases
 
-Local packaging no longer depends on GitHub Actions. From the extracted suite run `package.cmd` or `package.ps1` on Windows, or `python tools/package.py` for cross-platform builds. For GitHub monorepos, use the **root** `.github/workflows/package.yml`; addon's nested workflow is active only if this addon's files are committed at repository root in a separate repository. Refer to `PACKAGING.md` for specifics. Third-party publishing services may require separate ForeverCommsVoice installation and their own project dependency declaration.
+This source archive now contains `.pkgmeta` and `.github/workflows/package.yml`
+for automatic packaging from GitHub tags. The BigWigs packager recognises
+Forever (`## Interface: 16001`) without manually overriding the game type.
+For CurseForge-style distribution, its release ZIP excludes `install/`,
+`tests/`, the promotional `Media/ProjectIcon.png` and other repository-only files, while retaining the in-game `Media/Icon.tga` and `Bindings.xml`. **This manual ZIP still includes
+the integrated Windows installer.**
+
+To set up your own GitHub repository and publish releases, follow
+[`PACKAGING.md`](PACKAGING.md). The workflow requires you to push the
+extracted addon's **contents** as the repository root; it does not publish
+until you push an annotated version tag. No publishing accounts or project
+IDs are configured automatically.
 
 ## Addon icon
 
@@ -169,6 +178,10 @@ Enable Lua errors in game with `/console scriptErrors 1`, then `/reload`. If any
 
 ## Shared language/voice engine (0.5.0-beta)
 
-**Requires ForeverCommsVoice 0.1.1-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
+**Requires ForeverCommsVoice 0.1.0-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
 
 For the first upgrade, install the three-addon **ForeverComms bundle** or at least install ForeverCommsVoice before updating GuildComms. The updated GuildComms will not load without its dependency. Continue to use `/fgc` for guild functionality.
+
+## Shared review queue (v0.6.1-beta)
+
+**Verify with a click** now stages guild greetings and congratulations in ForeverCommsVoice's shared review list, alongside GroupComms messages. The old Guild-only approval frame has been removed. Use `/fgc verify` or `/fcv queue` to open it. Source column, visible rows, timeouts and auto-open are controlled under `/fcv`. A timeout only skips a message. `Restore Defaults` still does **not** modify the shared voice/queue profile.

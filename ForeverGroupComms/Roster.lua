@@ -40,6 +40,9 @@ function A:ScanRoster(silent)
         self.groupSerial = self.groupSerial + 1
         -- Preserve clicks only when the exact roster is stable; no old group sends.
         wipe(self.approvals)
+        if _G.ForeverCommsVoice and _G.ForeverCommsVoice.SkipAll then
+            _G.ForeverCommsVoice:SkipAll("group")
+        end
         if self.ClearQuestPeers then self:ClearQuestPeers() end
     end
     self.activeGroup, self.roster = grouped, current

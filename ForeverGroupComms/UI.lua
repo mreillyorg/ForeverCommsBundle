@@ -33,7 +33,7 @@ local function makeFrame(name, title, w, h)
 end
 function A:BuildPanel()
     if self.panel then return end
-    local f = makeFrame("ForeverGroupCommsPanel", "Forever Group Comms", 530, 530)
+    local f = makeFrame("ForeverGroupCommsPanel", "Forever Group Comms", 530, 435)
     self.panel = f
     self.groupSummaryLabel = text(f, "Not in a group", 18, -34, 490, 38, "GameFontHighlight")
     text(f, "Quick actions (click to send to your current group)", 18, -86, 490, 22, "GameFontNormal")
@@ -53,21 +53,13 @@ function A:BuildPanel()
         end)
     end
     self.roleLabel = text(f, "", 18, -318, 490, 56, "GameFontHighlightSmall")
-    text(f, "Suggestions to review", 18, -378, 490, 20, "GameFontNormal")
-    self.approvalRows = {}
-    for i = 1, 3 do
-        local y = -401 - (i - 1) * 30
-        local line = text(f, "", 19, y - 3, 313, 24, "GameFontHighlightSmall")
-        local send = button(f, "Send", 341, y, 74, 23, function() A:Approve(i) end)
-        local dismiss = button(f, "Dismiss", 419, y, 87, 23, function()
-            if A.approvals[i] then table.remove(A.approvals, i) end
-            A:RefreshUI()
-        end)
-        self.approvalRows[i] = {label=line, send=send, dismiss=dismiss}
-    end
-    button(f, "Compare quests", 18, -501, 154, 25, function() A:ShowQuests() end)
-    button(f, "Settings", 181, -501, 115, 25, function() A:OpenSettings() end)
-    button(f, "Recheck roles", 307, -501, 197, 25, function() A:ReviewRoles(false); A:RefreshUI() end)
+    self.queueSummaryLabel = text(f,"",18,-373,300,25,"GameFontNormalSmall")
+    button(f,"Review message queue",317,-370,188,25,function()
+        if _G.ForeverCommsVoice then _G.ForeverCommsVoice:ShowQueue(true) end
+    end)
+    button(f, "Compare quests", 18, -402, 154, 25, function() A:ShowQuests() end)
+    button(f, "Settings", 181, -402, 115, 25, function() A:OpenSettings() end)
+    button(f, "Recheck roles", 307, -402, 197, 25, function() A:ReviewRoles(false); A:RefreshUI() end)
     f:SetScript("OnShow", function() A:RefreshUI() end)
 end
 function A:RefreshUI()
@@ -82,12 +74,9 @@ function A:RefreshUI()
         self.roleLabel:SetText("Roles: " .. self:RoleSummary() .. "\n" ..
             (#issues > 0 and ("Double-check: " .. table.concat(issues, "; ")) or "No obvious assignment gaps. Confirm unusual compositions manually."))
     else self.roleLabel:SetText("No group role data available.") end
-    for i, controls in ipairs(self.approvalRows) do
-        local entry = self.approvals[i]
-        controls.label:SetText(entry and entry.text or (i == 1 and "No suggestions pending." or ""))
-        controls.send:SetShown(entry ~= nil)
-        controls.dismiss:SetShown(entry ~= nil)
-    end
+    local voice=_G.ForeverCommsVoice
+    local groupCount=voice and voice.PendingCount and voice:PendingCount("group") or #self.approvals
+    self.queueSummaryLabel:SetText("Group messages waiting: " .. groupCount)
     if self.RefreshQuestUI then self:RefreshQuestUI() end
     if self.UpdateBroker then self:UpdateBroker() end
 end

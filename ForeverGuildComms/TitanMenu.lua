@@ -101,7 +101,7 @@ function A:PopulateTitanMenu(root)
     AddSetting(tabard, "tabardOnExit", "Ask to remove tabard when leaving")
 
     local quick = root:CreateButton("Quick actions")
-    quick:CreateButton("Review pending messages (" .. #self.pendingApprovals .. ")",
+    quick:CreateButton("Review pending messages (" .. self:ApprovalCount() .. ")",
         function() A:ShowApprovals() end)
     quick:CreateButton("Show private alerts (" .. #self.alerts .. ")",
         function() A:RunQuickAction("alerts") end)
@@ -109,6 +109,7 @@ function A:PopulateTitanMenu(root)
     quick:CreateButton("Rescan open profession", function() A:RunQuickAction("rescan") end)
 
     root:CreateDivider()
+    root:CreateButton("Open Review Panel (" .. self:ApprovalCount() .. ")", function() A:ShowApprovals() end)
     root:CreateButton("Edit custom messages in Settings...", function() A:OpenSettings("messages") end)
     root:CreateButton("Open full Settings...", function() A:OpenSettings() end)
 end

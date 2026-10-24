@@ -1,6 +1,6 @@
 local ADDON, A = ...
 _G.ForeverGroupComms = A
-A.name, A.version = ADDON, "0.2.1-beta"
+A.name, A.version = ADDON, "0.3.3-beta"
 BINDING_HEADER_FOREVERGROUPCOMMS = "Forever Group Comms"
 BINDING_NAME_FGROUP_PANEL = "Open Group Comms"
 BINDING_NAME_FGROUP_ROLES = "Review group roles"
@@ -114,37 +114,56 @@ end
 function A:CanChat()
     return self.db and self.db.enabled and self.activeGroup and SendChatMessage ~= nil
 end
-function A:Send(kind, vars)
+function A:SendPrepared(message, serial)
     if not self:CanChat() then self:Print("Join a group first, or enable the addon."); return false end
-    local message = self:Render(kind, vars)
-    if message == "" then return false end
-    -- Require an explicit click for manual actions and a minimum spacing for all posts.
-    local now = self:Now()
-    if self.lastChat > 0 and now - self.lastChat < 2 then
+    if serial ~= nil and serial ~= self.groupSerial then
+        self:Print("Skipping suggestion from a previous group.")
+        return false,"stale"
+    end
+    if type(message)~="string" or message=="" then return false end
+    local now=self:Now()
+    if self.lastChat > 0 and now-self.lastChat < 2 then
         self:Print("Please allow two seconds between group messages.")
         return false
     end
-    local ok, err = pcall(SendChatMessage, message, self:GroupChannel())
-    if not ok then self:Print("Chat error: " .. tostring(err)); return false end
-    self.lastChat = now
+    local ok,err=pcall(SendChatMessage,message,self:GroupChannel())
+    if not ok then self:Print("Chat error: " .. tostring(err));return false end
+    self.lastChat=now
     return true
+end
+function A:Send(kind, vars)
+    return self:SendPrepared(self:Render(kind, vars))
 end
 function A:Stage(kind, vars, desc)
     if not self.activeGroup or not self.db.enabled then return end
+    local voice=_G.ForeverCommsVoice
+    if voice and voice.Enqueue then
+        -- Capture exactly the message the player sees. No re-rolling variants
+        -- and never post it to a different party after a roster transition.
+        local serial=self.groupSerial
+        local message=self:Render(kind, vars)
+        local id=voice:Enqueue({source="group",kind=kind,label=desc or kind,text=message,
+            send=function() return self:SendPrepared(message,serial) end})
+        if id then
+            self:Notify("Suggested: " .. (desc or kind) .. " (/fcv queue)")
+            return
+        end
+    end
+    -- Compatibility for standalone smoke tests without shared Voice.
     if #self.approvals >= 12 then table.remove(self.approvals, 1) end
-    table.insert(self.approvals, {kind=kind, vars=vars, text=desc or kind, serial=self.groupSerial})
+    table.insert(self.approvals,{kind=kind,vars=vars,text=desc or kind,serial=self.groupSerial})
     self:Notify("Suggested: " .. (desc or kind) .. " (open /fgp to send)")
     if self.RefreshUI then self:RefreshUI() end
 end
 function A:Approve(index)
-    local entry = self.approvals[index]
+    local entry=self.approvals[index]
     if not entry then return end
     if entry.serial ~= self.groupSerial then
-        table.remove(self.approvals, index)
+        table.remove(self.approvals,index)
         self:Print("That suggestion belongs to a previous group.")
         return
     end
-    if self:Send(entry.kind, entry.vars) then table.remove(self.approvals, index) end
+    if self:Send(entry.kind,entry.vars) then table.remove(self.approvals,index) end
     if self.RefreshUI then self:RefreshUI() end
 end
 function A:Quick(kind)
@@ -252,7 +271,8 @@ SlashCmdList.FOREVERGROUPCOMMS = function(input)
     elseif cmd == "skull" then A:Quick("skullMark")
     elseif cmd == "moon" then A:Quick("moonMark")
     elseif cmd == "pull" or cmd == "mana" or cmd == "regroup" or cmd == "heal" or cmd == "cc" or cmd == "interrupt" then A:Quick(cmd)
+    elseif cmd == "queue" or cmd == "review" then if _G.ForeverCommsVoice then _G.ForeverCommsVoice:ShowQueue(true) end
     elseif cmd == "settings" then A:OpenSettings()
     elseif cmd == "sync" then if A.ScheduleQuestSync then A:ScheduleQuestSync(true) end
-    else A:Print("Commands: /fgp, quests, roles, ready, skull, moon, pull, mana, regroup, heal, cc, interrupt, sync, settings") end
+    else A:Print("Commands: /fgp, quests, roles, ready, skull, moon, pull, mana, regroup, heal, cc, interrupt, sync, queue, settings") end
 end

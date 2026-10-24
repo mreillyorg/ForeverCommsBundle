@@ -87,17 +87,17 @@ def main():
             files.update(manifests[name] if args.runtime else source_files(ROOT / name))
         if not args.runtime:
             files.update(source_files(ROOT / 'install'))
-        build(output / f'{addon}-{versions[addon]}{"-runtime" if args.runtime else ""}.zip', files)
+        build(output / f'{addon}-{versions[addon]}-{ "runtime" if args.runtime else "source"}.zip', files)
     suite_files = set()
     for addon in ADDONS:
         suite_files.update(manifests[addon] if args.runtime else source_files(ROOT / addon))
     if not args.runtime:
         for path in ('install', 'tools', '.github'):
             suite_files.update(source_files(ROOT / path))
-        for name in ('README.md', 'PACKAGING.md', 'package.cmd', 'package.ps1', 'run-tests.cmd'):
+        for name in ('README.md', 'PACKAGING.md', 'package.cmd', 'package.ps1'):
             f = ROOT / name
             if f.exists(): suite_files.add(f)
-    build(output / f'ForeverComms-Bundle-{suite_version}{"-runtime" if args.runtime else ""}.zip', suite_files)
+    build(output / f'ForeverComms-Bundle-{suite_version}-{ "runtime" if args.runtime else "source"}.zip', suite_files)
     return 0
 
 

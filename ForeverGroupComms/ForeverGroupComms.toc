@@ -3,7 +3,7 @@
 ## Notes: Party, dungeon and raid greetings, coordination, roles, ready checks, target marks and quest sharing status.
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverGroupComms\Media\Icon
-## Version: 0.2.1-beta
+## Version: 0.3.3-beta
 ## SavedVariables: ForeverGroupCommsDB
 ## Dependencies: ForeverCommsVoice
 ## OptionalDeps: Titan
@@ -12,4 +12,5 @@ Roster.lua
 Quests.lua
 UI.lua
 Options.lua
+TitanMenu.lua
 Broker.lua

@@ -1,6 +1,6 @@
 local ADDON, V = ...
 _G.ForeverCommsVoice = V
-V.name, V.version = ADDON, "0.1.1-beta"
+V.name, V.version = ADDON, "0.2.0-beta"
 V.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 V.defaults = {templates={
     login="Welcome back, {name}!",

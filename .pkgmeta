@@ -1,0 +1,37 @@
+# BigWigsMods/packager configuration for the entire Forever Comms suite.
+# All three addons must appear as independent top-level AddOns folders.
+package-as: ForeverCommsBundle
+
+move-folders:
+  ForeverCommsBundle/ForeverCommsVoice: ForeverCommsVoice
+  ForeverCommsBundle/ForeverGuildComms: ForeverGuildComms
+  ForeverCommsBundle/ForeverGroupComms: ForeverGroupComms
+
+# Ship the WoW runtime, not the Windows installer, build tools, tests or docs.
+ignore:
+  - .github
+  - install
+  - tools
+  - dist
+  - tests
+  - .release
+  - package.cmd
+  - package.ps1
+  - PACKAGING.md
+  - README.md
+  - ForeverCommsVoice/.github
+  - ForeverCommsVoice/install
+  - ForeverCommsVoice/tests
+  - ForeverCommsVoice/README.md
+  - ForeverCommsVoice/Media/ProjectIcon.png
+  - ForeverGroupComms/.github
+  - ForeverGroupComms/install
+  - ForeverGroupComms/tests
+  - ForeverGroupComms/README.md
+  - ForeverGroupComms/Media/ProjectIcon.png
+  - ForeverGuildComms/.github
+  - ForeverGuildComms/install
+  - ForeverGuildComms/tests
+  - ForeverGuildComms/README.md
+  - ForeverGuildComms/PACKAGING.md
+  - ForeverGuildComms/Media/ProjectIcon.png

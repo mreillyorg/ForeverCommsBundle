@@ -1,6 +1,4 @@
-> **Current release: 0.1.1-beta.** Provides both addons' language/accents, two new project textures and restored Expressive punctuation. The Windows installer uses the shared suite installer and does not require a nonexistent `Bindings.xml`.
-
-# ForeverCommsVoice 0.1.1-beta
+# ForeverCommsVoice 0.2.1-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -14,7 +12,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.5.1-beta and/or GroupComms 0.2.1-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.0-beta and/or GroupComms 0.3.0-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 
@@ -40,3 +38,10 @@ The library does not send chat, run automatic actions or change what the player 
 ## Development
 
 From `ForeverCommsVoice`: `texlua tests/integration.lua` (requires the sibling `ForeverGuildComms` and `ForeverGroupComms` source folders). Syntax and integration checks were performed offline; the client UI and client-specific race IDs still require in-game testing.
+
+## Shared communication review queue
+
+New in v0.2.1-beta: `Queue.lua` and `QueueUI.lua` provide a single movable, scrollable click-to-send queue for Guild and Group messages. Open it with `/fcv queue`; `/fcv clear` skips everything. Queue settings live under `/fcv`: number of visible rows (1 to 10), source presentation (Guild/Group text or addon icons), expiry time in seconds (0 = no expiry) and auto-open. The queue owner accepts `V:Enqueue{source="guild"|"group",kind="...",label="...",text="...",send=function() return true end,timeout=seconds}`. Leave `timeout` out to use the current default. The producer must validate guild/group identity at send time. `V:Approve(id)` invokes the callback only on an explicit click; `V:Skip(id)` and expiry never invoke it. `V:SkipAll("guild")` or `V:SkipAll("group")` clears one source only. There is no persistent queue storage.
+
+
+Queue presentation: a compact, movable, scrollable floating overlay (not a normal Blizzard window). Fresh character defaults are **2 visible rows** and **20 seconds** auto-skip; existing saved queue preferences remain unchanged. `/fcv queue` opens the overlay.

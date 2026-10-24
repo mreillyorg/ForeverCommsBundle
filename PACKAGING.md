@@ -1,75 +1,52 @@
-# Forever Comms Suite: packaging and releases
+# Forever Comms packaging and releases
 
-Release set: **ForeverGuildComms 0.5.1-beta**, **ForeverGroupComms 0.2.1-beta**, **ForeverCommsVoice 0.1.1-beta** (WoW Forever Interface 16001).
+## Build locally (no GitHub Actions required)
 
-## Build locally without GitHub Actions
+From the suite root, run `package.cmd` on Windows or `python tools/package.py --output dist`. The build reads each addon `.toc` to obtain its version, verifies every listed runtime module and icon, and creates individual source ZIPs (each consumer includes its ForeverCommsVoice dependency) plus one suite source ZIP. For addon-manager-minimal builds use `python tools/package.py --output dist --runtime`.
 
-This extracted bundle is immediately packageable. No Git repository, tag, CurseForge account, network connection, packager installation or API token is needed.
+Current versions: ForeverCommsVoice **0.2.1-beta**, ForeverGuildComms **0.6.1-beta**, ForeverGroupComms **0.3.1-beta** (suite 0.6.1-beta). Copy release archives from `dist/`; do not upload an unextracted ZIP to a WoW AddOns folder.
 
-**Windows:** double-click `package.cmd`, or run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\package.ps1` in the extracted suite directory. Windows PowerShell 5.1 and .NET zip support are sufficient. The script includes hidden workflow files in the source archives.
+## GitHub
 
-**Windows/macOS/Linux with Python 3:** run `python tools/package.py --output dist`. Python's standard library is the only dependency. `--runtime` optionally creates smaller addon-manager ZIPs with only runtime files; source ZIPs are the default.
+The suite-root `.github/workflows/package.yml` builds on version tags and manual dispatch. The independent addon-root `.github/workflows/package.yml` files are BigWigsMods/packager workflows for independently hosted repositories: copy each addon folder's *contents* to that addon's GitHub repository root, and configure its CurseForge secrets as necessary. Do not expect an addon-root workflow to execute automatically when nested within the suite repository.
 
-Both commands put these archives under `dist/`:
+## Installation
 
-- `ForeverCommsVoice-0.1.1-beta.zip`
-- `ForeverGuildComms-0.5.1-beta.zip` (includes ForeverCommsVoice)
-- `ForeverGroupComms-0.2.1-beta.zip` (includes ForeverCommsVoice)
-- `ForeverComms-Bundle-0.5.1-beta.zip` (all three)
+The suite installer (`install/Install-ForeverComms.cmd`) stages and checks all runtime files before replacing installed addons, backs up existing directories outside AddOns, and preserves SavedVariables. Each consumer ZIP includes ForeverCommsVoice and redirects its per-addon installer to the shared installer.
 
-Every source ZIP includes the root `install/Install-ForeverComms.ps1` shared installer, and the per-addon `.cmd`/`.ps1` entry point inside its addon folder. An individual Guild/Group ZIP contains its Voice dependency so its installer can install both in the correct order. All source ZIPs include `Media/Icon.tga` and `Media/ProjectIcon.png` for each addon. Run `install/Install-ForeverComms.cmd` for the bundle.
+## Tests
 
-`--runtime` ZIPs contain TOC-listed runtime files, any `Bindings.xml`, and game icon `Media/Icon.tga`. They intentionally contain no installer, tests, `.pkgmeta` or promotional project icon. If installing a runtime ZIP manually, copy each top-level addon folder under `Interface/AddOns`.
+From the suite root: `texlua ForeverCommsVoice/tests/queue.lua`, `texlua ForeverCommsVoice/tests/queue_ui.lua`, and `texlua ForeverCommsVoice/tests/integration.lua`. From the GuildComms folder: `texlua tests/verify.lua` and `texlua tests/icon.lua`. From the GroupComms folder: `texlua tests/smoke.lua`. These test Lua behavior and UI with lightweight mocks, not in-game client acceptance.
 
-## GitHub layout: suite in ONE repository
+Titan menu update: GuildComms 0.6.2-beta and GroupComms 0.3.3-beta; Voice remains 0.2.1-beta. `TitanMenu.lua` is included in GroupComms TOC and both source and runtime packages.
 
-Commit the **contents of the extracted bundle** at repository root:
+## BigWigsMods/packager: whole bundle
 
-```text
-.github/workflows/package.yml    <-- active in a suite repository
-package.cmd                       <-- offline Windows entry point
-package.ps1
-PACKAGING.md
-README.md
-tools/package.py                  <-- offline cross-platform entry point
-install/Install-ForeverComms.ps1
+The repository **root** now contains `.pkgmeta` and `.github/workflows/package.yml`.
+It is intended for a **single GitHub repository containing all three addon
+subdirectories**, not a repository that contains only one addon folder.
+
+On GitHub, **Actions → Package Forever Comms bundle (BigWigs) → Run workflow**
+creates an installable artifact. Pushing an annotated tag such as
+`v0.6.2-beta.1` also creates a GitHub Release with the ZIP attached. Tag and
+ZIP versioning is managed by BigWigs.
+
+The root `.pkgmeta` uses `package-as: ForeverCommsBundle` plus `move-folders`
+to produce the only correct installable layout:
+
+```
 ForeverCommsVoice/ForeverCommsVoice.toc
 ForeverGuildComms/ForeverGuildComms.toc
 ForeverGroupComms/ForeverGroupComms.toc
 ```
 
-The active **root** `.github/workflows/package.yml` runs the same offline Python builder on manual workflow dispatch or `v*` tag push. It uploads four ZIPs as a workflow artifact. Tagged runs additionally attach the ZIPs to the GitHub Release using the built-in `GITHUB_TOKEN`, which needs `contents: write` permission. It does **not** require BigWigsMods or optional CurseForge secrets. A workflow nested inside `ForeverGuildComms/.github` is NOT discovered when GitHub's repository root is the *suite*; those nested workflows are for independent addon repositories only.
+The workflow passes `-d` to suppress automatic third-party publication. This
+keeps the beta safe to build without CurseForge/Wago project IDs or API secrets;
+GitHub Releases and workflow artifacts still receive the output ZIP. When you
+create a dedicated CurseForge project, supply its actual project ID and upload
+credentials before enabling platform publication. WoW Forever's nonstandard
+`## Interface: 16001` may require manual game-version selection on hosted
+addon platforms.
 
-For a tagged release, run `git tag -a v0.5.1-beta -m "Forever Comms 0.5.1 beta"` then `git push origin v0.5.1-beta`, after committing the sources. The root workflow is also usable via Actions > Build Forever Comms suite > Run workflow.
-
-## Three independent repositories / BigWigsMods/packager
-
-For *standalone* CurseForge-style source repositories, move the **contents** of `ForeverGuildComms/`, `ForeverGroupComms/` or `ForeverCommsVoice/` to that repository root. Each contains its own `.pkgmeta` and `.github/workflows/package.yml`. That workflow uses [BigWigsMods/packager@v2](https://github.com/BigWigsMods/packager), runs only after code is pushed to GitHub, and should receive the supported environment variables `GH_API_TOKEN` and `CF_API_TOKEN`. It will not work merely by extracting the downloaded ZIP on your PC. Local builds should use `package.cmd` / `package.ps1` from the bundle instead.
-
-The packager omits tests, install scripts, and promotional project icon (but preserves `Media/Icon.tga`). It does not bundle ForeverCommsVoice into the Guild or Group standalone release: users must install ForeverCommsVoice separately, and any CurseForge project metadata must declare it as a dependency. Set any optional CurseForge/Wago/WoWInterface tokens and real project IDs yourself; none are bundled or presumed. WoW Forever's custom interface ID `16001` may not be recognized by third-party publishing providers, and should be tested before public upload.
-
-## Testing before a release
-
-Run the whole offline Lua suite with one command from the extracted suite root:
-
-```text
-python tools/run_tests.py          (or: run-tests.cmd on Windows)
-```
-
-It needs Python 3 and a Lua **5.1** interpreter — the dialect the WoW client embeds. The
-runner finds one from `--lua`, then `$LUA51`, then `lua5.1` / `luajit` / `texlua` / `lua`
-on PATH, then `%USERPROFILE%\tools\lua-5.1.5\lua5.1.exe` and `/usr/bin/lua5.1`. It
-rejects anything that does not report Lua 5.1 or LuaJIT, so a 5.3/5.4 install on PATH is
-skipped rather than used. Expect `PASSED: 13   FAILED: 0`.
-
-The root GitHub workflow runs the same command **before** packaging, so a failing harness
-stops the build before anything is built or published.
-
-## Release checks
-
-1. Confirm that `.toc` versions match the intended release names (scripts read these automatically).
-2. Run `python tools/run_tests.py` for addon behaviour, then `tools/verify_package.py` for the archives.
-3. Test individual installs and bundle installs on Windows, including backup/rollback, and the new addon icons with a full WoW restart.
-4. In-game verify GuildComms Settings > Restore Defaults leaves `/fcv` language and accents unchanged, and expressive terminal periods change to exclamation marks for built-in, accented guild messages.
-
-All three addons share the same per-character voice SavedVariables. This shared file lives under the WoW WTF SavedVariables path and is never copied over by an installer.
+Run `python tools/check_bigwigs_bundle.py` after an actual BigWigs build to
+check its structure. Local custom packaging via `package.cmd` remains available.

@@ -6,7 +6,7 @@ BINDING_HEADER_FOREVERGUILDCOMMS = "Forever Guild Comms"
 BINDING_NAME_FGC_OPEN_ALERTS = "Open guild alerts"
 BINDING_NAME_FGC_ASK_HELP = "Ask guild for help"
 BINDING_NAME_FGC_RESCAN_PROFESSION = "Rescan open profession"
-A.version = "0.5.1-beta"
+A.version = "0.6.2-beta"
 -- These language preferences are per character; old account-wide settings stay intact.
 A.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 A.defaults = {
@@ -184,13 +184,39 @@ function A:QueueGuild(message, key, cooldown)
 end
 function A:StageApproval(entry)
     if not entry or not self:CanUse() then return end
-    if #self.pendingApprovals >= 30 then
-        table.remove(self.pendingApprovals, 1)
+    local voice = _G.ForeverCommsVoice
+    if voice and voice.Enqueue then
+        local guildAtCreation = entry.guild
+        local textAtCreation = entry.text
+        local id = voice:Enqueue({
+            source="guild", kind=entry.kind,
+            label=({login="Login greeting",join="New member welcome",level="Level congratulations"})[entry.kind] or "Guild message",
+            text=textAtCreation,
+            send=function()
+                if not self:CanUse() or (GetGuildInfo and GetGuildInfo("player") or nil) ~= guildAtCreation then
+                    self:Print("Old guild approval skipped: guild changed or addon disabled.")
+                    return false,"stale"
+                end
+                if self:SendGuild(textAtCreation) then
+                    self.lastGuildSend=self:Now()
+                    return true
+                end
+                return false
+            end,
+        })
+        if id then return end
     end
+    -- Legacy fallback for isolated tests/older installations without Voice.
+    if #self.pendingApprovals >= 30 then table.remove(self.pendingApprovals, 1) end
     table.insert(self.pendingApprovals, entry)
     if self.UpdateApprovalsUI then self:UpdateApprovalsUI() end
     if self.UpdateBroker then self:UpdateBroker() end
     if self.ShowApprovals then self:ShowApprovals() end
+end
+function A:ApprovalCount()
+    local voice=_G.ForeverCommsVoice
+    if voice and voice.PendingCount then return voice:PendingCount("guild") end
+    return #self.pendingApprovals
 end
 function A:ApproveMessage(index)
     local entry = self.pendingApprovals[index]
@@ -220,6 +246,9 @@ function A:DismissMessage(index)
     if self.UpdateBroker then self:UpdateBroker() end
 end
 function A:ClearApprovals()
+    if _G.ForeverCommsVoice and _G.ForeverCommsVoice.SkipAll then
+        _G.ForeverCommsVoice:SkipAll("guild")
+    end
     wipe(self.pendingApprovals)
     if self.UpdateApprovalsUI then self:UpdateApprovalsUI() end
     if self.UpdateBroker then self:UpdateBroker() end
@@ -277,7 +306,7 @@ function A:SetOption(key, value)
     local changed = self.db[key] ~= value
     self.db[key] = value
     if changed and key == "outgoingMode" and value == "automatic"
-        and #self.pendingApprovals > 0 then
+        and self:ApprovalCount() > 0 then
         self:Print("Earlier pending messages still need approval or dismissal. /fgc verify")
     end
     if changed then
@@ -447,7 +476,7 @@ SlashCmdList.FOREVERGUILDCOMMS = function(input)
         wipe(A.char.recipes)
         A:Print("Recipe cache cleared. Open your professions again to repopulate it.")
     elseif input == "status" then
-        A:Print("Guild members: " .. A.guildCount .. ", online: " .. A.onlineCount .. ", private alerts: " .. #A.alerts .. ", pending review: " .. #A.pendingApprovals .. ", mode: " .. A.db.outgoingMode)
+        A:Print("Guild members: " .. A.guildCount .. ", online: " .. A.onlineCount .. ", private alerts: " .. #A.alerts .. ", pending review: " .. A:ApprovalCount() .. ", mode: " .. A.db.outgoingMode)
     else A:ShowAlerts() end
 end
 

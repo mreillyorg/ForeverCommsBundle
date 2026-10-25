@@ -21,21 +21,34 @@ jobs:
       # The WoW client embeds Lua 5.1, so test against exactly that dialect. Not LuaJIT
       # and not 5.3/5.4: both are supersets that would let a harness come to depend on
       # something the client does not have.
-      - name: Install Lua 5.1
+      - name: Install Lua 5.1 and luacheck
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y lua5.1
+          sudo apt-get install -y lua5.1 luacheck
           lua5.1 -v
+          luac5.1 -v
+          luacheck --version
 
-      # Behaviour first: a failing harness must stop the build before anything is
-      # packaged or published.
-      - name: Run all offline Lua harnesses
+      - name: Verify Lua 5.1 syntax across addon sources
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/run_tests.py
+          find ForeverCommsVoice ForeverGuildComms ForeverGroupComms \
+            -type f -name '*.lua' -print0 | xargs -0 -r -n1 luac5.1 -p
+
+      - name: Run all offline harnesses under Lua 5.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/run_tests.py --lua lua5.1
+
+      - name: Run luacheck (zero warnings)
+        shell: bash
+        run: |
+          set -euo pipefail
+          luacheck . --codes --max-warnings 0
 
       - name: Build installable bundle with BigWigsMods/packager
         uses: BigWigsMods/packager@v2

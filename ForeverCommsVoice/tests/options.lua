@@ -172,6 +172,45 @@ if accentButton then
     end
 end
 
+-- ------------------------------------------------- shuffle bags vs option writes
+
+-- A bag is keyed by scope:kind:language:accent, so changing a voice option strands every
+-- bag under the old signature. Nothing would ever read them again and nothing freed them.
+local function bagCount()
+    local n = 0
+    for _ in pairs(V.messageVariantBags) do n = n + 1 end
+    return n
+end
+V:ResetVariantBags()
+assert(bagCount() == 0, "starting from no bags, got " .. bagCount())
+V:Pick("guild", "login", "en", nil, "One", {"Two", "Three"}, true)
+assert(bagCount() == 1, "a randomized Pick with several choices primes one bag, got " ..
+    bagCount())
+
+-- A REJECTED write must leave the bags alone: the profile did not change, so neither did
+-- any signature, and discarding them would lose anti-repetition state for nothing.
+assert(V:SetOption("language", "not-a-language") == false, "invalid language is refused")
+assert(bagCount() == 1, "a refused write keeps the bags, got " .. bagCount())
+
+-- An accepted write clears them, whatever the key.
+assert(V:SetOption("accentStrength", "subtle"))
+assert(bagCount() == 0, "an accepted option write resets the bags, got " .. bagCount())
+V:Pick("guild", "login", "en", nil, "One", {"Two", "Three"}, true)
+assert(V:SetOption("language", "en"))
+assert(bagCount() == 0, "a language write resets the bags, got " .. bagCount())
+
+-- Cover the no-wipe path too. `wipe` is a WoW global and this harness stubs it, so the
+-- loop fallback is the branch that runs under a bare Lua 5.1 and would otherwise never
+-- be executed by any test.
+local stubbedWipe = _G.wipe
+_G.wipe = nil
+V:Pick("guild", "login", "en", nil, "One", {"Two", "Three"}, true)
+assert(bagCount() == 1, "primed a bag with wipe unavailable, got " .. bagCount())
+V:ResetVariantBags()
+assert(bagCount() == 0, "the loop fallback clears the bags without wipe, got " ..
+    bagCount())
+_G.wipe = stubbedWipe
+
 -- ------------------------------------------------------- queue settings controls
 
 -- Row count cycles 1..10 and wraps.

@@ -56,6 +56,11 @@ A.classRoles = {
 }
 A.roleNames = {tank="Tank", healer="Healer", damage="DPS"}
 A.roleOrder = {"tank", "healer", "damage"}
+-- The Ask-for-Help activity type, as an index into activityTypes. Declared here rather
+-- than captured in BuildRequestUI's closure so A:RequestText can read it before the frame
+-- exists, and so a harness can drive the real A:GetActivityType instead of stubbing it.
+A.activityTypes = {"Dungeon", "Raid", "Quest"}
+A.activityType = 1
 -- Both timing options are saved as whole seconds. Clamp values coming from
 -- older SavedVariables as well as from the Settings edit boxes.
 A.timingLimits = {

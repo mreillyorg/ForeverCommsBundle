@@ -1,8 +1,8 @@
 # Code Structure
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## Build System
 
@@ -19,7 +19,8 @@
 | `.pkgmeta` (root) | `package-as: ForeverCommsBundle` plus `move-folders` lifting the three addons to top level, plus the ignore list. **The single source of truth for what ships** |
 | `<Addon>/.pkgmeta` ×3 | For the standalone-repository case only |
 | `.luacheckrc` (root) | Linter configuration covering all three packages |
-| `.github/workflows/package.yml` | Checkout → install Lua 5.1 → **run all 28 harnesses** → BigWigs build → structure check → artifact → Release on a tag |
+| `.github/workflows/package.yml` | Checkout → install Lua 5.1 **and luacheck** → **one gate: strict `luac -p` parse of every file, all 28 harnesses, zero-warning luacheck** → BigWigs build → structure check → artifact → Release on a tag |
+| `tools/check_lua_quality.py` | The gate that step runs. Validates its three executables, rejecting LuaJIT or a non-5.1 banner, then parses, tests and lints. Exit 0 only if all three pass |
 | `<Addon>/.github/workflows/package.yml` ×3 | Standalone case only; each carries a header comment saying so |
 
 ## Module hierarchy
@@ -50,37 +51,37 @@ state with a safe initial value, so a later file can never index nil.
 
 ## Existing Files Inventory
 
-### ForeverCommsVoice — 1,221 shipped lines
+### ForeverCommsVoice — 1,242 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `Core.lua` | 251 | 9 | Namespace published as `_G.ForeverCommsVoice`; voice defaults; the profile getter, validator and sole writer; the legacy migration latch; the catalog registry; `V:Format` with the byte clamp; shuffle-bag `V:Pick`; `V:Render` as a dispatcher over per-scope resolvers plus `pickTemplate`, `flairApplies` and `applyFlair` |
+| `Core.lua` | 270 | 10 | Namespace published as `_G.ForeverCommsVoice`; voice defaults; the profile getter, validator and sole writer; the legacy migration latch; the catalog registry; `V:Format` with the byte clamp; shuffle-bag `V:Pick` and `V:ResetVariantBags`; `V:Render` as a dispatcher over per-scope resolvers plus `pickTemplate`, `flairApplies` and `applyFlair` |
 | `Languages.lua` | 81 | 0 | 8 language definitions and the guild locale template bank |
 | `Accents.lua` | 51 | 0 | 29 accent registrations via a local `register` helper: id, label, language, four guild templates, flair prefix |
 | `RaceProfiles.lua` | 76 | 5 | Race-to-accent map, availability filtering, role and activity localization |
-| `MessageVariants.lua` | 200 | 0 | Accent and locale variant banks for guild wording |
+| `MessageVariants.lua` | 202 | 0 | Accent and locale variant banks for guild wording. Declares no namespace state: it used to re-declare `messageVariantBags`, which replaced Core's table rather than adding to it |
 | `GroupPhrases.lua` | 144 | 0 | Group/dungeon catalog for 8 languages plus curated per-accent group wordings; registers both catalogs |
 | `Queue.lua` | 148 | 12 | The shared review queue: persisted settings with clamping, enqueue with a 100-entry bound, approve/skip/skip-all, per-record expiry on a `C_Timer` ticker |
 | `QueueUI.lua` | 136 | 4 | Movable scrollable overlay, countdown refresh |
 | `Options.lua` | 134 | 3 | Settings canvas panel, `/fcv`, and this addon's `ADDON_LOADED` frame |
-| `tests/*.lua` | 1,053 | — | 8 harnesses, none in the TOC |
+| `tests/*.lua` | 1,137 | — | 8 harnesses, none in the TOC. `syntax.lua` also asserts each shared namespace field is declared by exactly one module |
 | `README.md` | 97 | — | User documentation, current at 0.2.2-beta, with release notes |
 
-### ForeverGuildComms — 1,580 shipped lines
+### ForeverGuildComms — 1,585 shipped lines
 
 | File | Lines | Methods | Purpose |
 | --- | --- | --- | --- |
-| `Core.lua` | 570 | 31 | **The load-time library guard, as the first statement**; defaults and timing limits; `A:FillDefaults`; `A:CanFillRole`; `A:Key`/`A:IsSelf`; `A:ChatLimit`; dedup with periodic pruning; `A:SendGuild` through `pcall`; `A:QueueGuild` → `A:DrainQueue` spacing; `A:StageApproval`; the approval floor; settings writers shared by Settings and Titan; the single 14-event dispatcher; `/fgc` |
+| `Core.lua` | 575 | 31 | **The load-time library guard, as the first statement**; defaults and timing limits; `A:FillDefaults`; `A:CanFillRole`; `A:Key`/`A:IsSelf`; `A:ChatLimit`; dedup with periodic pruning; `A:SendGuild` through `pcall`; `A:QueueGuild` → `A:DrainQueue` spacing; `A:StageApproval`; the approval floor; settings writers shared by Settings and Titan; the single 14-event dispatcher; `/fgc` |
 | `VoiceBridge.lua` | 28 | 6 | Forwarders to the library. Returns quietly when the library is absent rather than raising a second error, because `Core.lua` has already refused and a Lua error in one TOC file does not stop the client loading the rest |
 | `Roster.lua` | 123 | 7 | Roster request throttle, read, baseline capture, diff with self-exclusion, the suspicious-read guard, localized guild-join parsing, 60-second ticker |
 | `Alerts.lua` | 99 | 5 | `cleanChat` escape stripping, craft and group request detection, recipe cache scan, the 30-entry private alert list |
 | `Tabard.lua` | 70 | 2 | Capital-city detection, tabard checks, `StaticPopupDialogs` |
-| `UI.lua` | 229 | 11 | Alerts window with 7 fixed paged rows; help composer with a fingerprinted preview draft so the Send button sends exactly what is shown |
+| `UI.lua` | 229 | 12 | Alerts window with 7 fixed paged rows; help composer with a fingerprinted preview draft so the Send button sends exactly what is shown; `A:GetActivityType` reading the namespace state rather than a closure |
 | `Options.lua` | 294 | 1 | Settings canvas panel; `OnDefault` preserves `outgoingMode` and leaves the shared profile alone |
 | `TitanMenu.lua` | 129 | 2 | Nested context menu |
 | `Broker.lua` | 38 | 2 | Optional LibDataBroker object |
 | `Bindings.xml` | 14 | — | Three keybindings. **Not in the TOC** — the client auto-loads it |
-| `tests/*.lua` | 1,490 | — | 13 harnesses, none in the TOC |
+| `tests/*.lua` | 1,512 | — | 13 harnesses, none in the TOC |
 | `README.md` | 212 | — | User documentation, current at 0.6.3-beta, with release notes |
 | `PACKAGING.md` | 91 | — | Per-package release guide, current at 0.6.3-beta |
 
@@ -105,8 +106,11 @@ state with a safe initial value, so a later file can never index nil.
 | --- | --- |
 | `README.md` | Bundle overview, install, shared queue, Titan menus, testing, release notes |
 | `PACKAGING.md` | Bundle release guide; the four version locations per package |
-| `SUGGESTED-CHANGES.md` | **44-item remediation ledger.** Records the decision and reasoning for every item, including the one rejected |
-| `.pkgmeta` | What ships |
+| `SUGGESTED-CHANGES.md` | **46-item remediation ledger.** Records the decision and reasoning for every item, including the one rejected |
+| `LUA51-AUDIT.md` | 23-line record of the Lua 5.1 CI and lint work. **Its "Starting point" section misstates the baseline** — see `code-quality-assessment.md` |
+| `Lua51-Test-Results.txt` | 189-line committed test transcript. Goes stale as soon as the suite changes; nothing checks it |
+| `wiki/` | 9 pages, 1,530 lines of user documentation: Home, Installation, Settings Reference, Slash Commands and Keybindings, Troubleshooting, three per-addon module pages, sidebar. Excluded from every archive by `.pkgmeta` |
+| `.pkgmeta` | What ships. Ignores `wiki`, `tools`, `tests`, `install`, `.github` and the root docs |
 | `.luacheckrc` | Linter config |
 | `.gitattributes`, `.gitignore` | Line endings; ignores `.release/` |
 | `tools/*.py` | `run_tests`, `package`, `check_bigwigs_bundle`, `verify_package`, `fault_inject` |

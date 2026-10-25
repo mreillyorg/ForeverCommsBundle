@@ -1,8 +1,8 @@
 # Dependencies
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## Internal Dependencies
 
@@ -164,7 +164,8 @@ fallback behaviour is part of the contract:
 | --- | --- | --- | --- |
 | Lua interpreter | **5.1** | Running the 28 offline harnesses | Testing |
 | Python | 3 | The five `tools/*.py` scripts | Testing, packaging |
-| luacheck | 1.2.0 | Static analysis against the root `.luacheckrc` | Linting, not yet in CI |
+| luacheck | 1.2.0 | Static analysis against the root `.luacheckrc` | **CI-required.** The build fails on any warning |
+| `luac5.1` | 5.1.5 | Strict dialect parse of every `.lua` file | **CI-required** |
 | BigWigsMods/packager | `@v2` | The authoritative GitHub release path | Releases |
 | GitHub Actions | — | Runs the suite, then the packager | CI |
 | PowerShell | 5.1+ | The four Windows installers | Manual installation |

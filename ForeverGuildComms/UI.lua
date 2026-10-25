@@ -135,14 +135,11 @@ function A:BuildRequestUI()
     activity:SetScript("OnEnterPressed", activity.ClearFocus)
     self.activityEdit = activity
     Label(f, "Activity type:", 22, -117, 150)
-    local types = {"Dungeon", "Raid", "Quest"}
-    local currentType = 1
-    Button(f, types[currentType] .. "  >", 178, -111, 147, function(btn)
-        currentType = currentType % #types + 1
-        btn:SetText(types[currentType] .. "  >")
+    Button(f, self:GetActivityType() .. "  >", 178, -111, 147, function(btn)
+        A.activityType = A.activityType % #A.activityTypes + 1
+        btn:SetText(A:GetActivityType() .. "  >")
         A:UpdateRequestPreview()
     end)
-    self.GetActivityType = function() return types[currentType] end
     self.roleChecks = {}
     Label(f, "My roles (available for your class):", 22, -164, 410)
     for i, role in ipairs(self.roleOrder) do
@@ -178,13 +175,16 @@ function A:BuildRequestUI()
     f:Hide()
     self:UpdateRequestPreview()
 end
+function A:GetActivityType()
+    return self.activityTypes[self.activityType] or self.activityTypes[1]
+end
 function A:RequestText()
     local activity = (self.activityEdit:GetText() or ""):match("^%s*(.-)%s*$")
     if activity == "" then activity = "[activity]" end
     local custom = self.db.templates.help ~= self.defaults.templates.help
     local vars = {
         activity = activity,
-        type = custom and self.GetActivityType() or self:LocalizeActivityType(self.GetActivityType()),
+        type = custom and self:GetActivityType() or self:LocalizeActivityType(self:GetActivityType()),
         myroles = custom and self:RoleText(self.char.myRoles, "Flexible") or self:LocalizeRoleText(self.char.myRoles, "flexible"),
         needed = custom and self:RoleText(self.char.needRoles, "Any role") or self:LocalizeRoleText(self.char.needRoles, "any"),
         name = self.playerName,

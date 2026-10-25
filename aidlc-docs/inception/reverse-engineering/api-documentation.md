@@ -1,8 +1,8 @@
 # API Documentation
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## REST APIs
 
@@ -11,7 +11,7 @@ service. The only inter-process communication is the game's own chat transport.
 
 ## Internal APIs
 
-### ForeverCommsVoice — the shared library (33 methods)
+### ForeverCommsVoice — the shared library (34 methods)
 
 Published as `_G.ForeverCommsVoice`. This is the only cross-package API contract in the
 bundle, so a change here is a change to both consumers.
@@ -82,7 +82,7 @@ leaves it queued so the click can be repeated.
 `A:GetPlayerRace()`, `A:GetAvailableAccents()`, `A:ResolveAccent()`,
 `A:LocalizeRoleText(roles, fallback)`, `A:LocalizeActivityType(kind)`.
 
-### ForeverGuildComms (67 methods)
+### ForeverGuildComms (68 methods)
 
 Published as `_G.ForeverGuildComms`. Selected methods; see `code-structure.md` for the
 per-module breakdown.

@@ -188,13 +188,15 @@ A.accentVariants = {
     },
 }
 
--- Shuffle-bag state, shared with V:Pick in Core.lua: exhaust every wording before
--- reshuffling, while avoiding an immediate repeat across two consecutive bags.
--- Session-local by design.
+-- The shuffle-bag state these variants feed is declared once, on the namespace, in
+-- Core.lua. This file deliberately does NOT declare it: `A` here and `V` in Core.lua are
+-- the same table (both are the addon vararg), and the TOC loads Core.lua first, so an
+-- `A.messageVariantBags = {}` here would throw away the table Core.lua just created.
+-- Harmless only because nothing primes a bag between the two loads — it would become a
+-- silent wipe the moment anything did, or the moment the TOC order changed.
 --
 -- A:ChooseMessageTemplate used to live here. It was a second implementation of the same
--- algorithm as V:Pick, writing into this same table under a DIFFERENT signature format
+-- algorithm as V:Pick, writing into that same table under a DIFFERENT signature format
 -- (kind:language:accent against Pick's scope:kind:language:accent), and reachable only
 -- through a VoiceBridge forwarder that nothing called once A:VoiceText routed through
 -- V:Render. Both it and the forwarder are gone; V:Pick is the single implementation.
-A.messageVariantBags = {}

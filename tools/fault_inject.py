@@ -179,24 +179,86 @@ FAULTS = [
      "make VoiceBridge raise a second error about the same missing library",
      "if not V then return end",
      'if not V then error("ForeverGuildComms requires ForeverCommsVoice") end'),
+
+    # Shuffle-bag lifetime. Stale bags are a leak, not a wrong message, so nothing else
+    # in the suite would notice either of these.
+    ("ForeverCommsVoice", "Core.lua", "tests/options.lua",
+     "stop resetting the shuffle bags, stranding every bag under the old signature",
+     "    self:ResetVariantBags()\n",
+     ""),
+
+    ("ForeverCommsVoice", "Core.lua", "tests/options.lua",
+     "reset the bags even when the option write was refused",
+     "    if not self:ValidateOption(key, value) then return false end",
+     "    if not self:ValidateOption(key, value) then self:ResetVariantBags(); return false end"),
+
+    ("ForeverCommsVoice", "Core.lua", "tests/options.lua",
+     "break the no-wipe fallback, so clearing bags silently does nothing without wipe",
+     "    for signature in pairs(self.messageVariantBags) do",
+     "    for signature in pairs({}) do"),
+
+    # The Ask-for-Help activity type, now that its state is on the namespace rather than
+    # closed over inside BuildRequestUI and therefore reachable from a harness.
+    ("ForeverGuildComms", "UI.lua", "tests/variations.lua",
+     "break the activity-type wrap so cycling walks off the end of the list",
+     "    return self.activityTypes[self.activityType] or self.activityTypes[1]",
+     "    return self.activityTypes[self.activityType]"),
+
+    ("ForeverGuildComms", "Core.lua", "tests/variations.lua",
+     "reorder the activity types, so the composer sends a type the player did not pick",
+     'A.activityTypes = {"Dungeon", "Raid", "Quest"}',
+     'A.activityTypes = {"Raid", "Dungeon", "Quest"}'),
+
+    # The duplicate namespace declaration. Re-adding it cannot fail at runtime -- the
+    # replacement happens at load, before any bag is written -- so the only thing that
+    # can catch it is the source-text check in tests/syntax.lua.
+    ("ForeverCommsVoice", "MessageVariants.lua", "tests/syntax.lua",
+     "re-declare messageVariantBags in a later-loading module, silently replacing Core's",
+     "A.localeVariants = {",
+     "A.messageVariantBags = {}\nA.localeVariants = {"),
 ]
+
+
+def read_exact(path):
+    """Read without newline translation, so a restore puts the file back byte
+    for byte. Text mode would hand back LF and then write CRLF on Windows,
+    which .gitattributes pins to LF and git would report as a modification."""
+    with open(path, "r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def write_exact(path, text):
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+
+
+def match_newlines(text, sample):
+    """Rewrite a multi-line anchor to use the newline the file actually has.
+    Six sources are committed with CRLF despite .gitattributes pinning LF, and
+    a multi-line anchor written with \\n would silently miss in those, which
+    reports as a skipped fault rather than an uncovered one."""
+    if "\n" not in text:
+        return text
+    return text.replace("\n", "\r\n") if "\r\n" in sample else text
 
 
 def main():
     caught, missed, skipped = 0, [], []
     for pkg, source, harness, label, find, replace in FAULTS:
         path = pathlib.Path(pkg) / source
-        original = path.read_text(encoding="utf-8")
+        original = read_exact(path)
+        find = match_newlines(find, original)
+        replace = match_newlines(replace, original)
         if find not in original:
             skipped.append(f"{pkg}/{source}: {label}")
             print(f"SKIP   {harness:<28} anchor not found -- {label}")
             continue
-        path.write_text(original.replace(find, replace, 1), encoding="utf-8")
+        write_exact(path, original.replace(find, replace, 1))
         try:
             result = subprocess.run([LUA, harness], cwd=pkg,
                                     capture_output=True, text=True)
         finally:
-            path.write_text(original, encoding="utf-8")
+            write_exact(path, original)
         if result.returncode != 0:
             caught += 1
             print(f"CAUGHT {harness:<28} {label}")

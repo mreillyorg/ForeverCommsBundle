@@ -1,8 +1,8 @@
 # System Architecture
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## System Overview
 

@@ -11,6 +11,10 @@ V.defaults = {templates={
 V.roleNames = {tank="Tank", healer="Healer", damage="DPS"}
 V.roleOrder = {"tank", "healer", "damage"}
 V.catalogs = {}
+-- Shuffle-bag state for V:Pick: exhaust every wording before reshuffling, while avoiding
+-- an immediate repeat across two consecutive bags. Session-local by design, and declared
+-- only here — MessageVariants.lua used to re-declare it, which silently replaced this
+-- table because both files share one namespace and Core.lua loads first.
 V.messageVariantBags = {}
 V.initialized = false
 
@@ -66,6 +70,20 @@ function V:ValidateOption(key, value)
     end
     return false
 end
+-- Bag signatures embed the language and accent, so changing either strands every bag
+-- under the old signature: never read again, never freed. Reset on ANY successful option
+-- write rather than just those two keys -- raceFilter can reassign the accent below, and
+-- accentStrength changes the wording a selection renders into. Enumerating which keys
+-- matter is a rule with edge cases; "any successful write" has none. The cost is at most
+-- one repeated wording, because a bag is anti-repetition only, never correctness, and a
+-- fresh shuffle is what a player expects after changing their voice anyway.
+function V:ResetVariantBags()
+    -- wipe is a WoW global; the offline harnesses run on plain Lua 5.1 without it.
+    if wipe then return wipe(self.messageVariantBags) end
+    for signature in pairs(self.messageVariantBags) do
+        self.messageVariantBags[signature] = nil
+    end
+end
 function V:SetOption(key, value)
     local voice = self:GetSettings()
     if not self:ValidateOption(key, value) then return false end
@@ -75,6 +93,7 @@ function V:SetOption(key, value)
         for _, entry in ipairs(self:GetAvailableAccents()) do if entry.id == voice.accent then valid = true end end
         if not valid then voice.accent = "auto" end
     end
+    self:ResetVariantBags()
     if self.RefreshOptions then self:RefreshOptions() end
     if _G.ForeverGuildComms and _G.ForeverGuildComms.RefreshOptions then
         _G.ForeverGuildComms:RefreshOptions()

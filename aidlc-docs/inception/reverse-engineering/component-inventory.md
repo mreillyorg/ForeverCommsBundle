@@ -1,21 +1,21 @@
 # Component Inventory
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## Application Packages
 
 | Package | Version | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| `ForeverGuildComms` | 0.6.3-beta | 9 | 1,580 | 67 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
+| `ForeverGuildComms` | 0.6.3-beta | 9 | 1,585 | 68 | Guild social layer: login greetings, new-member welcomes, level congratulations, automatic-or-review delivery, private craft and LFG alerts, recipe cache, tabard reminders, help composer, Titan menu, keybindings |
 | `ForeverGroupComms` | 0.3.4-beta | 7 | 1,166 | 53 | Party and dungeon layer: group greetings and congratulations staged for review, coordination calls, native ready checks with a private response tally, target marking, bidirectional quest comparison, manual quest sharing, Titan menu |
 
 ## Shared Packages
 
 | Package | Version | Type | Modules | Lines | Methods | Purpose |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ForeverCommsVoice` | 0.2.2-beta | Library / Models | 9 | 1,221 | 33 | Two shared capabilities. **Wording**: the per-character voice profile and its sole writer, 8 languages, 29 accent phrasebooks, the race map, both phrase catalogs, variant banks, shuffle bags, the `Render` pipeline. **Review queue**: one transient click-to-send backlog shared by both consumers, with its own movable overlay |
+| `ForeverCommsVoice` | 0.2.2-beta | Library / Models | 9 | 1,242 | 34 | Two shared capabilities. **Wording**: the per-character voice profile and its sole writer, 8 languages, 29 accent phrasebooks, the race map, both phrase catalogs, variant banks, shuffle bags, the `Render` pipeline. **Review queue**: one transient click-to-send backlog shared by both consumers, with its own movable overlay |
 
 ## Infrastructure Packages
 
@@ -30,37 +30,37 @@ shipped archive by `.pkgmeta`.
 
 | Location | Harnesses | Lines |
 | --- | --- | --- |
-| `ForeverCommsVoice/tests/` | 8 | 1,053 |
-| `ForeverGuildComms/tests/` | 13 | 1,490 |
+| `ForeverCommsVoice/tests/` | 8 | 1,137 |
+| `ForeverGuildComms/tests/` | 13 | 1,512 |
 | `ForeverGroupComms/tests/` | 7 | 1,714 |
-| **Total** | **28** | **4,257** |
+| **Total** | **28** | **4,363** |
 
 ## Module inventory
 
-### ForeverCommsVoice — 9 modules, 1,221 lines, 33 methods
+### ForeverCommsVoice — 9 modules, 1,242 lines, 34 methods
 
 | Module | Lines | Methods | Responsibility |
 | --- | --- | --- | --- |
-| `Core.lua` | 251 | 9 | Namespace, voice profile and its validating writer, legacy migration latch, catalog registry, `V:Format` with the byte clamp, shuffle-bag `V:Pick`, the `V:Render` dispatcher and its per-scope resolvers |
+| `Core.lua` | 270 | 10 | Namespace, voice profile and its validating writer, legacy migration latch, catalog registry, `V:Format` with the byte clamp, shuffle-bag `V:Pick` and `V:ResetVariantBags`, the `V:Render` dispatcher and its per-scope resolvers |
 | `Languages.lua` | 81 | 0 | 8 language definitions and the guild locale template bank |
 | `Accents.lua` | 51 | 0 | 29 accent registrations: label, language, four guild templates, flair prefix |
 | `RaceProfiles.lua` | 76 | 5 | Race-to-accent map, availability filtering, role and activity localization |
-| `MessageVariants.lua` | 200 | 0 | Accent and locale variant banks for guild wording |
+| `MessageVariants.lua` | 202 | 0 | Accent and locale variant banks for guild wording. Declares no namespace state of its own |
 | `GroupPhrases.lua` | 144 | 0 | Group/dungeon catalog for 8 languages plus curated per-accent group wordings |
 | `Queue.lua` | 148 | 12 | The shared review queue: settings, enqueue, approve, skip, expiry ticker, 100-entry cap |
 | `QueueUI.lua` | 136 | 4 | The movable scrollable queue overlay |
 | `Options.lua` | 134 | 3 | Settings canvas panel, `/fcv`, and the addon's `ADDON_LOADED` frame |
 
-### ForeverGuildComms — 9 modules, 1,580 lines, 67 methods
+### ForeverGuildComms — 9 modules, 1,585 lines, 68 methods
 
 | Module | Lines | Methods | Responsibility |
 | --- | --- | --- | --- |
-| `Core.lua` | 570 | 31 | **Load-time library guard as its first statement**, defaults, helpers, `A:IsSelf`, byte clamp, dedup with pruning, the guild send queue and its spacing, approval staging and the approval floor, settings writers, the single event dispatcher, `/fgc` |
+| `Core.lua` | 575 | 31 | **Load-time library guard as its first statement**, defaults, helpers, `A:IsSelf`, byte clamp, dedup with pruning, the guild send queue and its spacing, approval staging and the approval floor, the activity-type state, settings writers, the single event dispatcher, `/fgc` |
 | `VoiceBridge.lua` | 28 | 6 | Thin forwarders to the library; returns quietly if the library is absent, since `Core.lua` has already refused |
 | `Roster.lua` | 123 | 7 | Roster read, baseline capture, diff, the suspicious-read guard, guild-join parsing, polling |
 | `Alerts.lua` | 99 | 5 | Guild chat parsing, craft and group detection, recipe cache, the private alert list |
 | `Tabard.lua` | 70 | 2 | City detection and tabard reminders via `StaticPopupDialogs` |
-| `UI.lua` | 229 | 11 | Alerts window with 7 paged rows, help composer and its preview draft |
+| `UI.lua` | 229 | 12 | Alerts window with 7 paged rows, help composer and its preview draft, `A:GetActivityType` |
 | `Options.lua` | 294 | 1 | Settings canvas panel |
 | `TitanMenu.lua` | 129 | 2 | Nested LibDataBroker/Titan context menu |
 | `Broker.lua` | 38 | 2 | Optional LibDataBroker data object |
@@ -131,6 +131,9 @@ shipped archive by `.pkgmeta`.
 | `tools/check_bigwigs_bundle.py` | Release gate for both paths: archive structure, runtime completeness, version consistency across four locations per package |
 | `tools/verify_package.py` | Verifies the `--source` archives only |
 | `tools/fault_inject.py` | Mutation check: reverts one guard at a time and confirms a harness fails. Developer tool, deliberately not in CI |
+| `tools/check_lua_quality.py` | **The CI quality gate.** Resolves and validates `lua5.1`, `luac5.1` and `luacheck`; strict-parses every `.lua`; runs `run_tests.py`; demands a zero-warning luacheck |
+| `wiki/` | 9 pages, 1,530 lines of user documentation. Excluded from every archive |
+| `LUA51-AUDIT.md`, `Lua51-Test-Results.txt` | Engineering records of the Lua 5.1 quality work |
 | `package.ps1` / `package.cmd` | Windows launcher over `tools/package.py` |
 | `run-tests.cmd` | Windows launcher over `tools/run_tests.py` |
 | `.luacheckrc` | Linter configuration for all three packages |
@@ -150,10 +153,10 @@ shipped archive by `.pkgmeta`.
 | Measure | Value |
 | --- | --- |
 | Shipped Lua modules | 25 |
-| Shipped Lua lines | 3,967 |
-| Public methods | 153 |
+| Shipped Lua lines | 3,993 |
+| Public methods | 155 |
 | Offline harnesses | 28 |
-| Harness lines | 4,257 (107% of shipped) |
+| Harness lines | 4,363 (109% of shipped) |
 | Event dispatchers | 3, one per addon |
 | Registered events | 25 |
 | SavedVariables tables | 4 |

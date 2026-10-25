@@ -2,9 +2,9 @@
 
 **Target of analysis**: `ForeverCommsBundle` monorepo — ForeverCommsVoice 0.2.2-beta,
 ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta.
-**Analysis date**: 2026-10-25T03:10:00Z (ninth reverse-engineering pass, fifth
+**Analysis date**: 2026-10-25T04:00:00Z (tenth reverse-engineering pass, sixth
 multi-package pass)
-**Target commit**: `b712070`
+**Target commit**: `f7f7bab`
 
 ## Business Context Diagram
 
@@ -151,10 +151,12 @@ Shared layer (ForeverCommsVoice):
 
 ## Where the product stands
 
-The nine-pass history has moved this from one flat addon to a three-package bundle whose
-offline behaviour is now well covered: 28 harnesses, 4,257 lines of test against 3,967
-lines of shipped Lua, a linter reporting zero errors, and a mutation check confirming all
-31 of its deliberately injected faults are caught.
+The ten-pass history has moved this from one flat addon to a three-package bundle whose
+offline behaviour is now well covered: 28 harnesses, 4,363 lines of test against 3,993
+lines of shipped Lua, a linter reporting **zero warnings and zero errors** and enforced by
+CI, a strict Lua 5.1 parse of every file, and a mutation check confirming all 37 of its
+deliberately injected faults are caught. A 9-page user wiki now documents installation,
+settings, commands and troubleshooting.
 
 The business risk is unchanged and is not a code risk: **no part of this bundle has ever
 run in the client it is written for.** Every behaviour above is implemented against the

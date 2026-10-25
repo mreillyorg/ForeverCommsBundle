@@ -5,7 +5,7 @@
   Comms **0.3.4-beta**, Forever Guild Comms **0.6.3-beta**
 - **Project Type**: Brownfield, multi-package
 - **Start Date**: 2026-10-18T23:45:00Z
-- **Current Stage**: INCEPTION - Reverse Engineering (ninth pass complete, awaiting user approval)
+- **Current Stage**: INCEPTION - Reverse Engineering (tenth pass complete, awaiting user approval)
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -19,7 +19,7 @@
 - **Project Structure**: Monorepo with three flat World of Warcraft addon packages,
   25 shipped modules, plus root-level build, lint and install tooling
 - **Reverse Engineering Needed**: Completed eight times; artifacts current as of
-  2026-10-25T03:10:00Z against commit `b712070`
+  2026-10-25T04:00:00Z against commit `f7f7bab`
 - **Workspace Root**: `c:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development`
 
 ## Packages
@@ -29,6 +29,11 @@
 | `ForeverCommsVoice` | 0.2.2-beta | Shared library | 9 | 1,221 | 33 | 8 | `ForeverCommsVoiceCharDB` |
 | `ForeverGuildComms` | 0.6.3-beta | Application | 9 | 1,580 | 67 | 13 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
 | `ForeverGroupComms` | 0.3.4-beta | Application | 7 | 1,166 | 53 | 7 | `ForeverGroupCommsDB` |
+
+Measured at `f7f7bab`, like the rest of this document. The uncommitted follow-up work on
+the two code smells adds 21 lines and one method to Voice (`V:ResetVariantBags`) and 5
+lines and one method to GuildComms (`A:GetActivityType`), with 84 and 22 harness lines
+respectively. GroupComms is untouched.
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither and is the **sole writer** of the shared voice profile.
@@ -86,8 +91,9 @@ evaluated during Reverse Engineering.
       0.1.1 / 0.2.1 / 0.5.1 remediation release
 - [x] Reverse Engineering - Sixth rerun completed 2026-10-19T13:30:00Z against `57f7cdc`
 - [x] Reverse Engineering - Seventh rerun completed 2026-10-25T02:30:00Z against `a64ac2a`
-- [x] Reverse Engineering - **Eighth rerun** completed 2026-10-25T03:10:00Z against
-      `b712070` (0.2.2 / 0.6.3 / 0.3.4, unchanged) - awaiting approval
+- [x] Reverse Engineering - Eighth rerun completed 2026-10-25T03:10:00Z against `b712070`
+- [x] Reverse Engineering - **Ninth rerun** completed 2026-10-25T04:00:00Z against
+      `f7f7bab` (0.2.2 / 0.6.3 / 0.3.4, unchanged) - awaiting approval
 - [ ] Requirements Analysis - Not started (user has scoped every run to end after Reverse Engineering)
 - [ ] User Stories - Not assessed
 - [ ] Workflow Planning - Not started
@@ -101,19 +107,21 @@ evaluated during Reverse Engineering.
 - [ ] Placeholder stage
 
 ## Reverse Engineering Status
-- [x] Reverse Engineering - Ninth pass completed on 2026-10-25T03:10:00Z
+- [x] Reverse Engineering - Tenth pass completed on 2026-10-25T04:00:00Z
 - **Artifacts Location**: `aidlc-docs/inception/reverse-engineering/`
-- **Artifacts target**: commit `b712070` — Voice 0.2.2-beta, GuildComms 0.6.3-beta,
+- **Artifacts target**: commit `f7f7bab` — Voice 0.2.2-beta, GuildComms 0.6.3-beta,
   GroupComms 0.3.4-beta. No version changed in this span.
-- **Approach**: targeted update, not a regeneration. The previous pass rewrote all nine
-  artifacts against `a64ac2a` an hour earlier; re-deriving them wholesale would churn the
-  documents without improving them. `reverse-engineering-timestamp.md` was rewritten,
-  `dependencies.md` gained a substantial new section, six artifacts had the affected
-  sections and the re-measured figures updated, and `api-documentation.md` needed only its
-  header because the public API surface did not change.
-- **Why this pass was needed at all**: `b712070` carries both the previous pass's artifact
-  regeneration *and* the code change those findings prompted, so the artifacts committed
-  inside it describe `a64ac2a` while the code around them is one step further on.
+- **Approach**: targeted update. `reverse-engineering-timestamp.md` was rewritten;
+  `code-quality-assessment.md`, `technology-stack.md`, `component-inventory.md`,
+  `code-structure.md`, `dependencies.md` and `business-overview.md` had the affected
+  sections and re-measured figures updated; `architecture.md` and `api-documentation.md`
+  needed only their headers, because this span changed quality tooling and documentation
+  rather than architecture or the public API.
+- **Change span covered**: five commits. Two were this session's output being committed
+  (`05970d1`) and a generated user wiki (`c8a0e30`). The other three were **external**:
+  `ae17bfa` added `tools/check_lua_quality.py` and rewrote the workflow around it, and
+  `eec9635` plus `f7f7bab` cleared all 29 luacheck warnings. Every code metric is
+  unchanged — the lint pass was 48 insertions against 48 deletions.
 - **Change span covered**: remediation items 1–40 of `SUGGESTED-CHANGES.md` across two
   commits, then a version bump of all three packages with release notes in all four
   READMEs. The span restored the three failing harnesses and the CI test step, restored
@@ -137,24 +145,31 @@ evaluated during Reverse Engineering.
 | 6 | 2026-10-19T11:30Z | 0.1.1 / 0.2.1 / 0.5.1 | Explicit rerun after remediation | 10 of 25 resolved, 1 partly. First pass with any build step executed |
 | 7 | 2026-10-19T13:30Z | `57f7cdc` | Explicit rerun | 2 of 20 resolved, 1 regressed. **First pass where the suite could be run — and it was red, 3 of 17** |
 | 8 | 2026-10-25T02:30Z | `a64ac2a` | Explicit rerun after a staleness check | **40 of 44 resolved.** First pass with a green suite, a linter, zero uncovered modules and mutation-verified assertions |
+| 9 | 2026-10-25T03:10Z | `b712070` | Explicit rerun | **42 of 46 resolved.** Targeted update, not a rewrite: the hard library dependency is now enforced at load in both consumers, and embedding the library was considered and rejected on the record |
+| 10 | 2026-10-25T04:00Z | `f7f7bab` | Explicit rerun | **45 of 47 resolved.** Items 43 and 44 closed externally: luacheck clean at 0 warnings, and CI now enforces strict 5.1 parsing, the harnesses and zero-warning lint. **Only the two live-client items remain.** One documentation defect found in `LUA51-AUDIT.md`, and one tooling defect found and fixed in `tools/fault_inject.py` (item 47) |
 
 ## Project Growth Across Passes
 
-| Metric | 0.1.0 | 0.2.0 | 0.4.1 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` | `b712070` |
+Every column up to `f7f7bab` is a commit. The last is the uncommitted working tree, kept
+separate so each committed column still describes a state that can be checked out.
+
+| Metric | 0.1.0 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` | `b712070` | `f7f7bab` | uncommitted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Packages | 1 | 1 | 1 | 1 | 3 | 3 | 3 | 3 | **3** |
-| Shipped Lua modules | 7 | 7 | 11 | 12 | 22 | 22 | 25 | 25 | **25** |
-| Shipped Lua lines | 882 | 1,097 | 1,733 | 2,022 | 3,395 | 3,388 | 3,806 | 3,927 | **3,967** |
-| Public methods | 38 | 45 | 62 | 64 | 129 | 129 | 152 | 153 | **153** |
-| Offline harnesses | 1 | 4 | 9 | 11 | 13 | 13 | 17 | 28 | **28** |
-| Harness lines | 72 | 207 | 589 | 816 | 1,029 | 1,215 | 1,215 | 4,138 | **4,257** |
-| Test % of shipped Lua | 8% | 19% | 34% | 40% | 29% | 30% | 32% | 105% | **107%** |
-| Modules with no harness | 6 | 3 | 1 | 0 | 4 | 4 | 5 | 0 | **0** |
-| Suite passing | n/a | n/a | n/a | n/a | not run | not run | NO — 3/17 | YES — 28/28 | **YES — 28/28** |
-| Linter configured | No | No | No | No | No | No | No | Yes | **Yes — 0 errors** |
-| Assertions mutation-verified | No | No | No | No | No | No | No | 28/28 | **31/31** |
-| Active CI workflows | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | **1** |
-| CI runs the harnesses | No | No | No | No | No | Yes | No | Yes | **Yes** |
+| Packages | 1 | 1 | 3 | 3 | 3 | 3 | 3 | 3 | **3** |
+| Shipped Lua modules | 7 | 12 | 22 | 22 | 25 | 25 | 25 | 25 | **25** |
+| Shipped Lua lines | 882 | 2,022 | 3,395 | 3,388 | 3,806 | 3,927 | 3,967 | 3,967 | **3,993** |
+| Public methods | 38 | 64 | 129 | 129 | 152 | 153 | 153 | 153 | **155** |
+| Offline harnesses | 1 | 11 | 13 | 13 | 17 | 28 | 28 | 28 | **28** |
+| Harness lines | 72 | 816 | 1,029 | 1,215 | 1,215 | 4,138 | 4,257 | 4,257 | **4,363** |
+| Test % of shipped Lua | 8% | 40% | 29% | 30% | 32% | 105% | 107% | 107% | **109%** |
+| Modules with no harness | 6 | 0 | 4 | 4 | 5 | 0 | 0 | 0 | **0** |
+| Suite passing | n/a | n/a | not run | not run | NO — 3/17 | YES | YES | YES | **YES — 28/28** |
+| luacheck warnings | n/a | n/a | n/a | n/a | n/a | 29 | 29 | 0 | **0** |
+| Assertions mutation-verified | No | No | No | No | No | 28/28 | 31/31 | 31/31 | **37/37** |
+| Active CI workflows | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | **1** |
+| CI runs the harnesses | No | No | No | Yes | No | Yes | Yes | **Yes** |
+| CI runs the linter | No | No | No | No | No | No | No | **Yes** |
+| CI strict-parses all Lua | No | No | No | No | No | No | No | **Yes** |
 
 ## Notes
 
@@ -189,8 +204,8 @@ evaluated during Reverse Engineering.
 - **Still open — four ledger items**: 41 confirm the tabard login-ordering fix in-game;
   42 walk the 32-step in-game checklist; 43 clear or deliberately silence the 29 cosmetic
   luacheck warnings; 44 add a luacheck step to the workflow.
-- **Still open — two carried-forward code smells**, neither a defect:
-  `A.GetActivityType` is a dot-called closure (`ForeverGuildComms/UI.lua:145`), and
+- **Closed since, as items 48 and 49 — the two carried-forward code smells:**
+  `A.GetActivityType` was a dot-called closure (`ForeverGuildComms/UI.lua:145`), and
   `A.messageVariantBags` is unbounded (`ForeverCommsVoice/Core.lua:14`).
 - **The largest risk is unchanged and is not a code risk.** Nothing in this bundle has
   ever been loaded by the client it targets. Offline confidence is now high; live
@@ -216,4 +231,47 @@ evaluated during Reverse Engineering.
   item 46 and reveals that none of them had been modelling the shipped reality: every one
   loaded a consumer's `Core.lua` with no library present, a state the TOC dependency makes
   impossible in game.
-- Mutation coverage grew with the change rather than after it: 28 → **31 of 31** caught.
+- Mutation coverage grew with the change rather than after it: 28 → **31 of 31** caught at
+  the time of that pass; 37 of 37 after the tenth pass's follow-up work.
+
+### Added by the tenth pass
+
+- **Items 43 and 44 are closed, externally**, and the pass raised and fixed item 47,
+  taking the ledger to **45 of 47**. Only 41 and 42 remain and both need a live client, so
+  for the first time in ten passes there is no open work that can be done offline.
+- **One tooling defect found and fixed (item 47).** `tools/fault_inject.py` restored
+  mutated sources through `pathlib.Path.write_text`, which translates `\n` to CRLF on
+  Windows, so every run rewrote line endings against `* text=auto eol=lf`. Six shipped
+  sources sat at `i/lf w/crlf` — committed blobs unaffected, and `git diff` silent because
+  check-in normalisation makes a CRLF working file compare equal to an LF blob, which is
+  why the symptom was `git status` reporting modifications with an empty diff. Restoring
+  byte-exact then turned two multi-line anchors into silent skips, so anchors are now
+  matched against the file's real newline. Working tree re-checked-out to LF; zero
+  `w/crlf` files remain and a repeat injection run leaves the tree clean.
+- **luacheck is clean and enforced**: 29 warnings → **0 warnings, 0 errors across 53
+  files**, achieved by 48 insertions against 48 deletions with no behaviour change. CI now
+  runs `tools/check_lua_quality.py`, which strict-parses every `.lua` with `luac5.1 -p`,
+  runs the existing harnesses, then demands a zero-warning lint.
+- **`luac -p` is genuinely new coverage.** It parses every `.lua` file, including ones no
+  harness loads and files absent from any TOC, which the TOC-driven syntax harnesses
+  cannot reach.
+- **Verified the harnesses survived the workflow rewrite.** The explicit `run_tests.py`
+  step disappeared from the workflow — this project's most-repeated regression — but the
+  new tool invokes it by subprocess, confirmed by reading the tool.
+- **A 9-page `wiki/` was added** (1,530 lines) and `.pkgmeta` correctly excludes it; the
+  rebuilt archive is still 33 entries with no wiki, audit, results or tooling leakage.
+- **One documentation defect**: `LUA51-AUDIT.md` claims the repository already had
+  `luac5.1 -p` and `luacheck --max-warnings 0` in the workflow at the baseline. It did not
+  — verified with `git show b712070:.github/workflows/package.yml`, which has only
+  `lua5.1` and the harness step. The document understates its own contribution.
+- **Both carried-forward code smells are now closed, as ledger items 48 and 49**, and one
+  had been diagnosed wrongly. `A.GetActivityType` closed over two locals of
+  `A:BuildRequestUI`, so converting the call sites alone would have fixed nothing; the
+  state moved to `A.activityTypes` / `A.activityType` in `Core.lua`, which also removed an
+  ordering dependency and let `tests/variations.lua` drop its stub and drive the real
+  method — the cycling arithmetic had been covered by nothing. `A.messageVariantBags` was
+  never an unbounded-growth problem, because language and accent are single-valued per
+  profile; the defect was stale bags surviving a profile change, now cleared by
+  `V:ResetVariantBags` on any accepted option write. An LRU and an entry cap were both
+  rejected. Six new fault-injection entries cover the two fixes, taking the mutation check
+  to **37 of 37**.

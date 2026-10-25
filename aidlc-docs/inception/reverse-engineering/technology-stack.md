@@ -1,8 +1,8 @@
 # Technology Stack
 
 **Target**: ForeverCommsVoice 0.2.2-beta, ForeverGroupComms 0.3.4-beta, ForeverGuildComms 0.6.3-beta
-**Analysis date**: 2026-10-25T03:10:00Z
-**Target commit**: `b712070`
+**Analysis date**: 2026-10-25T04:00:00Z
+**Target commit**: `f7f7bab`
 
 ## Programming Languages
 
@@ -65,8 +65,10 @@ There is no compile step. Lua ships as source.
 | Lua interpreter | **5.1.5** | Runs every harness. Located at `~/tools/lua-5.1.5/lua5.1.exe` on this machine; CI installs `lua5.1` from apt |
 | Lua `assert` | stdlib | The entire assertion mechanism across all 28 harnesses. No test framework |
 | `tools/run_tests.py` | in-repo | Discovers and runs every harness, each with its package folder as the working directory. Refuses an explicitly requested interpreter that is not 5.1 rather than silently substituting |
-| `tools/fault_inject.py` | in-repo | Mutation check. Reverts one real guard at a time and asserts the relevant harness fails. 31 of 31 caught |
-| **luacheck** | **1.2.0** | Static analysis, configured by the root `.luacheckrc`. Standalone Windows binary; no LuaRocks and no C compiler needed |
+| `tools/fault_inject.py` | in-repo | Mutation check. Reverts one real guard at a time and asserts the relevant harness fails. 37 of 37 caught. Reads and restores byte-exact, and matches multi-line anchors against the target file's own line endings |
+| **luacheck** | **1.2.0** | Static analysis, configured by the root `.luacheckrc`. Standalone Windows binary; no LuaRocks and no C compiler needed. **Now CI-required**: the build fails on any warning |
+| **`luac5.1 -p`** | 5.1.5 | Strict dialect parse of **every** `.lua` file, run by `check_lua_quality.py`. Broader than the TOC-driven syntax harnesses, which cannot cover a file absent from a TOC |
+| `tools/check_lua_quality.py` | in-repo | The single gate for all three checks, local and CI. Resolves and **validates** its three executables — rejecting LuaJIT or any non-5.1 banner rather than silently substituting — then parses, runs `run_tests.py`, and demands a zero-warning luacheck |
 | `tools/check_bigwigs_bundle.py` | in-repo | Release gate: archive structure, runtime completeness, version consistency |
 | `tools/verify_package.py` | in-repo | Verifies the `--source` archives |
 
@@ -78,8 +80,9 @@ Python tools use explicit `check()` helpers that raise a dedicated error rather 
 | Layer | Available | Executed | Result |
 | --- | --- | --- | --- |
 | **Lua harnesses** | Yes — 5.1.5 | **Yes** | **Exit 0. PASSED: 28, FAILED: 0, TOTAL: 28** |
-| **Mutation check** | Yes | **Yes** | **Exit 0. 31 of 31 injected faults caught** |
-| **luacheck** | Yes — 1.2.0 | **Yes** | 29 warnings, **0 errors**, 53 files |
+| **Mutation check** | Yes | **Yes** | **Exit 0. 37 of 37 injected faults caught** |
+| **luacheck** | Yes — 1.2.0 | **Yes** | **Exit 0. 0 warnings, 0 errors, 53 files** |
+| **`luac5.1 -p`** | Yes — 5.1.5 | **Yes**, via the quality gate | All 53 files parse under stock 5.1 |
 | `tools/package.py` | Yes | **Yes** | Exit 0 — 33-entry bundle |
 | `tools/check_bigwigs_bundle.py` | Yes | **Yes** | **Exit 0** |
 | `tools/verify_package.py` | Yes | **Yes** | **Exit 0** |

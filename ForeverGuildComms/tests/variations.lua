@@ -21,7 +21,11 @@ _G.ForeverCommsVoiceCharDB={voice=A.char.voice}
 A.playerName = "Tester"
 A.playerClass = "PRIEST"
 A.activityEdit = {GetText=function() return "Deadmines" end}
-A.GetActivityType = function() return "Dungeon" end
+-- Drive the real A:GetActivityType by setting the index it reads, rather than stubbing
+-- the method. It used to be a closure over BuildRequestUI's locals, which a harness
+-- cannot reach without building the frame, so a stub was the only option.
+A.activityType = 1
+assert(A:GetActivityType() == "Dungeon", "fixture expects Dungeon as the first type")
 A.requestPreview = {SetText=function(self, text) self.text = text end}
 A.requestFrame = {Hide=function(self) self.hidden = true end, Show=function(self) self.hidden = false end}
 A.CanUse = function() return true end
@@ -97,4 +101,22 @@ A.activityEdit = {GetText=function() return "Shadowfang Keep" end}
 A:UpdateRequestPreview()
 assert(A.requestPreview.text:find("Shadowfang Keep",1,true), "activity change not reflected")
 
-print("PASSED: nonrepeating shuffle bags, all languages and accents, custom overrides, stable preview/send, settings sample")
+-- The activity type cycles and wraps. This is the arithmetic the type button runs; it
+-- became reachable offline once the state moved from BuildRequestUI's closure onto the
+-- namespace. Asserted over two full laps, because an off-by-one only shows on the wrap.
+assert(#A.activityTypes == 3, "expected Dungeon/Raid/Quest")
+A.activityType = 1
+local walk = {}
+for _ = 1, #A.activityTypes * 2 do
+    walk[#walk+1] = A:GetActivityType()
+    A.activityType = A.activityType % #A.activityTypes + 1
+end
+assert(table.concat(walk, ",") == "Dungeon,Raid,Quest,Dungeon,Raid,Quest",
+    "activity type should cycle in order and wrap: " .. table.concat(walk, ","))
+assert(A.activityType == 1, "a full lap should land back on the first type")
+-- Out-of-range state falls back rather than returning nil into the chat template.
+A.activityType = 99
+assert(A:GetActivityType() == "Dungeon", "out-of-range index should fall back")
+A.activityType = 1
+
+print("PASSED: nonrepeating shuffle bags, all languages and accents, custom overrides, stable preview/send, activity cycling, settings sample")

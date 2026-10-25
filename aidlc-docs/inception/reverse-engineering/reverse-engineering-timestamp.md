@@ -117,6 +117,9 @@ carried-forward code smells, which moved these figures in the working tree:
 
 | Metric | `f7f7bab` | Working tree | Δ |
 | --- | --- | --- | --- |
+| Voice version | 0.2.2-beta | **0.2.3-beta** | patch |
+| GuildComms version | 0.6.3-beta | **0.6.4-beta** | patch |
+| GroupComms version | 0.3.4-beta | **0.3.5-beta** | patch |
 | Shipped Lua lines | 3,967 | **3,993** | +26 |
 | Public methods | 153 | **155** | +2 |
 | Harness lines | 4,257 | **4,363** | +106 |
@@ -126,7 +129,12 @@ carried-forward code smells, which moved these figures in the working tree:
 | Offline harnesses | 28 | 28 | — |
 
 The two new methods are `V:ResetVariantBags` and `A:GetActivityType`. No new files, so the
-project file count stays at 124. GroupComms is untouched.
+project file count stays at 124. GroupComms carries **no behavioural change** — it was
+bumped only because its README names the required library version twice. Its shipped diff
+is two lines, both version strings: the TOC `## Version` and `A.version` in `Core.lua`.
+Its 53 methods, 1,166 lines and 7 harnesses are all unchanged, so the line and method
+counts above are unaffected by it. The bundle archive takes GuildComms' version and is now
+`ForeverCommsBundle-0.6.4-beta.zip`, still 33 entries.
 
 ## Comparison across all ten passes
 

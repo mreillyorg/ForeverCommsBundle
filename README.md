@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.2.2-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.6.3-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.3.4-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.2.3-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.6.4-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.3.5-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -57,8 +57,8 @@ Forever server, and each addon's README lists what that leaves unverified.
 
 ## What changed in this release
 
-ForeverCommsVoice **0.2.2-beta**, ForeverGuildComms **0.6.3-beta**,
-ForeverGroupComms **0.3.4-beta**. Each addon's README has the detail; the user-visible
+ForeverCommsVoice **0.2.3-beta**, ForeverGuildComms **0.6.4-beta**,
+ForeverGroupComms **0.3.5-beta**. Each addon's README has the detail; the user-visible
 changes are:
 
 - **Voice:** the Settings panel now appears as soon as the addon loads, instead of only

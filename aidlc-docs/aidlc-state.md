@@ -33,7 +33,16 @@
 Measured at `f7f7bab`, like the rest of this document. The uncommitted follow-up work on
 the two code smells adds 21 lines and one method to Voice (`V:ResetVariantBags`) and 5
 lines and one method to GuildComms (`A:GetActivityType`), with 84 and 22 harness lines
-respectively. GroupComms is untouched.
+respectively. GroupComms' Lua is untouched.
+
+All three versions were then bumped a patch level in the working tree — Voice
+**0.2.3-beta**, GuildComms **0.6.4-beta**, GroupComms **0.3.5-beta** — across the four
+canonical locations each, the root `README.md` and `PACKAGING.md`, GuildComms'
+`PACKAGING.md`, and the `Requires ForeverCommsVoice` lines in both consumer READMEs.
+GroupComms was bumped despite having no behavioural change, because its README states the
+required library version in two places and that reference had to move. Its shipped diff is
+two lines, both version strings, and its release note says so explicitly.
+`check_bigwigs_bundle.py` passes all three.
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither and is the **sole writer** of the shared voice profile.

@@ -1,4 +1,4 @@
-# ForeverCommsVoice 0.2.2-beta
+# ForeverCommsVoice 0.2.3-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -12,7 +12,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.3-beta and/or GroupComms 0.3.4-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.4-beta and/or GroupComms 0.3.5-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 
@@ -69,6 +69,25 @@ New in v0.2.1-beta: `Queue.lua` and `QueueUI.lua` provide a single movable, scro
 
 
 Queue presentation: a compact, movable, scrollable floating overlay (not a normal Blizzard window). Fresh character defaults are **2 visible rows** and **20 seconds** auto-skip; existing saved queue preferences remain unchanged. `/fcv queue` opens the overlay.
+
+## What changed in 0.2.3-beta
+
+Internal maintenance only. **Nothing about your saved profile or any message wording
+changes**, and there is no new setting.
+
+**Changed: message variety restarts when you change a voice setting.** The library keeps
+a "shuffle bag" per wording set so every variation is used before any repeats. Those bags
+are tied to your language and accent, so changing either one left the old bags behind in
+memory for the rest of the session, doing nothing. They are now cleared whenever a voice
+setting is accepted, which also means you get a fresh shuffle after switching language,
+accent, race filter or strength rather than resuming a part-used one. A rejected setting
+change leaves them alone.
+
+**Internal: one piece of shared state had been declared twice.**
+`MessageVariants.lua` re-declared the shuffle-bag table that `Core.lua` already owns,
+which replaced it at load rather than adding to it. Harmless in the shipped load order,
+but it would have silently discarded bags if that order ever changed. The duplicate is
+gone and a test now asserts each shared table is declared by exactly one file.
 
 ## What changed in 0.2.2-beta
 

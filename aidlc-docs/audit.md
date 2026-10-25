@@ -320,3 +320,13 @@ tell me if I need to add any System or User paths in Windows 11 and what I need 
 **Context**: Post-pass implementation work, still awaiting approval at the tenth pass's Step 13 gate
 
 ---
+
+## Post-pass follow-up — version bump
+**Timestamp**: 2026-10-19T00:00:00Z
+**User Input**: "bump version numbers"
+**AI Response**: "Loaded the release-packaging steering, enumerated every existing version string with the grep it prescribes, and confirmed GroupComms had zero code changes via git diff before deciding. Patch-bumped all three: Voice 0.2.2 to 0.2.3-beta, GuildComms 0.6.3 to 0.6.4-beta, GroupComms 0.3.4 to 0.3.5-beta. Updated the four canonical locations per package (TOC, Core.lua, README title, installer .cmd title and echo), the root README.md and PACKAGING.md, GuildComms' own PACKAGING.md including its tag examples, and the 'Requires ForeverCommsVoice' lines in both consumer READMEs. Added a release-note section to each of the three READMEs. Bumped GroupComms despite no behavioural change because its README names the required library version in two places and that reference had to move. Corrected my own release note twice here: first claimed its files were byte for byte identical to 0.3.4-beta, which the TOC version line disproves, then claimed no .lua file changed, which git diff disproved because Core.lua carries A.version. Its shipped diff is two lines, both version strings."
+**Context**: Versions Voice 0.2.3-beta, GuildComms 0.6.4-beta, GroupComms 0.3.5-beta. Commit-pinned artifact tables left at f7f7bab; the bump is recorded in the uncommitted follow-up sections of aidlc-state.md and reverse-engineering-timestamp.md.
+**Findings**: "check_bigwigs_bundle.py initially FAILED, correctly: a stale ForeverCommsBundle-0.6.3-beta.zip was still in .release/ and the checker compares the shipped TOC version against the repository. Cleared .release/ and rebuilt. Final state: all three packages PASS the four-location consistency check, bundle is ForeverCommsBundle-0.6.4-beta.zip at 33 entries, suite 28/28, luacheck 0 warnings / 0 errors in 53 files, check_lua_quality.py exit 0, fault injection 37/37, source archives and verify_package.py exit 0, zero w/crlf files. The only remaining old version strings are historical changelog headings, which the checker explicitly permits."
+**Context**: Post-pass release preparation; the tenth pass remains at its Step 13 gate
+
+---

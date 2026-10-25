@@ -31,24 +31,11 @@ jobs:
           luac5.1 -v
           luacheck --version
 
-      - name: Verify Lua 5.1 syntax across addon sources
+      - name: Enforce Lua 5.1 syntax, tests and zero-warning lint
         shell: bash
         run: |
           set -euo pipefail
-          find ForeverCommsVoice ForeverGuildComms ForeverGroupComms \
-            -type f -name '*.lua' -print0 | xargs -0 -r -n1 luac5.1 -p
-
-      - name: Run all offline harnesses under Lua 5.1
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 tools/run_tests.py --lua lua5.1
-
-      - name: Run luacheck (zero warnings)
-        shell: bash
-        run: |
-          set -euo pipefail
-          luacheck . --codes --max-warnings 0
+          python3 tools/check_lua_quality.py --lua lua5.1 --luac luac5.1 --luacheck luacheck
 
       - name: Build installable bundle with BigWigsMods/packager
         uses: BigWigsMods/packager@v2

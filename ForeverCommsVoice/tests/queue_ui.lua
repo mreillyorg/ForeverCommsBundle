@@ -16,7 +16,7 @@ local function frame()
  function f:SetTexture(path)self.texture=path end
  function f:SetChecked(t)self.checked=t end
  function f:GetCenter()return 500,400 end
- setmetatable(f,{__index=function(_,k)return function()end end})
+ setmetatable(f,{__index=function(_)return function()end end})
  all[#all+1]=f
  return f
 end

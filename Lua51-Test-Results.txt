@@ -1,0 +1,189 @@
+Lua interpreter: C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe
+Lua compiler: C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe
+Luacheck: C:\Users\mreillyorg\tools\lua-5.1.5\luacheck.exe
+Parsing 53 Lua files with Lua 5.1
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\Accents.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\Core.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\GroupPhrases.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\Languages.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\MessageVariants.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\Options.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\Queue.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\QueueUI.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\RaceProfiles.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\bytelimit.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\expressive.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\integration.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\options.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\parity.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\queue.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\queue_ui.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverCommsVoice\tests\syntax.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\Broker.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\Core.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\Options.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\Quests.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\Roster.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\outbox.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\protocol.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\safety.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\smoke.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\syntax.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\titanmenu.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\tests\ui.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\TitanMenu.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGroupComms\UI.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Alerts.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Broker.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Core.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Options.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Roster.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\Tabard.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\alertsui.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\icon.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\keybindings.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\roster.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\settings.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\smoke.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\syntax.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\tabard_dedup.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\timing.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\titanmenu.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\variations.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\verify.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\tests\voice.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\TitanMenu.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\UI.lua
++ C:\Users\mreillyorg\tools\lua-5.1.5\luac5.1.exe -p C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\ForeverGuildComms\VoiceBridge.lua
++ C:\Users\mreillyorg\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\Addon-Manual\ForeverCommsBundle-Development\tools\run_tests.py --lua C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe
+Interpreter: C:\Users\mreillyorg\tools\lua-5.1.5\lua5.1.exe
+Reported:    Lua 5.1.5  Copyright (C) 1994-2012 Lua.org, PUC-Rio
+Harnesses:   28
+
+[PASS] ForeverCommsVoice/tests/syntax.lua
+        PASSED: all 9 TOC-listed files compile
+[PASS] ForeverCommsVoice/tests/bytelimit.lua
+        PASSED: 138 clamp checks across 3 implementations and 5 characters - 2, 3 and 4-byte sequences dropped whole at every straddling offset, solid multibyte runs cut on character boundaries, exact-250 messages untouched, substitution clamped
+[PASS] ForeverCommsVoice/tests/expressive.lua
+        PASSED: expressive scope matrix - group greet/welcome/level amplified, combat and coordination directives untouched, curated wordings keep one catchphrase, guild help exempt
+[PASS] ForeverCommsVoice/tests/integration.lua
+        PASSED: guild migration, shared per-character voice, both rendering paths, accented greeting, combat clarity, variables, fallback, shuffle
+[PASS] ForeverCommsVoice/tests/options.lua
+        PASSED: canvas registered once, cycles show live values and wrap, accent cycle stays inside the available list, strength labels exact, queue row/source cycles, auto-skip sanitizes and clamps and escape abandons, ADDON_LOADED registers for our own addon only
+[PASS] ForeverCommsVoice/tests/parity.lua
+        PASSED: guild defaults match the library and its English catalog, group variants match entry for entry, untouched defaults translate and user edits do not
+[PASS] ForeverCommsVoice/tests/queue.lua
+        |cff6bcbffForeverGuildComms|r: Old guild approval skipped: guild changed or addon disabled.
+        PASSED: shared guild/group queue, click approval, FIFO, source counts, hidden expiry, per-record TTL, stale identity, selective clear, no auto-send, 100-entry cap dropping the oldest without firing it
+[PASS] ForeverCommsVoice/tests/queue_ui.lua
+        PASSED: floating panel, two-row and twenty-second defaults, scroll control, checkbox send, skip, queue advancement, source icon, row size
+[PASS] ForeverGuildComms/tests/syntax.lua
+        PASSED: all 9 TOC-listed files and 3 bindings compile
+[PASS] ForeverGuildComms/tests/alertsui.lua
+        |cff6bcbffForeverGuildComms|r: Loaded. /fgc for alerts, /fgc verify to review messages, /fgc options for settings.
+        PASSED: 7 fixed rows, empty/partial/exact/overflow pages, Next clamped and Prev floored, page pulled back when the list empties, 30-cap bounds paging at 5, line clipped for display only, whisper targets its own row, Review counts the queue
+[PASS] ForeverGuildComms/tests/icon.lua
+        icon test passed
+[PASS] ForeverGuildComms/tests/keybindings.lua
+        PASSED: Key Bindings XML, action dispatch, no auto-send, profession scan/feedback
+[PASS] ForeverGuildComms/tests/roster.lua
+        |cff6bcbffForeverGuildComms|r: Loaded. /fgc for alerts, /fgc verify to review messages, /fgc options for settings.
+        PASSED: IsSelf GUID/name/realm matrix including prefix collisions, baseline sends nothing, empty and collapsed reads discarded without touching state, small guilds exempt from the 70% rule, guild change resets and re-baselines
+[PASS] ForeverGuildComms/tests/settings.lua
+        |cff6bcbffForeverGuildComms|r: Loaded. /fgc for alerts, /fgc verify to review messages, /fgc options for settings.
+        PASSED: timing migration, UI numeric edits, bounds/defaults, templates, radio modes, shared voice isolation, defaults scope
+[PASS] ForeverGuildComms/tests/smoke.lua
+        PASSED: self level-up excluded, login, other level-up, join, craft, group, self chat, recipe learned check
+[PASS] ForeverGuildComms/tests/tabard_dedup.lua
+        |cff6bcbffForeverGuildComms|r: Loaded. /fgc for alerts, /fgc verify to review messages, /fgc options for settings.
+        PASSED: tabard login ordering, repeat suppression, city exits/re-entry, event pruning
+[PASS] ForeverGuildComms/tests/timing.lua
+        PASSED: automatic message spacing, per-member login cooldown, zero cooldown
+[PASS] ForeverGuildComms/tests/titanmenu.lua
+        |cff6bcbffForeverGuildComms|r: Loaded. /fgc for alerts, /fgc verify to review messages, /fgc options for settings.
+        |cff6bcbffForeverGuildComms|r: Earlier pending messages still need approval or dismissal. /fgc verify
+        |cff6bcbffForeverGuildComms|r: Open a profession window first, then rescan its learned recipes.
+        |cff6bcbffForeverGuildComms|r: Nested menus are unavailable in this client; opening Settings instead.
+        PASSED: LDB Titan right click, nested menus, shared Settings state, presets, quick actions, custom-message shortcut, fallback
+[PASS] ForeverGuildComms/tests/variations.lua
+        PASSED: nonrepeating shuffle bags, all languages and accents, custom overrides, stable preview/send, settings sample
+[PASS] ForeverGuildComms/tests/verify.lua
+        |cff6bcbffForeverGuildComms|r: Message discarded: your guild has changed.
+        |cff6bcbffForeverGuildComms|r: Wait 1 second(s) between approved messages.
+        PASSED: confirmation, dedup, click to send, dismiss, mode switch, guild change, automatic sending, approval floor, 30-entry backlog cap dropping the oldest, library dependency refuses to degrade
+[PASS] ForeverGuildComms/tests/voice.lua
+        PASSED: languages, regional and racial accent filtering, custom links, UTF-8, template variables, per-character voice settings
+[PASS] ForeverGroupComms/tests/syntax.lua
+        PASSED: all 7 TOC-listed files and 3 bindings compile
+[PASS] ForeverGroupComms/tests/outbox.lua
+        PASSED: one packet per 1.15s with a single armed timer, 60-entry refusal keeps the oldest, token cancellation on roster change plus serial re-check, 12-chunk refusal with no partial send, 240s unchanged-log skip, questSync opt-out blocks send and queue and schedule but still receives, registration failure fails closed
+[PASS] ForeverGroupComms/tests/protocol.lua
+        PASSED: envelope, sender, channel, header, numeric range, integrality, payload character class, comma placement, id bounds, length cap, pattern metacharacters, reassembly totals and expiry, epoch ordering, reply-epoch matching
+[PASS] ForeverGroupComms/tests/safety.lua
+        PASSED: 2s floor holds and refusals do not slide it, channel follows group type, stale serial blocked on both the queue closure and the fallback, queue sends the previewed text verbatim, rank gate fails closed, Notify dedup window and cap, library dependency refuses to degrade
+[PASS] ForeverGroupComms/tests/smoke.lua
+        Smoke tests passed: roster, roles, level suggestions, quick actions, Q/R sync, share and staleness
+[PASS] ForeverGroupComms/tests/titanmenu.lua
+        PASSED: menu structure, live status/channel/roles/queue counts, every toggle reads and writes its own key, questSync schedules only on enable, marking gated by rank and coordination by grouping, send obeys the chat floor, MenuUtil and owner fallbacks, no db builds nothing
+[PASS] ForeverGroupComms/tests/ui.lua
+        PASSED: panel idempotent, grouped/ungrouped summaries, staged count, quick action obeys the floor, quest window 9 rows with paging clamped both ends, short pages blank rows and hide buttons, unshareable disabled, view switch resets paging and relabels to Ask, canvas OnRefresh re-reads the db and OnDefault restores defaults
+
+============================================================
+PASSED: 28   FAILED: 0   TOTAL: 28
++ C:\Users\mreillyorg\tools\lua-5.1.5\luacheck.exe . --codes
+Checking ForeverCommsVoice\Accents.lua            OK
+Checking ForeverCommsVoice\Core.lua               OK
+Checking ForeverCommsVoice\GroupPhrases.lua       OK
+Checking ForeverCommsVoice\Languages.lua          OK
+Checking ForeverCommsVoice\MessageVariants.lua    OK
+Checking ForeverCommsVoice\Options.lua            OK
+Checking ForeverCommsVoice\Queue.lua              OK
+Checking ForeverCommsVoice\QueueUI.lua            OK
+Checking ForeverCommsVoice\RaceProfiles.lua       OK
+Checking ForeverCommsVoice\tests\bytelimit.lua    OK
+Checking ForeverCommsVoice\tests\expressive.lua   OK
+Checking ForeverCommsVoice\tests\integration.lua  OK
+Checking ForeverCommsVoice\tests\options.lua      OK
+Checking ForeverCommsVoice\tests\parity.lua       OK
+Checking ForeverCommsVoice\tests\queue.lua        OK
+Checking ForeverCommsVoice\tests\queue_ui.lua     OK
+Checking ForeverCommsVoice\tests\syntax.lua       OK
+Checking ForeverGroupComms\Broker.lua             OK
+Checking ForeverGroupComms\Core.lua               OK
+Checking ForeverGroupComms\Options.lua            OK
+Checking ForeverGroupComms\Quests.lua             OK
+Checking ForeverGroupComms\Roster.lua             OK
+Checking ForeverGroupComms\TitanMenu.lua          OK
+Checking ForeverGroupComms\UI.lua                 OK
+Checking ForeverGroupComms\tests\outbox.lua       OK
+Checking ForeverGroupComms\tests\protocol.lua     OK
+Checking ForeverGroupComms\tests\safety.lua       OK
+Checking ForeverGroupComms\tests\smoke.lua        OK
+Checking ForeverGroupComms\tests\syntax.lua       OK
+Checking ForeverGroupComms\tests\titanmenu.lua    OK
+Checking ForeverGroupComms\tests\ui.lua           OK
+Checking ForeverGuildComms\Alerts.lua             OK
+Checking ForeverGuildComms\Broker.lua             OK
+Checking ForeverGuildComms\Core.lua               OK
+Checking ForeverGuildComms\Options.lua            OK
+Checking ForeverGuildComms\Roster.lua             OK
+Checking ForeverGuildComms\Tabard.lua             OK
+Checking ForeverGuildComms\TitanMenu.lua          OK
+Checking ForeverGuildComms\UI.lua                 OK
+Checking ForeverGuildComms\VoiceBridge.lua        OK
+Checking ForeverGuildComms\tests\alertsui.lua     OK
+Checking ForeverGuildComms\tests\icon.lua         OK
+Checking ForeverGuildComms\tests\keybindings.lua  OK
+Checking ForeverGuildComms\tests\roster.lua       OK
+Checking ForeverGuildComms\tests\settings.lua     OK
+Checking ForeverGuildComms\tests\smoke.lua        OK
+Checking ForeverGuildComms\tests\syntax.lua       OK
+Checking ForeverGuildComms\tests\tabard_dedup.lua OK
+Checking ForeverGuildComms\tests\timing.lua       OK
+Checking ForeverGuildComms\tests\titanmenu.lua    OK
+Checking ForeverGuildComms\tests\variations.lua   OK
+Checking ForeverGuildComms\tests\verify.lua       OK
+Checking ForeverGuildComms\tests\voice.lua        OK
+
+Total: 0 warnings / 0 errors in 53 files
+Lua 5.1 syntax, harnesses, and luacheck: PASS

@@ -10,7 +10,7 @@ _G.IsInGuild = function() return _G.testGuild ~= nil end
 _G.testGuild = "Guild A"
 _G.C_Timer = {
     scheduled = {},
-    After = function(delay, callback) table.insert(_G.C_Timer.scheduled, callback) end,
+    After = function(_, callback) table.insert(_G.C_Timer.scheduled, callback) end,
     NewTicker = function() end,
 }
 _G.SendChatMessage = function(text, channel)

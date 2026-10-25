@@ -33,7 +33,7 @@ _G.CreateFrame = function(kind, name, parent, template)
 end
 local settingsOpens = 0
 _G.Settings = {
-    RegisterCanvasLayoutCategory=function(panel) return {GetID=function()return 9 end} end,
+    RegisterCanvasLayoutCategory=function() return {GetID=function()return 9 end} end,
     RegisterAddOnCategory=function()end,
     OpenToCategory=function(id) assert(id==9); settingsOpens=settingsOpens+1 end,
 }

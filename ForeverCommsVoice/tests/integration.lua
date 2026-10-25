@@ -51,7 +51,7 @@ assert(reloaded.language=="es" and reloaded.accent=="auto", "old guild setting m
 assert(V:SetOption("language","en") and V:SetOption("accent","none"))
 for _, scope in ipairs({"guild","group"}) do
   local seen={}
-  for i=1,3 do
+  for _=1,3 do
     local result=V:Render(scope,"level",{name="Alice",level=50},{random=true})
     assert(not seen[result],"non-repeating " .. scope .. " shuffle bag")
     seen[result]=true

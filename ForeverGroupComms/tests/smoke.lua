@@ -12,7 +12,7 @@ local people = {
     party1={name='Ben Another',level=26,role='TANK',guid='P2'},
     party2={name='Cora Person',level=25,role='DAMAGER',guid='P3'},
 }
-DEFAULT_CHAT_FRAME={AddMessage=function(_,s) end}
+DEFAULT_CHAT_FRAME={AddMessage=function() end}
 C_Timer={After=function(wait,cb) timers[#timers+1]={delay=wait,cb=cb} end}
 GetTime=function() return now end
 GetUnitName=function(u) return people[u] and people[u].name end
@@ -35,8 +35,8 @@ C_QuestLog={
  GetNumQuestLogEntries=function() return #quests end,
  GetInfo=function(i) return quests[i] end,
  IsQuestFlaggedCompleted=function(id) return completed[id] == true end,
- IsPushableQuest=function(id) return true end,
- SetSelectedQuest=function(id) end,
+ IsPushableQuest=function() return true end,
+ SetSelectedQuest=function() end,
  GetSelectedQuest=function() return 101 end,
 }
 C_ChatInfo={

@@ -95,7 +95,7 @@ def main():
             return 1
     if run([sys.executable, ROOT / 'tools' / 'run_tests.py', '--lua', lua]):
         return 1
-    if run([luacheck, '.', '--codes' ]):
+    if run([luacheck, '.', '--codes']):
         return 1
     print('Lua 5.1 syntax, harnesses, and luacheck: PASS')
     return 0

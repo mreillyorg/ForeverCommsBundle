@@ -23,10 +23,10 @@ function V:BuildQueueUI()
     f:SetMovable(true); f:EnableMouse(true); f:SetClampedToScreen(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        if self.GetCenter and UIParent and UIParent.GetCenter then
-            local x,y=self:GetCenter(); local cx,cy=UIParent:GetCenter()
+    f:SetScript("OnDragStop", function(widget)
+        widget:StopMovingOrSizing()
+        if widget.GetCenter and UIParent and UIParent.GetCenter then
+            local x,y=widget:GetCenter(); local cx,cy=UIParent:GetCenter()
             if x and cx then
                 local settings=V:GetQueueSettings()
                 settings.x,settings.y=x-cx,y-cy
@@ -55,8 +55,8 @@ function V:BuildQueueUI()
     self.queueScroll:SetScrollChild(self.queueChild)
     self.queueRows={}
     self.queueScroll:EnableMouseWheel(true)
-    self.queueScroll:SetScript("OnMouseWheel",function(self, delta)
-        self:SetVerticalScroll(math.max(0, self:GetVerticalScroll() - delta * ROW_HEIGHT))
+    self.queueScroll:SetScript("OnMouseWheel",function(widget, delta)
+        widget:SetVerticalScroll(math.max(0, widget:GetVerticalScroll() - delta * ROW_HEIGHT))
     end)
     self.queueSkipAll=button(f,"Skip all",423,-(56+q.visibleRows*ROW_HEIGHT),100,function() V:SkipAll() end)
     self.queueSettings=button(f,"Settings",533,-(56+q.visibleRows*ROW_HEIGHT),92,function() V:OpenOptions() end)
@@ -100,9 +100,9 @@ function V:RefreshQueueUI()
             r.timer=txt(r,"",473,-9,57,"GameFontHighlightSmall")
             r.check=CreateFrame("CheckButton",nil,r,"UICheckButtonTemplate")
             r.check:SetSize(27,27);r.check:SetPoint("TOPLEFT",r,"TOPLEFT",529,-13)
-            r.check:SetScript("OnClick",function(self)
+            r.check:SetScript("OnClick",function(widget)
                 local id=r.id
-                self:SetChecked(false)
+                widget:SetChecked(false)
                 if id then V:Approve(id) end
             end)
             r.approveLabel=txt(r,"Send",529,-40,37,"GameFontHighlightSmall")

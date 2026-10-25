@@ -74,7 +74,7 @@ function A:CaptureBaseline()
     self.rosterGuild = guild
     self:AcceptRoster(members, count, online, true)
 end
-function A:OnRosterEvent(event)
+function A:OnRosterEvent()
     local guild = guildName()
     if not guild or guild ~= self.rosterGuild then
         -- Don't leak queued greetings into a different guild after a guild change.

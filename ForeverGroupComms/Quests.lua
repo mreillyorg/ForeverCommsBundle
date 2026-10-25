@@ -48,7 +48,7 @@ local function parseIDs(csv)
     end
     return ids
 end
-local function packetize(head, ids)
+local function packetize(ids)
     local chunks, buffer = {}, ""
     for _, id in ipairs(ids) do
         local s = tostring(id)
@@ -126,7 +126,7 @@ function A:BroadcastQuests(force)
     self.lastQuestSignature, self.lastQuestAnnounce = signature, now
     self.questEpoch = self.questEpoch + 1
     for _, peer in pairs(self.questPeers) do peer.completionEpoch = nil; peer.completed = nil end
-    local chunks = packetize("Q", ids)
+    local chunks = packetize(ids)
     if not chunks then self:Print("Quest log too large for group sync."); return end
     for part,csv in ipairs(chunks) do
         self:QueuePacket(string.format("Q|%s|%d|%d|%d|%s", PROTOCOL, self.questEpoch, part, #chunks, csv))
@@ -141,7 +141,7 @@ function A:ReplyCompletions(sender, epoch, ids)
         if ok and result == true then completed[#completed+1] = id end
     end
     table.sort(completed)
-    local chunks = packetize("R", completed)
+    local chunks = packetize(completed)
     if not chunks then return end
     for part,csv in ipairs(chunks) do
         self:QueuePacket(string.format("R|%s|%d|%d|%d|%s", PROTOCOL, epoch, part, #chunks, csv), "WHISPER", sender)

@@ -137,7 +137,7 @@ function A:BuildRequestUI()
     Label(f, "Activity type:", 22, -117, 150)
     local types = {"Dungeon", "Raid", "Quest"}
     local currentType = 1
-    local typeBtn = Button(f, types[currentType] .. "  >", 178, -111, 147, function(btn)
+    Button(f, types[currentType] .. "  >", 178, -111, 147, function(btn)
         currentType = currentType % #types + 1
         btn:SetText(types[currentType] .. "  >")
         A:UpdateRequestPreview()

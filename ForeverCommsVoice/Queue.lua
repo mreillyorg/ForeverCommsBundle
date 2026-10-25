@@ -117,7 +117,7 @@ function V:SkipAll(source)
     return changed
 end
 function V:Approve(id)
-    local index, item = self:FindQueueItem(id)
+    local _, item = self:FindQueueItem(id)
     if not item then return false end
     -- Expired messages can never be resurrected by an overlapping user click.
     if item.expiresAt and now() >= item.expiresAt then self:Skip(id); return false end

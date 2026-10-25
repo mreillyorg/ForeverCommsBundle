@@ -31,9 +31,9 @@ function A:BuildOptions()
         cb:SetPoint("TOPLEFT", 16, y)
         cb:SetSize(24,24)
         cb:SetChecked(self.db[key])
-        cb:SetScript("OnClick", function(self)
+        cb:SetScript("OnClick", function(widget)
             local old = A.db[key]
-            A.db[key] = self:GetChecked() == true
+            A.db[key] = widget:GetChecked() == true
             if key == "questSync" and not old and A.db[key] then A:ScheduleQuestSync(true) end
             if A.RefreshUI then A:RefreshUI() end
         end)

@@ -150,7 +150,7 @@ function A:OnReadyCheckEvent(event, ...)
         self.readyCheck = nil
         if not check or check.serial ~= self.groupSerial then return end
         local counts = {ready=0, unready=0, unknown=0}
-        for key,member in pairs(self.roster) do
+        for key in pairs(self.roster) do
             local status = check.results[key]
             if status == "ready" then counts.ready = counts.ready+1
             elseif status == "not ready" then counts.unready = counts.unready+1

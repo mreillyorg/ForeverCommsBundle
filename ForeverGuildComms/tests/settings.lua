@@ -17,7 +17,7 @@ _G.UIParent = {}
 local widgets = {}
 local noop = function()end
 local mt
-mt = {__index=function(tbl, method)
+mt = {__index=function(_, method)
     if method == 'SetText' then return function(self, text) self.text=text end end
     if method == 'SetNumeric' then return function(self, value) self.numeric=value end end
     if method == 'GetText' then return function(self) return self.text end end
@@ -35,7 +35,7 @@ _G.CreateFrame=function(kind, name, parent, template)
     return w
 end
 _G.Settings={
-    RegisterCanvasLayoutCategory=function(panel,title)
+    RegisterCanvasLayoutCategory=function(panel)
         _G.panel=panel
         return {GetID=function()return 5 end}
     end,

@@ -1,0 +1,41 @@
+# Publish ForeverGroupComms to its own CurseForge project from the monorepo.
+# See tools/pkgmeta/ForeverCommsVoice.yaml for why this lives here rather than in the
+# addon folder, and why the ignore list has to name the whole repository root.
+package-as: ForeverGroupComms
+
+move-folders:
+  ForeverGroupComms/ForeverGroupComms: ForeverGroupComms
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - CHANGELOG.md
+  - .gitattributes
+  - .github
+  - .gitignore
+  - .kiro
+  - .luacheckrc
+  - .pkgmeta
+  - ForeverCommsVoice
+  - ForeverGuildComms
+  - LICENSE
+  - PACKAGING.md
+  - README.md
+  - SUGGESTED-CHANGES.md
+  - aidlc-docs
+  - install
+  - package.cmd
+  - package.ps1
+  - run-tests.cmd
+  - tools
+  - wiki
+  # This addon's own non-runtime files. Bindings.xml is NOT listed: the client
+  # auto-loads it from the addon root and it must ship.
+  - ForeverGroupComms/.github
+  - ForeverGroupComms/.pkgmeta
+  - ForeverGroupComms/install
+  - ForeverGroupComms/tests
+  - ForeverGroupComms/README.md
+  - ForeverGroupComms/Media/ProjectIcon.png

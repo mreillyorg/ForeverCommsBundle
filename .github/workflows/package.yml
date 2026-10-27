@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+env:
+  # Empty on a tag, so the per-addon builds upload. "-d" (skip uploading) on anything
+  # else, so the same packaging path is exercised by every push without publishing.
+  # CurseForge files cannot be unpublished, so this gate must stay.
+  UPLOAD_FLAG: ${{ startsWith(github.ref, 'refs/tags/') && '' || '-d' }}
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -83,8 +89,21 @@ jobs:
       # The project ids live in each addon's own TOC as X-Curse-Project-ID. Uploading only
       # happens on a tag: an untagged run has no version to publish, and CurseForge files
       # cannot be unpublished, so this must never fire on a branch push.
+      # Each addon is its own CurseForge project, so each needs its own archive.
+      #
+      # These builds run on EVERY run, not just tags, and only the upload is gated. An
+      # earlier attempt used `-t <addon>`, which cannot work -- release.sh requires a .git
+      # directory at its topdir, so it refuses a subdirectory with "No Git, SVN, or Hg
+      # checkout found" -- and because the step was tag-only, that was discovered by a
+      # failed release rather than by a test run. Building unconditionally means the
+      # packaging path is exercised by ordinary pushes; UPLOAD_FLAG adds -d (skip
+      # uploading) whenever this is not a tag.
+      #
+      # topdir is therefore the repository root, and each config under tools/pkgmeta/
+      # excludes everything that is not its own addon. check_bigwigs_bundle.py asserts
+      # those lists stay complete. Each build gets its own release directory so none of
+      # them can disturb the bundle in .release that was verified above.
       - name: Stage the curated changelog for the per-addon builds
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           set -euo pipefail
@@ -92,29 +111,51 @@ jobs:
             cp CHANGELOG.md "$addon/CHANGELOG.md"
           done
 
-      - name: Publish ForeverCommsVoice to CurseForge
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Package ForeverCommsVoice
         uses: BigWigsMods/packager@v2
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         with:
-          args: -t ForeverCommsVoice
+          args: >-
+            -m tools/pkgmeta/ForeverCommsVoice.yaml
+            -r ${{ github.workspace }}/.release-ForeverCommsVoice
+            ${{ env.UPLOAD_FLAG }}
 
-      - name: Publish ForeverGuildComms to CurseForge
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Package ForeverGuildComms
         uses: BigWigsMods/packager@v2
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         with:
-          args: -t ForeverGuildComms
+          args: >-
+            -m tools/pkgmeta/ForeverGuildComms.yaml
+            -r ${{ github.workspace }}/.release-ForeverGuildComms
+            ${{ env.UPLOAD_FLAG }}
 
-      - name: Publish ForeverGroupComms to CurseForge
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Package ForeverGroupComms
         uses: BigWigsMods/packager@v2
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         with:
-          args: -t ForeverGroupComms
+          args: >-
+            -m tools/pkgmeta/ForeverGroupComms.yaml
+            -r ${{ github.workspace }}/.release-ForeverGroupComms
+            ${{ env.UPLOAD_FLAG }}
+
+      - name: Check each per-addon archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          for addon in ForeverCommsVoice ForeverGuildComms ForeverGroupComms; do
+            dir=".release-$addon"
+            zip=$( find "$dir" -maxdepth 1 -name '*.zip' -print -quit )
+            [ -n "$zip" ] || { echo "no archive built for $addon" >&2; exit 1; }
+            echo "== $addon: $zip"
+            top=$( unzip -Z1 "$zip" | cut -d/ -f1 | sort -u )
+            [ "$top" = "$addon" ] || {
+              echo "expected only $addon at top level, got: $top" >&2; exit 1; }
+            unzip -Z1 "$zip" | grep -q "^$addon/$addon.toc$" || {
+              echo "$addon.toc missing from the archive" >&2; exit 1; }
+          done
 
       - name: Publish tag as GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

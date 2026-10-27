@@ -55,3 +55,7 @@ __pycache__/
 /ForeverCommsVoice/CHANGELOG.md
 /ForeverGuildComms/CHANGELOG.md
 /ForeverGroupComms/CHANGELOG.md
+# Per-addon packager output directories, one per CurseForge project.
+.release-ForeverCommsVoice/
+.release-ForeverGuildComms/
+.release-ForeverGroupComms/

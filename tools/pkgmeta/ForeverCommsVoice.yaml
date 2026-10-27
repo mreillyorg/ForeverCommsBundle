@@ -1,0 +1,54 @@
+# Publish ForeverCommsVoice to its own CurseForge project from the monorepo.
+#
+# Why this file exists rather than ForeverCommsVoice/.pkgmeta: release.sh requires a .git
+# DIRECTORY at its topdir, so it cannot be pointed at a subdirectory with -t (that fails
+# with "No Git, SVN, or Hg checkout found") and a git worktree will not do either, since a
+# worktree's .git is a file. topdir must therefore be the repository root, which means the
+# whole root gets copied into the package directory and everything that is not this addon
+# has to be excluded by hand below.
+#
+# ForeverCommsVoice/.pkgmeta is left alone: it describes the standalone-repository case,
+# where paths are relative to the addon root. The two cannot share one file.
+#
+# The move-folders entry lifts the addon's own folder up to replace the package directory,
+# so the archive contains exactly ForeverCommsVoice/ at top level.
+package-as: ForeverCommsVoice
+
+move-folders:
+  ForeverCommsVoice/ForeverCommsVoice: ForeverCommsVoice
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Everything at the repository root except this addon. tools/check_bigwigs_bundle.py
+# fails the build if a new top-level entry is ever missing from this list, so a file added
+# to the repository root cannot silently leak into a published addon.
+ignore:
+  - CHANGELOG.md
+  - .gitattributes
+  - .github
+  - .gitignore
+  - .kiro
+  - .luacheckrc
+  - .pkgmeta
+  - ForeverGroupComms
+  - ForeverGuildComms
+  - LICENSE
+  - PACKAGING.md
+  - README.md
+  - SUGGESTED-CHANGES.md
+  - aidlc-docs
+  - install
+  - package.cmd
+  - package.ps1
+  - run-tests.cmd
+  - tools
+  - wiki
+  # This addon's own non-runtime files.
+  - ForeverCommsVoice/.github
+  - ForeverCommsVoice/.pkgmeta
+  - ForeverCommsVoice/install
+  - ForeverCommsVoice/tests
+  - ForeverCommsVoice/README.md
+  - ForeverCommsVoice/Media/ProjectIcon.png

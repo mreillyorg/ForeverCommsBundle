@@ -20,6 +20,7 @@ Addon behaviour is NOT checked here; the workflow runs tools/run_tests.py before
 """
 from pathlib import Path
 import re
+import subprocess
 import sys
 import zipfile
 
@@ -144,10 +145,47 @@ def check_archive(path, versions):
     print(f'PASS: {path.name} ({len(names)} entries)')
 
 
+def check_publish_pkgmeta():
+    """Each addon publishes to its own CurseForge project from this monorepo.
+
+    release.sh needs a .git directory at its topdir, so it cannot be aimed at one addon
+    folder; topdir is the repository root and the entire root is copied into the package
+    directory. Everything that is not the addon being published therefore has to be named
+    in that addon's ignore list, and a file added to the repository root would otherwise
+    be published inside all three addons without anyone noticing.
+
+    So assert completeness here, before any upload: every top-level entry except the
+    addon's own folder must be ignored.
+    """
+    top = subprocess.run(['git', 'ls-tree', '--name-only', 'HEAD'], cwd=ROOT,
+                         capture_output=True, text=True)
+    if top.returncode != 0:
+        print('NOTE: not a git checkout, skipping publish .pkgmeta completeness check')
+        return
+    entries = {line.strip() for line in top.stdout.splitlines() if line.strip()}
+    for addon in ADDONS:
+        path = ROOT / 'tools' / 'pkgmeta' / f'{addon}.yaml'
+        check(path.is_file(), f'missing publish config {path.relative_to(ROOT)}')
+        text = path.read_text(encoding='utf-8')
+        ignored = {line.strip()[2:].strip() for line in text.splitlines()
+                   if line.strip().startswith('- ')}
+        if f'package-as: {addon}' not in text:
+            fail(f'{path.name} must declare "package-as: {addon}"')
+        missing = sorted(e for e in entries if e != addon and e not in ignored)
+        if missing:
+            fail(f'{path.name} does not ignore {missing}. Everything at the repository '
+                 f'root except {addon} must be ignored, or it ships inside the published '
+                 f'addon.')
+        if addon in ignored:
+            fail(f'{path.name} ignores {addon}, the addon it is supposed to publish')
+        print(f'PASS: {path.name} excludes every root entry except {addon}')
+
+
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / '.release'
     if not out.is_absolute():
         out = ROOT / out
+    check_publish_pkgmeta()
     versions = check_versions()
     archives = sorted(out.glob('*.zip'))
     if not archives:

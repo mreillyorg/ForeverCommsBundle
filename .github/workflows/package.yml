@@ -3,6 +3,15 @@ name: Package Forever Comms bundle (BigWigs)
 on:
   workflow_dispatch:
   push:
+    # Tags publish. Pushes to main only build and verify, because UPLOAD_FLAG below adds
+    # -d on anything that is not a tag.
+    #
+    # The branch trigger is the point: this workflow was previously tag-only, so the
+    # release steps were never exercised until a release was already in flight, and two
+    # tags were spent finding faults in steps that had never run. Building on main makes
+    # that impossible to repeat.
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -10,10 +19,14 @@ permissions:
   contents: write
 
 env:
-  # Empty on a tag, so the per-addon builds upload. "-d" (skip uploading) on anything
-  # else, so the same packaging path is exercised by every push without publishing.
-  # CurseForge files cannot be unpublished, so this gate must stay.
-  UPLOAD_FLAG: ${{ startsWith(github.ref, 'refs/tags/') && '' || '-d' }}
+  # UPLOAD_FLAG is set by the "Decide whether to upload" step below, not here.
+  #
+  # It cannot be an expression: the obvious
+  #   ${{ startsWith(github.ref, 'refs/tags/') && '' || '-d' }}
+  # is silently always "-d", because an empty string is FALSY in GitHub expressions, so
+  # the true branch falls through to the "||". That would have disabled publishing
+  # permanently while looking correct.
+  UPLOAD_FLAG: '-d'
 
 jobs:
   package:
@@ -91,18 +104,34 @@ jobs:
       # cannot be unpublished, so this must never fire on a branch push.
       # Each addon is its own CurseForge project, so each needs its own archive.
       #
-      # These builds run on EVERY run, not just tags, and only the upload is gated. An
-      # earlier attempt used `-t <addon>`, which cannot work -- release.sh requires a .git
-      # directory at its topdir, so it refuses a subdirectory with "No Git, SVN, or Hg
-      # checkout found" -- and because the step was tag-only, that was discovered by a
-      # failed release rather than by a test run. Building unconditionally means the
-      # packaging path is exercised by ordinary pushes; UPLOAD_FLAG adds -d (skip
-      # uploading) whenever this is not a tag.
+      # These builds are not gated on a tag; only the upload is, via UPLOAD_FLAG, which
+      # adds -d (skip uploading) whenever the ref is not a tag. Combined with the branch
+      # trigger above, a push to main now exercises this whole path without publishing.
+      #
+      # An earlier attempt used `-t <addon>`, which cannot work: release.sh requires a
+      # .git directory at its topdir, so it refuses a subdirectory with "No Git, SVN, or
+      # Hg checkout found", and a git worktree would fail too since its .git is a file.
+      # That fault reached a release only because nothing ran these steps beforehand.
       #
       # topdir is therefore the repository root, and each config under tools/pkgmeta/
       # excludes everything that is not its own addon. check_bigwigs_bundle.py asserts
       # those lists stay complete. Each build gets its own release directory so none of
       # them can disturb the bundle in .release that was verified above.
+      # Clear UPLOAD_FLAG on a tag so the per-addon builds publish; leave it as "-d"
+      # otherwise. Done in a step because an empty value has to survive, which an
+      # expression cannot do -- see the env block at the top of this file.
+      - name: Decide whether to upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo 'UPLOAD_FLAG=' >> "$GITHUB_ENV"
+            echo "Tag build: per-addon packages will be uploaded to CurseForge."
+          else
+            echo 'UPLOAD_FLAG=-d' >> "$GITHUB_ENV"
+            echo "Not a tag: building per-addon packages without uploading."
+          fi
+
       - name: Stage the curated changelog for the per-addon builds
         shell: bash
         run: |

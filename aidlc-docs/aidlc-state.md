@@ -51,18 +51,26 @@ With `set -euo pipefail` that step aborts the job, so the automated checks for t
 `v0.6.4-beta` tag could not have run.
 
 GuildComms was briefly set to **0.6.5-beta** for that purpose, then superseded before it
-was ever committed or tagged. **All three packages are now synchronised at 0.7.0-beta** in
-the working tree, uncommitted, via `tools/bump_version.py --sync --minor`: the three
-separate version lines (Voice 0.2.3-beta, GuildComms 0.6.4-beta, GroupComms 0.3.5-beta)
-collapsed onto one number taken from the highest and rolled once. The minor bump marks the
-scheme change, not a feature — the complete shipped diff against the released
-`v0.6.4-beta` is **six lines, all version strings**, verified with
-`git diff v0.6.4-beta -- "*/*.lua" "*/*.toc" "*/Bindings.xml"`.
+was ever committed or tagged. **All three packages were then synchronised onto one version
+number** via `tools/bump_version.py --sync --minor`: the three separate lines (Voice
+0.2.3-beta, GuildComms 0.6.4-beta, GroupComms 0.3.5-beta) collapsed onto the highest,
+rolled once, giving 0.7.0-beta. That was committed as `db37407` and **released as tag
+`v0.7.0-beta`**. The minor bump marked the scheme change, not a feature — the shipped diff
+against `v0.6.4-beta` was six lines, all version strings.
 
-`check_bigwigs_bundle.py` passes all three and the bundle is
-`ForeverCommsBundle-0.7.0-beta.zip` at 33 entries. Release notes were written into all four
-READMEs; the never-published 0.6.5-beta notes were folded into the 0.7.0-beta entry rather
-than left describing a version nobody could download.
+Two releases have followed in the same vein, neither touching a single shipped addon file:
+
+| Tag | Commit | Contents |
+| --- | --- | --- |
+| `v0.6.4-beta` | `33e5f30` | Last release under per-package numbering (0.2.3 / 0.6.4 / 0.3.5) |
+| `v0.7.0-beta` | `db37407` | Version numbers unified; the CI linter package-name fix |
+| **0.7.1-beta** | uncommitted | `.pkgmeta` now excludes root-level development files from the archive |
+
+0.7.1-beta is in the working tree, produced by `--sync --patch`. The shipped diff against
+`v0.7.0-beta` is again only version strings; the substance is packaging configuration plus
+`tools/bump_version.py` gaining its repository-state preamble. `check_bigwigs_bundle.py`
+passes all three at 0.7.1-beta with a 33-entry archive containing only the three addon
+folders. Release notes are in all four READMEs.
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither and is the **sole writer** of the shared voice profile.

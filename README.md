@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.7.0-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.7.0-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.7.0-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.7.1-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.7.1-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.7.1-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -55,29 +55,34 @@ client required. See `.kiro/steering/testing.md` for how an interpreter is locat
 None of it replaces in-game testing. Nothing in this bundle has been run against a live
 Forever server, and each addon's README lists what that leaves unverified.
 
-## What changed in this release
+## What changed in 0.7.1-beta
 
-**All three addons are now 0.7.0-beta, and that is the whole of this release.** Nothing in
-any of the three behaves differently from the previous release, 0.6.4-beta. No setting,
-message, window, command or keybinding has changed, and no saved settings are renamed or
-removed.
+**A packaging fix. No addon changed.** Every file the three addons load in the game is
+identical to 0.7.0-beta — same settings, messages, windows, commands and keybindings, and
+no saved settings renamed or removed.
 
-**Why the version numbers jumped.** The three addons used to be numbered separately, which
-had reached ForeverCommsVoice 0.2.3-beta, ForeverGuildComms 0.6.4-beta and
-ForeverGroupComms 0.3.5-beta. They are built, tested, bundled and installed together, so
-three numbers only ever answered "which version do I have?" with a question. From now on
-they share one, and the minor bump to 0.7.0 marks that change rather than any new feature.
+The download itself is tidier. The release archive is now explicitly restricted to the
+three addon folders, so project files that have no business in it — the development
+documentation, the lint and git configuration, `LICENSE`, `run-tests.cmd` — can no longer
+be swept in by the packager. If you install by copying folders, there is simply less to
+look at and nothing to copy by mistake.
 
-So ForeverCommsVoice going from 0.2.3-beta to 0.7.0-beta is **not** a large rewrite — it is
-the same addon, renumbered to match its siblings. The same applies to ForeverGroupComms.
+Updating from 0.7.0-beta is optional and safe.
 
-The one real fix is invisible from inside the game: the automated build installed the Lua
-linter under the wrong package name, so the checks that are supposed to gate a release
-could not run for 0.6.4-beta. That is corrected, and this release is the first built with
-those checks actually passing.
+## What changed in 0.7.0-beta
 
-If you already run 0.6.4-beta, updating gains you nothing except matching version numbers.
-It is safe either way.
+**The three addons were given one shared version number.** They had been versioned
+separately, reaching ForeverCommsVoice 0.2.3-beta, ForeverGuildComms 0.6.4-beta and
+ForeverGroupComms 0.3.5-beta. Since they are built, tested, bundled and installed
+together, three numbers only ever answered "which version do I have?" with a question.
+
+ForeverCommsVoice going from 0.2.3-beta to 0.7.0-beta was therefore **not** a rewrite — the
+same addon, renumbered to match its siblings. The same applies to ForeverGroupComms. No
+addon behaviour changed in that release either.
+
+It also carried one fix invisible from inside the game: the automated build installed the
+Lua linter under the wrong package name, so the checks meant to gate a release could not
+run for 0.6.4-beta.
 
 Each addon's README carries its own changelog, including the per-addon history from before
 the numbers were unified.

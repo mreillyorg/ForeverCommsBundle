@@ -1,4 +1,4 @@
-# Forever Group Comms 0.7.0-beta
+# Forever Group Comms 0.7.1-beta
 
 A companion to **ForeverGuildComms** using the shared **ForeverCommsVoice** addon, written for **WoW Forever 1.60.1 (Interface 16001)**.
 Author: Michael Reilly.
@@ -58,7 +58,7 @@ This is a separately maintained companion addon updated for ForeverCommsVoice. I
 
 ## Shared language/voice engine (0.2.0-beta)
 
-**Requires ForeverCommsVoice 0.7.0-beta.** The addon now calls the shared engine for group/dungeon messages; accents and language are configured per character with `/fcv` or Settings > AddOns > Forever Comms Voice. Eight languages receive curated group/dungeon messages and RP accents flavour casual messages. Combat directives keep a clear meaning.
+**Requires ForeverCommsVoice 0.7.1-beta.** The addon now calls the shared engine for group/dungeon messages; accents and language are configured per character with `/fcv` or Settings > AddOns > Forever Comms Voice. Eight languages receive curated group/dungeon messages and RP accents flavour casual messages. Combat directives keep a clear meaning.
 
 The shared **Strength** setting reaches group messages, so it is worth knowing where: the catchphrase prefix and the Expressive punctuation change (final `.` becomes `!`, final `!` becomes `!!`) apply to **group greetings, welcomes and level congratulations only**. Every coordination and combat directive — pull, mana break, regroup, wait-for-healer, crowd control, skull focus, interrupts, plus the role check, quest check and quest request — is rendered exactly as written at every strength, full stops intact. See the accent strength section of the [ForeverCommsVoice README](../ForeverCommsVoice/README.md) for the complete table. Disable `Use ForeverCommsVoice for group messages` in GroupComms Settings to restore the original English message rotation. Ready checks, target markers, group roles and quest-sync protocol remain independent of the voice library and are unchanged. Install the three-addon bundle for an easy upgrade; offline tests pass but live-game verification is still needed.
 
@@ -66,9 +66,21 @@ The shared **Strength** setting reaches group messages, so it is worth knowing w
 
 GroupComms stages **manual-approval greetings and level congratulations** in the common ForeverCommsVoice queue. The Group panel now has one “Review message queue” button instead of its embedded three-row suggestion window. Use `/fgp queue` or `/fcv queue`. Sending still checks the original party/raid identity and retains the two-second group chat spacing guard. Group changes purge outstanding Group-only suggestions without disturbing guild requests. Ready checks, target marking and explicitly clicked quick actions continue to act immediately.
 
+## What changed in 0.7.1-beta
+
+**Requires ForeverCommsVoice 0.7.1-beta.**
+
+**A packaging fix. Nothing in this addon changed** — every file the game loads is
+identical to 0.7.0-beta. No setting, message, window or command differs, and no saved
+settings are renamed or removed.
+
+The release archive is now explicitly restricted to the three addon folders, so project
+files that have no business in a download cannot be swept in by the packager. Updating
+from 0.7.0-beta is optional and safe.
+
 ## What changed in 0.7.0-beta
 
-**Requires ForeverCommsVoice 0.7.0-beta**, which is now the same number as this addon --
+**Requires ForeverCommsVoice 0.7.1-beta**, which is the same number as this addon --
 see below.
 
 **Nothing in the addon changed.** Every file the game loads is identical to 0.3.5-beta
@@ -87,7 +99,7 @@ for the previous one. Corrected; this is the first release built with them passi
 
 ## What changed in 0.3.5-beta
 
-**Requires ForeverCommsVoice 0.7.0-beta.**
+**Requires ForeverCommsVoice 0.7.1-beta.**
 
 **No functional changes to this addon.** The only edits are the version number itself and
 this note — no behaviour, setting, message or command is different from 0.3.4-beta. The version moved to keep the bundle aligned and to record
@@ -98,7 +110,7 @@ variety the same way it affects guild wording. See the
 
 ## What changed in 0.3.4-beta
 
-**Requires ForeverCommsVoice 0.7.0-beta.**
+**Requires ForeverCommsVoice 0.7.1-beta.**
 
 **Fixed: the Settings panel no longer shows stale values.** Its checkboxes kept whatever
 they displayed when the panel was first built, so a setting changed from the Titan

@@ -20,7 +20,7 @@ if not _G.ForeverCommsVoice then
           "bundle, or enable ForeverCommsVoice in the AddOns list.")
 end
 _G.ForeverGroupComms = A
-A.name, A.version = ADDON, "0.7.0-beta"
+A.name, A.version = ADDON, "0.7.1-beta"
 BINDING_HEADER_FOREVERGROUPCOMMS = "Forever Group Comms"
 BINDING_NAME_FGROUP_PANEL = "Open Group Comms"
 BINDING_NAME_FGROUP_ROLES = "Review group roles"

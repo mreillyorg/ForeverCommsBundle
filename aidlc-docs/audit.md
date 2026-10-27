@@ -380,3 +380,13 @@ tell me if I need to add any System or User paths in Windows 11 and what I need 
 **Context**: Process and tooling correction; no release action taken
 
 ---
+
+## Release 0.7.1-beta — packaging fix
+**Timestamp**: 2026-10-19T00:00:00Z
+**User Input**: "committed.. now, can you do the bump to 0.7.1-beta and tag it?"
+**AI Response**: "Checked git first, as the new rule requires. HEAD is d6b703c 'fixes for packaging', which committed both the user's .pkgmeta work and my tooling changes; tree clean; tags v0.6.4-beta and v0.7.0-beta, so v0.7.1-beta is free; HEAD is 1 commit AHEAD of upstream, i.e. not pushed. Confirmed my report_repository and warn_about_pending additions survived the commit before relying on them. Ran --sync --patch to 0.7.1-beta across 32 sites in 15 files. Established the release contents before writing notes: git diff v0.7.0-beta..HEAD touches only .pkgmeta, PACKAGING.md, check_bigwigs_bundle.py, bump_version.py, the steering file and audit.md - ZERO shipped addon files - so the notes say plainly that no addon changed and describe the tidier archive instead. Wrote notes in all four READMEs and kept the 0.7.0-beta entries intact, since that version was genuinely released."
+**Context**: All three packages 0.7.1-beta. Bundle ForeverCommsBundle-0.7.1-beta.zip, 33 entries, top level containing only the three addon folders.
+**Findings**: "Was careful not to overclaim the packaging fix. The .pkgmeta comment says BigWigs leaves root-level files in ForeverCommsBundle/ after move-folders, but the LOCAL mirror never exhibited that - check_bigwigs_bundle.py's top-level assertion would have failed, and it has been passing - so the local build could not have caught it and I cannot inspect the published GitHub artifact. The release notes therefore describe what the configuration now guarantees rather than asserting what the previous published ZIP contained. Verified the built archive's top level is exactly the three addon folders. All gates green at 0.7.1-beta: version consistency PASS for all three, suite 28/28, luacheck 0 warnings / 0 errors in 53 files, check_lua_quality.py exit 0, mutation 37/37, source archives and verify_package.py exit 0, zero w/crlf files."
+**Context**: Release 0.7.1-beta prepared, committed and tagged locally; push deliberately left to the user
+
+---

@@ -122,7 +122,7 @@ not a working tree:
 | Voice version | 0.2.2-beta | **0.2.3-beta** | patch |
 | GuildComms version | 0.6.3-beta | **0.6.4-beta** | patch |
 | GroupComms version | 0.3.4-beta | **0.3.5-beta** | patch |
-| *(all three since synchronised to 0.7.0-beta in the working tree — see below)* | | | |
+| *(all three since synchronised: 0.7.0-beta released, 0.7.1-beta pending — see below)* | | | |
 | Shipped Lua lines | 3,967 | **3,993** | +26 |
 | Public methods | 153 | **155** | +2 |
 | Harness lines | 4,257 | **4,363** | +106 |
@@ -151,7 +151,7 @@ in any addon is affected; no archive contains this file.
 
 GuildComms was briefly set to 0.6.5-beta to give the fixed pipeline an untaken tag, but
 was superseded before being committed. **The working tree now has all three packages
-synchronised at 0.7.0-beta**, produced by the new `tools/bump_version.py --sync --minor`:
+synchronised, at 0.7.1-beta**, produced by the new `tools/bump_version.py --sync --minor`:
 three independent version lines collapsed onto one number, taken from the highest and
 rolled once. The minor bump marks that scheme change rather than any feature — the
 complete shipped diff against the released `v0.6.4-beta` is six lines, all version
@@ -163,9 +163,14 @@ version whose `v*` tag already exists, and a `.gitignore` correction for `.relea
 which `release-packaging.md` required but which had been covered only accidentally by the
 `*.zip` rule.
 
-All gates green at 0.7.0-beta: suite 28/28, luacheck 0/0 across 53 files,
+0.7.0-beta was committed as `db37407` and released as tag `v0.7.0-beta`. A further
+packaging-only release, **0.7.1-beta**, followed in the working tree: `.pkgmeta` now
+excludes root-level development files so the archive cannot carry them, and again no
+shipped addon file changed.
+
+All gates green at 0.7.1-beta: suite 28/28, luacheck 0/0 across 53 files,
 `check_lua_quality.py` exit 0, mutation 37/37, the four packaging guards exit 0, bundle
-`ForeverCommsBundle-0.7.0-beta.zip` at 33 entries, zero `w/crlf` files.
+`ForeverCommsBundle-0.7.1-beta.zip` at 33 entries, zero `w/crlf` files.
 
 ## Comparison across all ten passes
 

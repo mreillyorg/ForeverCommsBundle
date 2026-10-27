@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.7.3-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.7.3-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.7.3-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.7.4-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.7.4-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.7.4-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -54,6 +54,20 @@ client required. See `.kiro/steering/testing.md` for how an interpreter is locat
 
 None of it replaces in-game testing. Nothing in this bundle has been run against a live
 Forever server, and each addon's README lists what that leaves unverified.
+
+## What changed in 0.7.4-beta
+
+**First release published to CurseForge. No addon changed.**
+
+All three addons are now separate CurseForge projects, with **Forever Comms Voice marked as
+a required dependency** of the other two. Installing Guild Comms or Group Comms through the
+CurseForge app brings the library with it automatically, rather than leaving you with an
+addon the client refuses to load.
+
+The combined bundle and the Windows installer are unchanged and still published here on
+GitHub for anyone who prefers them.
+
+Every file the three addons load is identical to 0.7.3-beta.
 
 ## What changed in 0.7.3-beta
 

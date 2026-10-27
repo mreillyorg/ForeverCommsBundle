@@ -7,6 +7,21 @@ history, including the per-addon numbering used before 0.7.0-beta.
 This file is the release notes the packager publishes. It is deliberately not shipped
 inside the addon archive.
 
+## 0.7.4-beta
+
+**First release published to CurseForge.** All three addons are now available as separate
+CurseForge projects, with Forever Comms Voice marked as a required dependency of the other
+two — so installing Guild Comms or Group Comms through the CurseForge app brings the
+library with it automatically, instead of leaving you with an addon the client refuses to
+load.
+
+The combined bundle and the manual Windows installer are unchanged and still published on
+GitHub for anyone who prefers them.
+
+**No addon changed.** Every file the game loads is identical to 0.7.3-beta. No setting,
+message, window, command or keybinding differs, and no saved settings are renamed or
+removed.
+
 ## 0.7.3-beta
 
 **Makes the automated release actually publish.** 0.7.2-beta built correctly and passed

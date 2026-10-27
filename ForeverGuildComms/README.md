@@ -1,4 +1,4 @@
-# Forever Guild Comms 0.7.3-beta
+# Forever Guild Comms 0.7.4-beta
 
 WoW: Forever 1.60.1 / Interface 16001 addon by Michael Reilly.
 Requires **ForeverCommsVoice**, which is bundled with every download.
@@ -192,7 +192,7 @@ Enable Lua errors in game with `/console scriptErrors 1`, then `/reload`. If any
 
 ## Shared language/voice engine (0.5.0-beta)
 
-**Requires ForeverCommsVoice 0.7.3-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
+**Requires ForeverCommsVoice 0.7.4-beta.** `VoiceBridge.lua` now delegates all languages, accents, race filters, message variation and shared character settings to `ForeverCommsVoice`, instead of maintaining four duplicated runtime modules. All guild custom templates are retained, always take precedence over translations and do not modify item links or player names. Existing per-character voice settings migrate once into `ForeverCommsVoiceCharDB.voice` when the new GuildComms loads. Set up the shared voice with `/fcv`; the existing GuildComms Settings and Titan voice controls continue to edit the same settings.
 
 For the first upgrade, install the three-addon **ForeverComms bundle** or at least install ForeverCommsVoice before updating GuildComms. The updated GuildComms will not load without its dependency. Continue to use `/fgc` for guild functionality.
 
@@ -200,9 +200,20 @@ For the first upgrade, install the three-addon **ForeverComms bundle** or at lea
 
 **Verify with a click** now stages guild greetings and congratulations in ForeverCommsVoice's shared review list, alongside GroupComms messages. The old Guild-only approval frame has been removed. Use `/fgc verify` or `/fcv queue` to open it. Source column, visible rows, timeouts and auto-open are controlled under `/fcv`. A timeout only skips a message. `Restore Defaults` still does **not** modify the shared voice/queue profile.
 
+## What changed in 0.7.4-beta
+
+**Requires ForeverCommsVoice 0.7.4-beta.**
+
+**Now on CurseForge. Nothing in this addon changed** — every file the game loads is
+identical to 0.7.3-beta, and no saved settings are renamed or removed.
+
+This addon is published as its own CurseForge project, with Forever Comms Voice declared a
+required dependency, so the CurseForge app installs the library for you. Previously the
+only route was the combined download.
+
 ## What changed in 0.7.3-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta.**
+**Requires ForeverCommsVoice 0.7.4-beta.**
 
 **A release-pipeline fix. Nothing in this addon changed** — every file the game loads is
 identical to 0.7.2-beta, and no saved settings are renamed or removed. 0.7.2-beta built
@@ -211,7 +222,7 @@ for it. This version restores that.
 
 ## What changed in 0.7.2-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta.**
+**Requires ForeverCommsVoice 0.7.4-beta.**
 
 **Fixes the download. Nothing in this addon changed** — every file the game loads is
 identical to 0.7.1-beta, and no saved settings are renamed or removed.
@@ -223,7 +234,7 @@ the archive, and the local build fails if that configuration breaks again.
 
 ## What changed in 0.7.1-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta.**
+**Requires ForeverCommsVoice 0.7.4-beta.**
 
 **A packaging change. Nothing in this addon changed** — every file the game loads is
 identical to 0.7.0-beta. The release archive was restricted to the three addon folders so
@@ -231,7 +242,7 @@ project files cannot be swept into a download. Superseded by 0.7.2-beta.
 
 ## What changed in 0.7.0-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta**, which is the same number as this addon --
+**Requires ForeverCommsVoice 0.7.4-beta**, which is the same number as this addon --
 see below.
 
 **Nothing in the addon changed.** Every file the game loads is identical to 0.6.4-beta
@@ -255,7 +266,7 @@ nobody could download.
 
 ## What changed in 0.6.4-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta.**
+**Requires ForeverCommsVoice 0.7.4-beta.**
 
 Internal maintenance only. **No setting, message or keybinding changes**, and the Ask for
 Help window looks and behaves exactly as before.
@@ -268,7 +279,7 @@ of that button is covered by tests for the first time.
 
 ## What changed in 0.6.3-beta
 
-**Requires ForeverCommsVoice 0.7.3-beta.**
+**Requires ForeverCommsVoice 0.7.4-beta.**
 
 **New setting: "Open the review list when a message is staged."** On by default, which
 keeps the existing behaviour. Turn it off if the review list popping up during a busy

@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title ForeverCommsVoice 0.7.3-beta Installer
+title ForeverCommsVoice 0.7.4-beta Installer
 pushd "%~dp0"
 if errorlevel 1 (
     echo ERROR: Could not locate the extracted installer directory.
@@ -13,7 +13,7 @@ if not exist "%~dp0..\ForeverCommsVoice.toc" (
     pause
     exit /b 1
 )
-echo Installing ForeverCommsVoice 0.7.3-beta ...
+echo Installing ForeverCommsVoice 0.7.4-beta ...
 echo Using a process-only execution policy for this installer.
 echo Your permanent Windows PowerShell settings will not be changed.
 echo.

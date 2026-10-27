@@ -4,6 +4,7 @@
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverCommsVoice\Media\Icon
 ## Version: 0.7.3-beta
+## X-Curse-Project-ID: 1768865
 ## SavedVariablesPerCharacter: ForeverCommsVoiceCharDB
 Core.lua
 Languages.lua

@@ -4,6 +4,7 @@
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverGuildComms\Media\Icon
 ## Version: 0.7.3-beta
+## X-Curse-Project-ID: 1768871
 ## SavedVariables: ForeverGuildCommsDB
 ## SavedVariablesPerCharacter: ForeverGuildCommsCharDB
 ## Dependencies: ForeverCommsVoice

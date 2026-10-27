@@ -4,6 +4,7 @@
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverGroupComms\Media\Icon
 ## Version: 0.7.3-beta
+## X-Curse-Project-ID: 1768876
 ## SavedVariables: ForeverGroupCommsDB
 ## Dependencies: ForeverCommsVoice
 ## OptionalDeps: Titan

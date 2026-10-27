@@ -5,7 +5,17 @@ package-as: ForeverGuildComms
 # The BigWigs release archive is suitable for addon managers and contains only
 # runtime files and the general README. Our manual-download ZIP still includes
 # install/ and tests/ for the integrated Windows installer and local testing.
+# Use the suite's curated changelog rather than a generated commit dump, and keep it out
+# of the addon folder. The release workflow copies the repository-root CHANGELOG.md in
+# here before packaging; run standalone without that copy and release.sh just warns and
+# generates one instead. See the root .pkgmeta for why the ignore entry below is required
+# rather than tidy.
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
 ignore:
+  - CHANGELOG.md
   - install
   - tests
   - PACKAGING.md

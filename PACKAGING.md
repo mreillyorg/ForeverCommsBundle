@@ -152,8 +152,55 @@ a header comment saying it is active only then. A standalone packager release do
 bundle `ForeverCommsVoice`: users must install it separately, and any project metadata
 must declare it as a dependency.
 
-WoW Forever's interface ID `16001` may not be recognised by third-party publishing
-providers; test before any public upload.
+## Publishing to CurseForge
+
+Each addon is **its own CurseForge project**, not one project for the bundle. Author
+account `mreillyorg`.
+
+| Addon | Project ID | Primary category | Required dependency |
+| --- | --- | --- | --- |
+| `ForeverCommsVoice` | `1768865` | Chat & Communication | — |
+| `ForeverGuildComms` | `1768871` | Guild | Forever Comms Voice |
+| `ForeverGroupComms` | `1768876` | Chat & Communication | Forever Comms Voice |
+
+The ids live in each addon's own TOC as `## X-Curse-Project-ID`. The API token is the
+`CF_API_TOKEN` repository secret and must never be committed.
+
+`16001` **is** recognised. An earlier note here warned it might not be; that has been
+settled. `release.sh` maps interface `16???` to game type `forever`, its flavour table
+accepts both `forever` and `camelot`, and CurseForge lists the client as *WoW: Forever
+(codename Camelot, flavour `wow_classic_beta`)* with other addons already publishing
+Forever files. No `-g` override is needed — the game version comes from the TOC.
+
+### How the workflow publishes
+
+Four packager invocations, deliberately separated:
+
+- **The bundle** builds with `-d -p 0` and is for GitHub only. `-d` skips uploading; `-p 0`
+  unsets any CurseForge id. The second flag matters because there is no
+  `ForeverCommsBundle.toc`, so `release.sh` falls back to a `move-folders` TOC and would
+  otherwise adopt one of the three addons' project ids and publish the whole bundle to
+  that single project.
+- **Each addon** builds with `-t <addon>`, which points `release.sh` at that folder, where
+  it finds the addon's own `.pkgmeta` and writes to `<addon>/.release`. These cannot
+  disturb the bundle already verified by `check_bigwigs_bundle.py`.
+
+All three CurseForge steps are gated on `startsWith(github.ref, 'refs/tags/')`. That gate
+is load-bearing: **CurseForge files cannot be unpublished**, so a branch push must never
+reach an upload.
+
+Each per-addon `.pkgmeta` declares `manual-changelog: CHANGELOG.md` and also ignores it, so
+uploads carry the curated root changelog rather than a generated commit dump, and no
+`CHANGELOG.md` ends up inside the addon folder. A workflow step copies the root
+`CHANGELOG.md` into each addon directory before packaging; those copies are gitignored and
+must not be committed. Run a per-addon build without that copy and `release.sh` simply
+warns and generates a changelog instead.
+
+### Project page content
+
+Keep the beta caveat on all three pages while the addons carry `-beta`. The READMEs state
+that nothing in this bundle has been run against a live Forever server; a store page that
+omits it would be the one actively misleading thing about these projects.
 
 ## Before tagging
 

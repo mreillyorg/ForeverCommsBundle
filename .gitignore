@@ -49,3 +49,9 @@ luac.out
 # imported rather than run, which the test helpers and bump_version.py both do.
 __pycache__/
 *.pyc
+# Per-addon copies of the root CHANGELOG.md, staged by the release workflow so each
+# CurseForge upload carries the curated notes instead of a generated commit dump. The
+# root file is the single source; these copies must never be committed.
+/ForeverCommsVoice/CHANGELOG.md
+/ForeverGuildComms/CHANGELOG.md
+/ForeverGroupComms/CHANGELOG.md

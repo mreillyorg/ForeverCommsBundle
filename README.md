@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.7.2-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.7.2-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.7.2-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.7.3-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.7.3-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.7.3-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -54,6 +54,20 @@ client required. See `.kiro/steering/testing.md` for how an interpreter is locat
 
 None of it replaces in-game testing. Nothing in this bundle has been run against a live
 Forever server, and each addon's README lists what that leaves unverified.
+
+## What changed in 0.7.3-beta
+
+**Makes the automated release actually publish. No addon changed.**
+
+0.7.2-beta built correctly and passed every check, then failed at the last step: the
+workflow could not attach the finished ZIP, so no downloadable release was produced. The
+cause was a changed default in GitHub's upload action — from v4.4 it excludes hidden files
+and treats any dot-prefixed path as hidden, which includes the packager's own `.release`
+output directory. The workflow now opts in explicitly.
+
+Every file the three addons load is identical to 0.7.2-beta. If you already have
+0.7.2-beta installed there is nothing to gain; this version exists so that a published
+download exists at all.
 
 ## What changed in 0.7.2-beta
 

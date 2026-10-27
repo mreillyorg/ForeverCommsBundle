@@ -48,12 +48,24 @@ jobs:
           set -euo pipefail
           python3 tools/check_bigwigs_bundle.py
 
+      # include-hidden-files is required, not optional. From v4.4 onwards
+      # actions/upload-artifact excludes hidden files by default, and it treats ANY path
+      # component beginning with a dot as hidden -- so `.release/*.zip` matches nothing
+      # and the step reports "No files were found with the provided path". The packager
+      # writes to .release by design, hence the opt-in.
+      #
+      # It stayed hidden until 0.7.2-beta because the release structure check above failed
+      # in every earlier run, so this step had never actually executed.
+      #
+      # The glob is deliberately narrow. release.sh also reads an optional .release/.env
+      # holding upload tokens, so do not widen this path to .release or .release/* .
       - name: Upload ZIP as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: forever-comms-bigwigs-bundle
           path: .release/*.zip
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Publish tag as GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

@@ -400,3 +400,13 @@ tell me if I need to add any System or User paths in Windows 11 and what I need 
 **Context**: Release 0.7.2-beta committed and tagged locally; push left to the user
 
 ---
+
+## Release 0.7.3-beta — artifact upload found no zip
+**Timestamp**: 2026-10-19T00:00:00Z
+**User Input**: "another error but in `Upload zip as workload artifact`:\n\nError: No files were found with the provided path: .release/*.zip. No artifacts will be uploaded."
+**AI Response**: "Reasoned from evidence rather than guessing at the packager again. The decisive observation is that check_bigwigs_bundle.py ran immediately BEFORE the upload and passed, and that script fails outright when .release contains no zip - so the file demonstrably existed when the upload claimed it did not. That ruled out the packager and pointed at the upload action. Confirmed the cause: from v4.4 actions/upload-artifact excludes hidden files by default and treats ANY path component beginning with a dot as hidden, and .release is the packager's own output directory. Read the workflow before editing and also confirmed from the packager README that the -d flag means 'skip uploading', not 'skip zip creation', which was the other candidate explanation. Fixed with include-hidden-files: true, kept the glob narrow at .release/*.zip because release.sh also reads an optional .release/.env holding upload tokens, and documented both points at the site. Then bumped to 0.7.3-beta, updated CHANGELOG.md and all four READMEs, committed and tagged."
+**Context**: .github/workflows/package.yml upload step; all three packages 0.7.3-beta.
+**Findings**: "Explained WHY this surfaced only now, which matters for trusting the pipeline: every earlier run failed at the release structure check before reaching the upload step, so that step had never executed to completion despite being misconfigured for several versions. Also established why a new version was necessary rather than retagging: a tag push runs the workflow file AS IT EXISTS AT THAT TAG, so v0.7.2-beta would fail again however many times it is re-run, and moving an already-pushed tag is more destructive than spending a patch number. Presented that trade-off rather than deciding it silently. Validated the edited YAML by parsing it and asserting the new input is present. All gates green at 0.7.3-beta: version consistency PASS for all three, suite 28/28, luacheck 0 warnings / 0 errors in 53 files, check_lua_quality.py exit 0, mutation 37/37, archive 33 entries with only the three addon folders, source archives and verify_package.py exit 0, zero w/crlf files. Checked git state first per the standing rule: HEAD 8d03fd7 equal to v0.7.2-beta, clean and in sync."
+**Context**: Release 0.7.3-beta committed and tagged locally; push left to the user
+
+---

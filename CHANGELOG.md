@@ -7,6 +7,25 @@ history, including the per-addon numbering used before 0.7.0-beta.
 This file is the release notes the packager publishes. It is deliberately not shipped
 inside the addon archive.
 
+## 0.7.3-beta
+
+**Makes the automated release actually publish.** 0.7.2-beta built correctly and passed
+every check, then failed at the final step: the workflow could not attach the finished ZIP,
+so no downloadable release was produced for it.
+
+The cause was a changed default in GitHub's upload action. From v4.4 it excludes hidden
+files, and it treats any path beginning with a dot as hidden — including the packager's
+own `.release` output directory. The upload was therefore looking in a place it had been
+told to ignore. The workflow now opts in explicitly.
+
+This had been latent for several versions and only surfaced now, because the release
+structure check ahead of it failed in every earlier run, so the upload step had never run
+to completion.
+
+**No addon changed.** Every file the game loads is identical to 0.7.2-beta. If you already
+have 0.7.2-beta installed there is nothing to gain here; 0.7.3-beta exists so that a
+published download exists at all.
+
 ## 0.7.2-beta
 
 **Fixes the release archive.** The 0.7.1-beta download contained a spurious fourth

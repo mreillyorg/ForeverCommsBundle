@@ -22,7 +22,7 @@ BINDING_HEADER_FOREVERGUILDCOMMS = "Forever Guild Comms"
 BINDING_NAME_FGC_OPEN_ALERTS = "Open guild alerts"
 BINDING_NAME_FGC_ASK_HELP = "Ask guild for help"
 BINDING_NAME_FGC_RESCAN_PROFESSION = "Rescan open profession"
-A.version = "0.7.2-beta"
+A.version = "0.7.3-beta"
 -- These language preferences are per character; old account-wide settings stay intact.
 A.voiceDefaults = {language="en", accent="none", raceFilter=true, accentStrength="subtle"}
 A.defaults = {

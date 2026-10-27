@@ -1,4 +1,4 @@
-# ForeverCommsVoice 0.7.2-beta
+# ForeverCommsVoice 0.7.3-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -12,7 +12,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.7.2-beta and/or GroupComms 0.7.2-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.7.3-beta and/or GroupComms 0.7.3-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 
@@ -69,6 +69,15 @@ New in v0.2.1-beta: `Queue.lua` and `QueueUI.lua` provide a single movable, scro
 
 
 Queue presentation: a compact, movable, scrollable floating overlay (not a normal Blizzard window). Fresh character defaults are **2 visible rows** and **20 seconds** auto-skip; existing saved queue preferences remain unchanged. `/fcv queue` opens the overlay.
+
+## What changed in 0.7.3-beta
+
+**A release-pipeline fix. Nothing in this addon changed** — every file the game loads is
+identical to 0.7.2-beta, including your saved voice profile, the languages, the accents
+and every message.
+
+0.7.2-beta built and passed its checks but could not attach the finished ZIP, so no
+download was published for it. This version restores that.
 
 ## What changed in 0.7.2-beta
 

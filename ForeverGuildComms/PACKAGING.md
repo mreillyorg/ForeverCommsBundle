@@ -2,7 +2,7 @@
 
 The addon is configured for [BigWigsMods/packager](https://github.com/BigWigsMods/packager)
 and WoW Forever beta (**Interface `16001`**). The in-game addon version is
-**`0.7.2-beta`**. The packager recognises the Forever game type from the TOC;
+**`0.7.3-beta`**. The packager recognises the Forever game type from the TOC;
 no `-g` override is required.
 
 ## GitHub repository layout
@@ -52,8 +52,8 @@ The `.pkgmeta` file and `.github/workflows` directory must be committed.
    Git repository after committing:
 
    ```bash
-   git tag -a v0.7.2-beta -m "ForeverGuildComms 0.7.2 beta"
-   git push origin v0.7.2-beta
+   git tag -a v0.7.3-beta -m "ForeverGuildComms 0.7.3 beta"
+   git push origin v0.7.3-beta
    ```
 
    Only create the tag if it does not exist. For subsequent updates, change

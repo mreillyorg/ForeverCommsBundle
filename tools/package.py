@@ -31,13 +31,14 @@ PKGMETA = ROOT / '.pkgmeta'
 def read_pkgmeta():
     """Minimal parse of the subset of .pkgmeta this project uses.
 
-    Recognises `package-as`, `move-folders` and `ignore`. Deliberately not a YAML
-    implementation: if .pkgmeta grows a construct beyond these, this raises rather than
-    silently producing an archive that differs from what BigWigs would build.
+    Recognises `package-as`, `manual-changelog`, `move-folders` and `ignore`. Deliberately
+    not a YAML implementation: if .pkgmeta grows a construct beyond these, this raises
+    rather than silently producing an archive that differs from what BigWigs would build.
     """
     if not PKGMETA.is_file():
         raise ValueError(f'missing {PKGMETA}')
     package_as, moves, ignores, section = None, {}, [], None
+    changelog = None
     for raw in PKGMETA.read_text(encoding='utf-8-sig').splitlines():
         line = raw.split('#', 1)[0].rstrip()
         if not line.strip():
@@ -48,7 +49,9 @@ def read_pkgmeta():
             section = key
             if key == 'package-as':
                 package_as = value
-            elif key not in ('move-folders', 'ignore'):
+            elif key == 'manual-changelog' and value:
+                changelog = value          # scalar shorthand
+            elif key not in ('move-folders', 'ignore', 'manual-changelog'):
                 raise ValueError(f'.pkgmeta key not supported by this builder: {key!r}')
             continue
         item = line.strip()
@@ -59,9 +62,44 @@ def read_pkgmeta():
         elif section == 'move-folders':
             src, _, dst = item.partition(':')
             moves[src.strip()] = dst.strip()
+        elif section == 'manual-changelog':
+            key, _, value = item.partition(':')
+            key, value = key.strip(), value.strip()
+            if key == 'filename':
+                changelog = value
+            elif key != 'markup-type':
+                raise ValueError(f'unsupported manual-changelog key: {key!r}')
     if not package_as:
         raise ValueError('.pkgmeta has no package-as')
+    check_changelog(changelog, ignores)
     return package_as, moves, ignores
+
+
+def check_changelog(changelog, ignores):
+    """Enforce the pairing the archive layout depends on.
+
+    release.sh writes a GENERATED changelog into the package directory, and only deletes
+    that directory after move-folders if it is empty. A changelog left there survives as a
+    spurious fourth top-level folder in the release, which is what broke v0.7.1-beta.
+
+    Declaring a manual changelog avoids it, but only while that file is also ignored: if
+    it gets copied into the package directory, release.sh uses the copy and the stray
+    folder returns. Neither condition is visible in the archive this builder produces
+    locally -- it does not generate changelogs at all -- so assert them on the
+    configuration instead of waiting for CI to notice.
+    """
+    if not changelog:
+        raise ValueError(
+            '.pkgmeta declares no manual-changelog. BigWigs would generate '
+            'ForeverCommsBundle/CHANGELOG.md, leaving a fourth top-level folder in the '
+            'release archive.')
+    if not (ROOT / changelog).is_file():
+        raise ValueError(f'.pkgmeta manual-changelog names {changelog!r}, which does not '
+                         f'exist. release.sh falls back to generating one.')
+    if changelog not in ignores:
+        raise ValueError(f'.pkgmeta manual-changelog {changelog!r} must also appear in '
+                         f'the ignore list, or it is copied into the package directory '
+                         f'and leaves a stray top-level folder in the archive.')
 
 
 def ignored(rel, ignores):

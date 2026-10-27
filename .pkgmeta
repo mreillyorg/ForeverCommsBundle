@@ -2,6 +2,23 @@
 # All three addons must appear as independent top-level AddOns folders.
 package-as: ForeverCommsBundle
 
+# Supply the changelog instead of letting the packager generate one.
+#
+# This is load-bearing, not cosmetic. release.sh generates its changelog to
+# $pkgdir/CHANGELOG.md, and after move-folders lifts the three addon folders out it
+# deletes the package directory ONLY IF EMPTY. A generated changelog left behind keeps
+# ForeverCommsBundle/ alive, so the archive gains a fourth top-level folder holding
+# nothing but CHANGELOG.md. That is exactly what broke the v0.7.1-beta build.
+#
+# With a manual changelog that is ALSO in the ignore list below, release.sh finds no copy
+# in the package directory, points at the source file instead, writes nothing into
+# $pkgdir, and the now-empty package directory is removed as intended. Keeping it ignored
+# is therefore required rather than tidy -- tools/package.py fails the build if the
+# manual-changelog filename is ever missing from the ignore list.
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
 move-folders:
   ForeverCommsBundle/ForeverCommsVoice: ForeverCommsVoice
   ForeverCommsBundle/ForeverGuildComms: ForeverGuildComms
@@ -20,6 +37,8 @@ ignore:
   - LICENSE
   - SUGGESTED-CHANGES.md
   - run-tests.cmd
+  # Required, not merely tidy: see the manual-changelog note above.
+  - CHANGELOG.md
   - install
   - tools
   - dist

@@ -1,7 +1,7 @@
 # Forever Comms Suite: packaging and releases
 
-Current versions: ForeverCommsVoice **0.7.1-beta**, ForeverGuildComms **0.7.1-beta**,
-ForeverGroupComms **0.7.1-beta** (WoW Forever Interface 16001).
+Current versions: ForeverCommsVoice **0.7.2-beta**, ForeverGuildComms **0.7.2-beta**,
+ForeverGroupComms **0.7.2-beta** (WoW Forever Interface 16001).
 
 ## One release path, two ways to run it
 
@@ -85,8 +85,8 @@ agree:
 
 | Place | Example |
 | --- | --- |
-| TOC `## Version:` | `## Version: 0.7.1-beta` |
-| `Core.lua` | `A.version = "0.7.1-beta"` |
+| TOC `## Version:` | `## Version: 0.7.2-beta` |
+| `Core.lua` | `A.version = "0.7.2-beta"` |
 | `README.md` | the title or "Current release" line |
 | `install/Install-<Addon>.cmd` | the `title` and `echo` lines |
 
@@ -130,8 +130,8 @@ ships — the TOC manifest and the `.pkgmeta` exclusions — and fails if they d
 Commit the suite contents at the repository root, then push an annotated tag:
 
 ```bash
-git tag -a v0.7.1-beta -m "Forever Comms 0.7.1 beta"
-git push origin v0.7.1-beta
+git tag -a v0.7.2-beta -m "Forever Comms 0.7.2 beta"
+git push origin v0.7.2-beta
 ```
 
 The workflow checks out with full tag history, runs BigWigs with `-d`, runs

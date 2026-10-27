@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.7.1-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.7.1-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.7.1-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.7.2-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.7.2-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.7.2-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -55,19 +55,33 @@ client required. See `.kiro/steering/testing.md` for how an interpreter is locat
 None of it replaces in-game testing. Nothing in this bundle has been run against a live
 Forever server, and each addon's README lists what that leaves unverified.
 
+## What changed in 0.7.2-beta
+
+**Fixes the download itself. No addon changed.**
+
+The 0.7.1-beta archive contained a spurious fourth top-level folder,
+`ForeverCommsBundle/`, holding nothing but a generated `CHANGELOG.md`. Extracted into
+`Interface\AddOns` it left behind a folder that is not an addon. **If you installed
+0.7.1-beta, you can simply delete that `ForeverCommsBundle` folder** — nothing used it.
+
+The cause was in the release tooling: the packager generates its changelog inside a
+staging folder, then deletes that folder after lifting the three addon folders to the top
+level — but only if it is empty. The generated file kept it alive. The project now
+supplies its own `CHANGELOG.md` and keeps it out of the copied files, so the staging
+folder really is empty and is removed as intended. The local build now fails outright if
+that configuration is ever broken again, instead of the fault reaching a release.
+
+Every file the three addons load in the game is identical to 0.7.1-beta — same settings,
+messages, windows, commands and keybindings, and no saved settings renamed or removed.
+
 ## What changed in 0.7.1-beta
 
-**A packaging fix. No addon changed.** Every file the three addons load in the game is
-identical to 0.7.0-beta — same settings, messages, windows, commands and keybindings, and
-no saved settings renamed or removed.
-
-The download itself is tidier. The release archive is now explicitly restricted to the
-three addon folders, so project files that have no business in it — the development
+**A packaging change. No addon changed.** The release archive was restricted to the three
+addon folders, so project files that have no business in it — the development
 documentation, the lint and git configuration, `LICENSE`, `run-tests.cmd` — can no longer
-be swept in by the packager. If you install by copying folders, there is simply less to
-look at and nothing to copy by mistake.
+be swept in by the packager.
 
-Updating from 0.7.0-beta is optional and safe.
+Superseded by 0.7.2-beta, which fixes the stray folder described above.
 
 ## What changed in 0.7.0-beta
 

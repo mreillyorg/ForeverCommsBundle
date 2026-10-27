@@ -1,4 +1,4 @@
-# ForeverCommsVoice 0.2.3-beta
+# ForeverCommsVoice 0.7.0-beta
 
 **Shared, offline translation and roleplay accent library** for ForeverGuildComms and ForeverGroupComms (WoW Forever 1.60.1, Interface 16001). Author: Michael Reilly.
 
@@ -12,7 +12,7 @@
 
 ## Installation
 
-Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.6.4-beta and/or GroupComms 0.3.5-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
+Install the **combined package** for the easiest update of all three addons. Or install this addon first, then GuildComms 0.7.0-beta and/or GroupComms 0.7.0-beta. Both clients declare this addon as a hard `## Dependencies:` entry and **will not load without it**.
 
 Put this folder at `_classic_beta_\Interface\AddOns\ForeverCommsVoice`, then `/reload`.
 
@@ -69,6 +69,23 @@ New in v0.2.1-beta: `Queue.lua` and `QueueUI.lua` provide a single movable, scro
 
 
 Queue presentation: a compact, movable, scrollable floating overlay (not a normal Blizzard window). Fresh character defaults are **2 visible rows** and **20 seconds** auto-skip; existing saved queue preferences remain unchanged. `/fcv queue` opens the overlay.
+
+## What changed in 0.7.0-beta
+
+**Nothing in the addon changed.** Every file the game loads is identical to 0.2.3-beta
+apart from the version number. Your saved voice profile, the languages, the accents and
+every message are exactly as they were.
+
+**The jump from 0.2.3-beta to 0.7.0-beta is a renumbering, not a rewrite.** The three
+addons in this bundle used to be versioned separately -- this library at 0.2.3-beta,
+ForeverGuildComms at 0.6.4-beta and ForeverGroupComms at 0.3.5-beta. They are built,
+tested, bundled and installed together, so three numbers made "which version do I have?"
+needlessly hard to answer. All three now share one, taken from the highest of the three
+and rolled once. Both consumers require this exact version, as they always have.
+
+**One real fix, invisible from inside the game.** The automated build installed the Lua
+linter under the wrong package name, so the checks meant to gate a release could not run
+for the previous one. Corrected; this is the first release built with them passing.
 
 ## What changed in 0.2.3-beta
 

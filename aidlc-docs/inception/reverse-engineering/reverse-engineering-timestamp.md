@@ -113,13 +113,16 @@ documentation.
 
 The tables above and below measure `f7f7bab` and are left that way, so each column still
 describes a state that can be checked out. The pass then closed item 47 and both
-carried-forward code smells, which moved these figures in the working tree:
+carried-forward code smells. That work was committed externally as `c0f2f5b` and
+`33e5f30` and released as tag **`v0.6.4-beta`**; the column below is that released state,
+not a working tree:
 
-| Metric | `f7f7bab` | Working tree | Δ |
+| Metric | `f7f7bab` | `v0.6.4-beta` | Δ |
 | --- | --- | --- | --- |
 | Voice version | 0.2.2-beta | **0.2.3-beta** | patch |
 | GuildComms version | 0.6.3-beta | **0.6.4-beta** | patch |
 | GroupComms version | 0.3.4-beta | **0.3.5-beta** | patch |
+| *(all three since synchronised to 0.7.0-beta in the working tree — see below)* | | | |
 | Shipped Lua lines | 3,967 | **3,993** | +26 |
 | Public methods | 153 | **155** | +2 |
 | Harness lines | 4,257 | **4,363** | +106 |
@@ -133,8 +136,36 @@ project file count stays at 124. GroupComms carries **no behavioural change** �
 bumped only because its README names the required library version twice. Its shipped diff
 is two lines, both version strings: the TOC `## Version` and `A.version` in `Core.lua`.
 Its 53 methods, 1,166 lines and 7 harnesses are all unchanged, so the line and method
-counts above are unaffected by it. The bundle archive takes GuildComms' version and is now
-`ForeverCommsBundle-0.6.4-beta.zip`, still 33 entries.
+counts above are unaffected by it. The bundle archive takes GuildComms' version, so
+`v0.6.4-beta` produced `ForeverCommsBundle-0.6.4-beta.zip` at 33 entries.
+
+### After the tag
+
+`fc94ccc` "fixing github action" (committed, **not pushed**) changes one line of
+`.github/workflows/package.yml`: the linter is installed as `lua-check`, not `luacheck`.
+That is the Ubuntu binary package name for the `luacheck` source package, verified against
+the universe pool, which carries `lua-check_1.2.0-1_all.deb` — the same 1.2.0 used locally.
+Because the step runs under `set -euo pipefail`, the old name aborted the job at the
+install, so the `v0.6.4-beta` tag's automated checks could not have run. Nothing shipped
+in any addon is affected; no archive contains this file.
+
+GuildComms was briefly set to 0.6.5-beta to give the fixed pipeline an untaken tag, but
+was superseded before being committed. **The working tree now has all three packages
+synchronised at 0.7.0-beta**, produced by the new `tools/bump_version.py --sync --minor`:
+three independent version lines collapsed onto one number, taken from the highest and
+rolled once. The minor bump marks that scheme change rather than any feature — the
+complete shipped diff against the released `v0.6.4-beta` is six lines, all version
+strings.
+
+Two pieces of new tooling arrived with it, neither shipped in any archive:
+`tools/bump_version.py`, which writes every version location and refuses a GuildComms
+version whose `v*` tag already exists, and a `.gitignore` correction for `.release/`,
+which `release-packaging.md` required but which had been covered only accidentally by the
+`*.zip` rule.
+
+All gates green at 0.7.0-beta: suite 28/28, luacheck 0/0 across 53 files,
+`check_lua_quality.py` exit 0, mutation 37/37, the four packaging guards exit 0, bundle
+`ForeverCommsBundle-0.7.0-beta.zip` at 33 entries, zero `w/crlf` files.
 
 ## Comparison across all ten passes
 

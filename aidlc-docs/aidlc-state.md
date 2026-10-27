@@ -30,19 +30,39 @@
 | `ForeverGuildComms` | 0.6.3-beta | Application | 9 | 1,580 | 67 | 13 | `ForeverGuildCommsDB`, `ForeverGuildCommsCharDB` |
 | `ForeverGroupComms` | 0.3.4-beta | Application | 7 | 1,166 | 53 | 7 | `ForeverGroupCommsDB` |
 
-Measured at `f7f7bab`, like the rest of this document. The uncommitted follow-up work on
-the two code smells adds 21 lines and one method to Voice (`V:ResetVariantBags`) and 5
-lines and one method to GuildComms (`A:GetActivityType`), with 84 and 22 harness lines
-respectively. GroupComms' Lua is untouched.
+Measured at `f7f7bab`, like the rest of this document. The follow-up work on the two code
+smells added 21 lines and one method to Voice (`V:ResetVariantBags`) and 5 lines and one
+method to GuildComms (`A:GetActivityType`), with 84 and 22 harness lines respectively.
+GroupComms' Lua was untouched.
 
-All three versions were then bumped a patch level in the working tree — Voice
-**0.2.3-beta**, GuildComms **0.6.4-beta**, GroupComms **0.3.5-beta** — across the four
-canonical locations each, the root `README.md` and `PACKAGING.md`, GuildComms'
-`PACKAGING.md`, and the `Requires ForeverCommsVoice` lines in both consumer READMEs.
-GroupComms was bumped despite having no behavioural change, because its README states the
-required library version in two places and that reference had to move. Its shipped diff is
-two lines, both version strings, and its release note says so explicitly.
-`check_bigwigs_bundle.py` passes all three.
+That work, and a patch bump of all three versions to Voice **0.2.3-beta**, GuildComms
+**0.6.4-beta** and GroupComms **0.3.5-beta**, were **committed and released externally**:
+`c0f2f5b` "kiro fixes" then `33e5f30` "all staged for v0.6.4-beta", tagged and pushed as
+**`v0.6.4-beta`**. GroupComms was bumped despite having no behavioural change, because its
+README names the required library version in two places and that reference had to move;
+its shipped diff is two version strings and its release note says so.
+
+**HEAD has since moved to `fc94ccc` "fixing github action"**, which is one line in
+`.github/workflows/package.yml` and is **not yet pushed**. It corrects the Ubuntu package
+name for the linter: `apt-get install luacheck` could never succeed, because the Ubuntu
+source package `luacheck` ships its binary as **`lua-check`** (confirmed against the
+universe pool, which carries `lua-check_1.2.0-1_all.deb`, the same 1.2.0 used locally).
+With `set -euo pipefail` that step aborts the job, so the automated checks for the
+`v0.6.4-beta` tag could not have run.
+
+GuildComms was briefly set to **0.6.5-beta** for that purpose, then superseded before it
+was ever committed or tagged. **All three packages are now synchronised at 0.7.0-beta** in
+the working tree, uncommitted, via `tools/bump_version.py --sync --minor`: the three
+separate version lines (Voice 0.2.3-beta, GuildComms 0.6.4-beta, GroupComms 0.3.5-beta)
+collapsed onto one number taken from the highest and rolled once. The minor bump marks the
+scheme change, not a feature — the complete shipped diff against the released
+`v0.6.4-beta` is **six lines, all version strings**, verified with
+`git diff v0.6.4-beta -- "*/*.lua" "*/*.toc" "*/Bindings.xml"`.
+
+`check_bigwigs_bundle.py` passes all three and the bundle is
+`ForeverCommsBundle-0.7.0-beta.zip` at 33 entries. Release notes were written into all four
+READMEs; the never-published 0.6.5-beta notes were folded into the 0.7.0-beta entry rather
+than left describing a version nobody could download.
 
 Both applications declare `## Dependencies: ForeverCommsVoice`. The library depends on
 neither and is the **sole writer** of the shared voice profile.
@@ -68,11 +88,23 @@ neither and is the **sole writer** of the shared voice profile.
     both the CI and local paths.
 
 ## Git State at Analysis Time
-- `HEAD` = `a64ac2a` "3rd round of Kiro changes", equal to `origin/main` and pushed
-- Working tree at analysis time: **clean**
-- Baseline for this pass: `57f7cdc`, spanning three commits — `8166b8b`, `6cf2f38`,
-  `a64ac2a` — 67 files changed, 5,244 insertions, 1,202 deletions, 14 added, 53 modified
-- Recent history: `63222ea` → `57f7cdc` → `8166b8b` → `6cf2f38` → `a64ac2a`
+This block had been left describing the **eighth** pass (`HEAD` = `a64ac2a`) and was
+simply wrong for the tenth. Corrected, and brought up to the current state:
+
+- Tenth pass analysed `HEAD` = `f7f7bab` "fixes found from the quality checks", then equal
+  to `origin/main`. Working tree clean at that point.
+- Baseline for that pass: `b712070`, spanning five commits — `05970d1`, `c8a0e30`,
+  `ae17bfa`, `eec9635`, `f7f7bab` — 40 files changed, 2,269 insertions, 244 deletions,
+  12 added, 28 modified.
+- **Since then, externally**: `1794300` "removing accidental files", `c0f2f5b`
+  "kiro fixes" and `33e5f30` "all staged for v0.6.4-beta", the last tagged and pushed as
+  **`v0.6.4-beta`**. `33e5f30` is `origin/main`.
+- **Current `HEAD` = `fc94ccc` "fixing github action"** — one line in
+  `.github/workflows/package.yml`, committed but **not pushed**, one ahead of upstream.
+- Working tree now: GuildComms bumped to **0.6.5-beta** and not committed. Nothing else
+  is modified.
+- Recent history: `f7f7bab` → `1794300` → `c0f2f5b` → `33e5f30` (tag `v0.6.4-beta`) →
+  `fc94ccc`
 
 ## Extension Configuration
 Not yet determined. Extension opt-in questions are presented during Requirements
@@ -159,10 +191,10 @@ evaluated during Reverse Engineering.
 
 ## Project Growth Across Passes
 
-Every column up to `f7f7bab` is a commit. The last is the uncommitted working tree, kept
-separate so each committed column still describes a state that can be checked out.
+Every column is a commit. The last was the working tree when this pass wrote it and has
+since been committed and released as tag `v0.6.4-beta` (`33e5f30`).
 
-| Metric | 0.1.0 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` | `b712070` | `f7f7bab` | uncommitted |
+| Metric | 0.1.0 | 0.4.3 | Bundle | 0.x.1 | `57f7cdc` | `a64ac2a` | `b712070` | `f7f7bab` | `v0.6.4-beta` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Packages | 1 | 1 | 3 | 3 | 3 | 3 | 3 | 3 | **3** |
 | Shipped Lua modules | 7 | 12 | 22 | 22 | 25 | 25 | 25 | 25 | **25** |

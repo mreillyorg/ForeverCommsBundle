@@ -39,3 +39,13 @@ luac.out
 *.x86_64
 *.hex
 
+# Packager output directory, local mirror of what BigWigs builds.
+# release-packaging.md requires this to be ignored. It was previously covered only by
+# accident, because *.zip above matched the one file a successful build leaves behind;
+# any staging folder or checksum file would have shown up as untracked.
+.release/
+
+# Python bytecode cache from the tools/ scripts. Created as soon as one of them is
+# imported rather than run, which the test helpers and bump_version.py both do.
+__pycache__/
+*.pyc

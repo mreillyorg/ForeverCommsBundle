@@ -72,7 +72,52 @@ name can be stale.
 The check requires the *current* version to appear — it does not object to historical
 changelog headings like `## Shared review queue (v0.6.1-beta)`.
 
-Grep before claiming a bump is done:
+**Use `tools/bump_version.py` rather than editing by hand.** It rewrites all four
+canonical locations plus the root `README.md` and `PACKAGING.md`, GuildComms'
+`PACKAGING.md` and its tag examples, and the cross-references in other packages'
+documentation — the `Requires ForeverCommsVoice x.y.z` lines and the "then GuildComms
+x.y.z and/or GroupComms x.y.z" line in the Voice README.
+
+```powershell
+python tools/bump_version.py --package all --patch --dry-run   # preview
+python tools/bump_version.py --package guild --patch           # apply
+python tools/bump_version.py --package voice --major --channel alpha
+python tools/bump_version.py --package guild --channel release # re-channel, no bump
+python tools/bump_version.py --sync --patch                    # one version for all three
+python tools/bump_version.py --sync                            # level up, no roll
+```
+
+`--major` resets minor and patch, `--minor` resets patch. `--channel` takes `alpha`,
+`beta` or `release`, where `release` means no suffix; omit it to keep the current channel.
+
+**`--package all` and `--sync` are different operations.** The first rolls each package
+from its own version and they stay apart: 0.2.3 / 0.6.5 / 0.3.5 with `--patch` becomes
+0.2.4 / 0.6.6 / 0.3.6. The second collapses all three onto one number — the highest in the
+bundle with the roll applied once, so the same input with `--sync --patch` makes all three
+0.6.6-beta. Sync takes the maximum, never a mean or the lowest, so no package's version can
+move backwards onto a number already published under different contents. It is mutually
+exclusive with `--package`.
+
+Sync is a one-way decision worth taking deliberately. Once the three numbers are equal,
+a package's version no longer tells you whether that package changed in a given release —
+which is the question GroupComms' 0.3.5-beta release note had to answer in prose. In
+exchange, "which versions do you have installed" becomes one number instead of three, and
+the `v*` tag stops being GuildComms-specific in practice.
+Three behaviours are deliberate and worth knowing:
+
+- It rewrites only individually-specified sites, never a blanket string replace, so
+  historical changelog headings and release notes that refer to an earlier version keep
+  their old numbers. It then lists any *other* remaining mention of a superseded version
+  for review, so a site it does not know about surfaces instead of going stale silently.
+- **It refuses a GuildComms version whose `v*` tag already exists**, locally or on origin,
+  because that namespace tracks GuildComms' version alone and a released version cannot be
+  reused. `0.6.4-beta` was once chosen for a bump when that tag was already pushed.
+  `--allow-existing-tag` overrides it.
+- It does not write release notes. The gate only requires the README to *mention* the new
+  version, which the title line satisfies, so a `## What changed in x.y.z` section is
+  still a manual step.
+
+Grep if you want to confirm independently:
 
 ```powershell
 Select-String -Path "<Addon>\*","<Addon>\install\*" -Pattern "\d+\.\d+\.\d+-beta"
@@ -227,7 +272,10 @@ Three things to be careful of when editing this layer:
    `ForeverCommsVoice/tests/integration.lua` loads all three packages, so a library change
    can break a consumer's suite. CI runs the same command before packaging, so a failure
    here is a failure there. See `testing.md`.
-2. All seven version-string locations match, plus `PACKAGING.md` for GuildComms.
+2. All four version-string locations match per package, plus the root `README.md` and
+   `PACKAGING.md` and GuildComms' `PACKAGING.md`. This step said "seven locations" long
+   after the count became four; `tools/bump_version.py` writes them all and
+   `tools/check_bigwigs_bundle.py` is the gate.
 3. Every shipped `.lua` file is in that package's TOC in the right load order, and
    `Bindings.xml` is **not**.
 4. `.pkgmeta` still does not exclude `Bindings.xml` or `Media/Icon.tga`.

@@ -3,7 +3,7 @@
 ## Notes: Party, dungeon and raid greetings, coordination, roles, ready checks, target marks and quest sharing status.
 ## Author: Michael Reilly
 ## IconTexture: Interface\AddOns\ForeverGroupComms\Media\Icon
-## Version: 0.3.5-beta
+## Version: 0.7.0-beta
 ## SavedVariables: ForeverGroupCommsDB
 ## Dependencies: ForeverCommsVoice
 ## OptionalDeps: Titan

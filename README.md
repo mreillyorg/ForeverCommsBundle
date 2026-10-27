@@ -4,9 +4,9 @@ For **WoW Forever 1.60.1**. Author: Michael Reilly.
 
 This bundle contains:
 
-- **ForeverCommsVoice 0.2.3-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
-- **ForeverGuildComms 0.6.4-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
-- **ForeverGroupComms 0.3.5-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
+- **ForeverCommsVoice 0.7.0-beta**: shared 8-language text, 29 curated accent/RP voice profiles, per-character voice preferences and one-time GuildComms settings migration.
+- **ForeverGuildComms 0.7.0-beta**: existing guild alerts, welcome/levels/help, keybindings and custom templates; `VoiceBridge.lua` now calls the shared library.
+- **ForeverGroupComms 0.7.0-beta**: party/raid greetings, roles, pull/CC instructions, ready checks, markers, quest synchronisation and translated group communication.
 
 ## Install on Windows
 
@@ -57,24 +57,30 @@ Forever server, and each addon's README lists what that leaves unverified.
 
 ## What changed in this release
 
-ForeverCommsVoice **0.2.3-beta**, ForeverGuildComms **0.6.4-beta**,
-ForeverGroupComms **0.3.5-beta**. Each addon's README has the detail; the user-visible
-changes are:
+**All three addons are now 0.7.0-beta, and that is the whole of this release.** Nothing in
+any of the three behaves differently from the previous release, 0.6.4-beta. No setting,
+message, window, command or keybinding has changed, and no saved settings are renamed or
+removed.
 
-- **Voice:** the Settings panel now appears as soon as the addon loads, instead of only
-  after you typed `/fcv`. Accent strength labels now say what each level does, and the
-  README documents exactly which messages each level affects.
-- **Guild Comms:** a new toggle for whether the review list opens by itself when a
-  message is staged (on by default). Approvals are now spaced at least two seconds
-  apart, so clicking through a backlog cannot post several lines at once. Restore
-  Defaults no longer resets your outgoing mode, which previously could switch you back
-  to posting without confirmation.
-- **Group Comms:** the Settings panel now refreshes when reopened, so a change made from
-  the Titan menu is displayed correctly, and Restore Defaults no longer touches the
-  shared language and accent.
+**Why the version numbers jumped.** The three addons used to be numbered separately, which
+had reached ForeverCommsVoice 0.2.3-beta, ForeverGuildComms 0.6.4-beta and
+ForeverGroupComms 0.3.5-beta. They are built, tested, bundled and installed together, so
+three numbers only ever answered "which version do I have?" with a question. From now on
+they share one, and the minor bump to 0.7.0 marks that change rather than any new feature.
 
-No saved settings are renamed or removed, so upgrading keeps your existing configuration.
-Both new Guild Comms settings default to the behaviour you already had.
+So ForeverCommsVoice going from 0.2.3-beta to 0.7.0-beta is **not** a large rewrite — it is
+the same addon, renumbered to match its siblings. The same applies to ForeverGroupComms.
+
+The one real fix is invisible from inside the game: the automated build installed the Lua
+linter under the wrong package name, so the checks that are supposed to gate a release
+could not run for 0.6.4-beta. That is corrected, and this release is the first built with
+those checks actually passing.
+
+If you already run 0.6.4-beta, updating gains you nothing except matching version numbers.
+It is safe either way.
+
+Each addon's README carries its own changelog, including the per-addon history from before
+the numbers were unified.
 
 ## Building a release
 

@@ -26,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y lua5.1 luacheck
+          sudo apt-get install -y lua5.1 lua-check
           lua5.1 -v
           luac5.1 -v
           luacheck --version

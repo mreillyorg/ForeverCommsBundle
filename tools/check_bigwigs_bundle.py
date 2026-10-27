@@ -111,7 +111,9 @@ def check_archive(path, versions):
         files = {n for n in names if n and not n.endswith('/')}
         top = {n.split('/', 1)[0] for n in files}
         if top != set(ADDONS):
-            fail(f'{path}: expected only {sorted(ADDONS)} at top level; got {sorted(top)}')
+            extras = sorted(n for n in files if n.split('/', 1)[0] not in ADDONS)
+            fail(f'{path}: expected only {sorted(ADDONS)} at top level; got {sorted(top)}'
+                 + (f'; unexpected files: {extras[:12]}' if extras else ''))
 
         for member in files:
             if member.startswith('/') or '..' in Path(member).parts:

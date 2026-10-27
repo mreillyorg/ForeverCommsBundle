@@ -370,3 +370,13 @@ tell me if I need to add any System or User paths in Windows 11 and what I need 
 **Context**: Release preparation for tag v0.7.0-beta; the tenth reverse-engineering pass remains at its Step 13 gate
 
 ---
+
+## Process correction — check git state before bumping
+**Timestamp**: 2026-10-19T00:00:00Z
+**User Input**: "remeber to check the git status and logs, before running a version bump and updating README"
+**AI Response**: "Accepted the correction; it names a real failure of mine. I chose 0.6.4-beta for a bump without reading the tag list, and that tag already existed and was pushed. Checked the state immediately as instructed and found it had moved again: HEAD is now db37407 'adding version bumper tool, bump synching all versions to 0.7.0-beta', in sync with origin, and v0.7.0-beta IS NOW TAGGED - so 0.7.0-beta is released, not pending as my previous summary said. Also found three STAGED files that are not mine: .pkgmeta, PACKAGING.md and tools/check_bigwigs_bundle.py, extending the .pkgmeta ignore list to keep root-level development files out of the built bundle. Left that work untouched. Rather than only acknowledging the instruction, made it durable in two places: a new 'Check the repository state first' section in .kiro/steering/release-packaging.md recording both failures and the four questions to establish, and enforcement in the tool itself."
+**Context**: tools/bump_version.py gained a repository preamble and a pending-changes warning; .kiro/steering/release-packaging.md gained the rule. No version was bumped.
+**Findings**: "The tool now prints HEAD, branch, upstream ahead/behind, staged and unstaged counts, and the existing tag list before it rewrites anything; warns when a file it is about to rewrite already has uncommitted changes; and warns that a tag on an unpushed commit will not build in Actions. Tested on the live state, where it correctly reported 'pending 3 staged, 1 unstaged', listed both released tags, and flagged PACKAGING.md as having uncommitted changes that a bump would overwrite - a genuine hazard that existed right now. Re-confirmed the tag refusal with a throwaway v0.7.1-beta tag: exit 1, then deleted. Verified the dry runs wrote nothing: versions still 0.7.0-beta across all three and the three staged files untouched. Also recorded in the steering that release notes must describe the diff against the last RELEASED tag rather than the previous version string, which is what led to folding the never-published 0.6.5-beta notes into the 0.7.0-beta entry."
+**Context**: Process and tooling correction; no release action taken
+
+---

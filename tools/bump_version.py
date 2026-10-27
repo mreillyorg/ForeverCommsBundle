@@ -211,6 +211,57 @@ def existing_tags():
     return tags, True
 
 
+def git(*arguments):
+    result = subprocess.run(('git',) + arguments, cwd=ROOT,
+                            capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def report_repository():
+    """Print the repository state before anything is rewritten.
+
+    This exists because skipping it has gone wrong twice: a bump was once chosen without
+    noticing that the target tag was already published, and on another occasion HEAD had
+    moved and been tagged externally while a bump was being prepared against the old
+    state. Both are obvious the moment the log and tag list are in front of you.
+    """
+    head = git('log', '-1', '--format=%h %s') or '(no commits)'
+    branch = git('rev-parse', '--abbrev-ref', 'HEAD') or '(unknown)'
+    print(f'Repository:\n  HEAD     {head}\n  branch   {branch}')
+
+    counts = git('rev-list', '--left-right', '--count', '@{u}...HEAD')
+    ahead = 0
+    if counts:
+        behind, ahead = (int(part) for part in counts.split())
+        state = 'in sync with upstream'
+        if ahead or behind:
+            state = f'{ahead} ahead, {behind} behind upstream'
+        print(f'  upstream {state}')
+    else:
+        print('  upstream (none configured)')
+
+    staged = [line[3:] for line in (git('status', '--porcelain') or '').splitlines()
+              if line[:1] not in (' ', '?', '')]
+    unstaged = [line[3:] for line in (git('status', '--porcelain') or '').splitlines()
+                if line[1:2] == 'M']
+    print(f'  pending  {len(staged)} staged, {len(unstaged)} unstaged')
+    return {'staged': set(staged), 'unstaged': set(unstaged), 'ahead': ahead}
+
+
+def warn_about_pending(state, targets):
+    """A bump that lands on top of someone else's in-flight edit to the same file leaves
+    two unrelated changesets tangled in the working tree. Worth naming, not blocking."""
+    pending = state['staged'] | state['unstaged']
+    overlap = sorted(p for p in pending if p.replace('\\', '/') in targets)
+    if overlap:
+        print('\nWARNING: these files already have uncommitted changes and this bump '
+              'will rewrite them:')
+        for path in overlap:
+            print(f'  {path}')
+        print('  Consider committing or stashing that work first, so the bump is a '
+              'reviewable change on its own.')
+
+
 def apply_edits(replacements, dry_run):
     """replacements: {relative path: [(pattern, new text for the `ver` group)]}"""
     changed, touched = [], 0
@@ -287,6 +338,10 @@ def main():
         parser.error('nothing to do: pass --major, --minor or --patch, '
                      'and/or --channel, or --sync')
 
+    state = report_repository()
+    released = sorted(t for t in (git('tag', '--list') or '').splitlines() if t.strip())
+    print(f'  released {", ".join(released) if released else "(no tags)"}\n')
+
     channel = _KEEP if args.channel is None else CHANNEL_SUFFIX[args.channel]
     versions = current_versions()
     updated = dict(versions)
@@ -351,6 +406,8 @@ def main():
             for relative, pattern, new_message in tag_messages(updated[addon]):
                 replacements.setdefault(relative, []).append((pattern, new_message))
 
+    warn_about_pending(state, set(replacements))
+
     changed, touched = apply_edits(replacements, args.dry_run)
     verb = 'Would rewrite' if args.dry_run else 'Rewrote'
     print(f'\n{verb} {len(changed)} site(s) across {touched} file(s):')
@@ -373,6 +430,10 @@ def main():
     # line now does, so a missing changelog section will not fail any check.
     print('\nStill to do by hand: a "What changed in x.y.z" section in the README of '
           'each bumped package.')
+    if state['ahead'] and str(updated[GUILD]) != str(versions[GUILD]):
+        print(f'\nWARNING: HEAD is {state["ahead"]} commit(s) ahead of upstream. A tag on '
+              'an unpushed commit will not build in GitHub Actions; push before tagging.')
+
     print('\nNot committed, not tagged. Next:')
     print('  python tools/package.py && python tools/check_bigwigs_bundle.py')
     if str(updated[GUILD]) != str(versions[GUILD]):

@@ -72,6 +72,43 @@ name can be stale.
 The check requires the *current* version to appear — it does not object to historical
 changelog headings like `## Shared review queue (v0.6.1-beta)`.
 
+### Check the repository state first — always
+
+**Before bumping a version or writing release notes, read `git status`, `git log` and
+`git tag --list`.** Not as a formality: this project is worked on outside the agent
+session as well, so HEAD, the tag list and the staged index can all have moved since the
+last thing you looked at. Two concrete failures came from skipping it.
+
+- A bump was chosen that landed on `0.6.4-beta` when a `v0.6.4-beta` tag already existed
+  and was pushed, so the "new" version was one that had already shipped under different
+  contents.
+- Release notes were drafted against a HEAD that had since advanced and been committed and
+  tagged externally, so they described work that was already released and a working tree
+  that no longer existed.
+
+What to establish before touching a version:
+
+| Question | Command |
+| --- | --- |
+| What is HEAD, and is it mine? | `git log --oneline -5` |
+| Which versions have actually shipped? | `git tag --list` |
+| Is HEAD pushed? A tag on an unpushed commit never builds. | `git rev-list --left-right --count '@{u}...HEAD'` |
+| Is someone mid-change, including in the index? | `git status --short` |
+
+The first column of `git status --short` is the index. `M ` means staged and ` M` means
+unstaged — a staged change is somebody's work in progress, not leftover noise, and it is
+not yours to commit or discard.
+
+Release notes must describe the diff against the last **released tag**, not against
+whatever the previous version string happened to be. A version that was never tagged was
+never published, and a changelog heading for it describes a release nobody could download;
+fold it into the entry that supersedes it.
+
+`tools/bump_version.py` now prints this state before it rewrites anything, lists the
+existing tags, refuses a tag that already exists, and warns when a file it is about to
+rewrite already has uncommitted changes. That makes the check hard to skip, but the
+judgement about whether the state is what you expected is still yours.
+
 **Use `tools/bump_version.py` rather than editing by hand.** It rewrites all four
 canonical locations plus the root `README.md` and `PACKAGING.md`, GuildComms'
 `PACKAGING.md` and its tag examples, and the cross-references in other packages'

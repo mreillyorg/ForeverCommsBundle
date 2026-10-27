@@ -56,8 +56,12 @@ ForeverGroupComms/    TOC, 7 Lua modules, Bindings.xml, Media/Icon.tga
 every README, `PACKAGING.md`, the promotional `Media/ProjectIcon.png` and the build
 scripts. Dotfiles, including `.pkgmeta` itself, are not shipped.
 
-`move-folders` is what lifts the three addons out of the `ForeverCommsBundle/` wrapper
-directory to top level.
+`move-folders` lifts the three addons out of the `ForeverCommsBundle/` wrapper
+directory to top level. **Every other repository-root file/directory must be listed
+in the root `.pkgmeta` `ignore` section**, otherwise BigWigs may leave an extra
+`ForeverCommsBundle/` directory in the archive. The local Python builder
+includes only addon folders, so its successful run alone cannot prove that
+BigWigs has no leftover root files. The structure validator catches this.
 
 ## What `check_bigwigs_bundle.py` verifies
 

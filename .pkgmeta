@@ -9,7 +9,17 @@ move-folders:
 
 # Ship the WoW runtime, not the Windows installer, build tools, tests or docs.
 ignore:
+  # Root-level development and documentation files must also be excluded.
+  # Otherwise BigWigs leaves them in ForeverCommsBundle/ after move-folders.
   - .github
+  - .kiro
+  - aidlc-docs
+  - .gitattributes
+  - .gitignore
+  - .luacheckrc
+  - LICENSE
+  - SUGGESTED-CHANGES.md
+  - run-tests.cmd
   - install
   - tools
   - dist

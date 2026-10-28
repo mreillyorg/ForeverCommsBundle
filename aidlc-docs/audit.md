@@ -430,3 +430,13 @@ tell me if I need to add any System or User paths in Windows 11 and what I need 
 **Context**: Fix committed and unpushed; recommended a plain push to validate before bumping to 0.7.5-beta
 
 ---
+
+## Release 0.7.5-beta — first real CurseForge publish
+**Timestamp**: 2026-10-19T00:00:00Z
+**User Input**: "bump to 0.7.5-beta and tag"
+**AI Response**: "Checked git first per the standing rule: HEAD 7700e2f, clean, in sync with origin, latest tag v0.7.4-beta, so v0.7.5-beta free. Ran --sync --patch. Established the release contents before writing notes: git diff v0.7.4-beta..HEAD touches only the workflow, .gitignore, PACKAGING.md, audit.md, check_bigwigs_bundle.py and the three new tools/pkgmeta configs, and the shipped diff is six version strings. Wrote notes in CHANGELOG.md and all four READMEs. Chose to state plainly in both the 0.7.5 and 0.7.4 entries that 0.7.4-beta announced the CurseForge move but never uploaded, rather than silently leaving its claim standing - users reading the changelog would otherwise have been told twice that the addons were on CurseForge when the first time was false."
+**Context**: All three packages 0.7.5-beta. Committed and tagged locally. This tag carries no workflow inputs, so all three addons publish.
+**Findings**: "This is the first release whose per-addon publish path was proven BEFORE tagging rather than by tagging. The preceding three commits moved the per-addon builds off the impossible -t approach onto tools/pkgmeta configs built from the repository root, added a main-branch trigger so the steps run without publishing, replaced a single UPLOAD_FLAG that an expression would have pinned permanently to -d, and added a completeness gate on the exclusion lists. All gates green at 0.7.5-beta: three publish-config completeness checks PASS, version consistency PASS for all three, suite 28/28, luacheck 0 warnings / 0 errors in 53 files, check_lua_quality.py exit 0, mutation 37/37, bundle 33 entries with only the three addon folders, source archives and verify_package.py exit 0, zero w/crlf files. Push left to the user, and flagged that the CF_API_TOKEN secret is the one precondition I cannot verify from here."
+**Context**: Release 0.7.5-beta committed and tagged locally; push left to the user
+
+---

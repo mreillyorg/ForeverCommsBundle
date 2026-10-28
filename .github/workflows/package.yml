@@ -2,6 +2,28 @@ name: Package Forever Comms bundle (BigWigs)
 
 on:
   workflow_dispatch:
+    # Which addons to publish. All three default to true, so a plain dispatch or a tag
+    # push behaves exactly as before. Deselecting one skips only its UPLOAD -- every
+    # addon is still built and verified, because a package that is not checked is a
+    # package nobody notices has broken.
+    #
+    # To publish a subset, dispatch against the TAG you want published, e.g.
+    #   gh workflow run "Package Forever Comms bundle (BigWigs)" --ref v0.7.5-beta \
+    #     -f publish_voice=false -f publish_guild=true -f publish_group=false
+    # Uploading still requires a tag ref: an untagged build has no release version.
+    inputs:
+      publish_voice:
+        description: Publish ForeverCommsVoice to CurseForge
+        type: boolean
+        default: true
+      publish_guild:
+        description: Publish ForeverGuildComms to CurseForge
+        type: boolean
+        default: true
+      publish_group:
+        description: Publish ForeverGroupComms to CurseForge
+        type: boolean
+        default: true
   push:
     # Tags publish. Pushes to main only build and verify, because UPLOAD_FLAG below adds
     # -d on anything that is not a tag.
@@ -19,14 +41,18 @@ permissions:
   contents: write
 
 env:
-  # UPLOAD_FLAG is set by the "Decide whether to upload" step below, not here.
+  # One upload flag per addon, each set by the "Decide what to publish" step below.
+  # "-d" means skip uploading, so the default here is the safe one: if that step were
+  # ever removed or failed, nothing would publish.
   #
-  # It cannot be an expression: the obvious
+  # These cannot be expressions. The obvious
   #   ${{ startsWith(github.ref, 'refs/tags/') && '' || '-d' }}
   # is silently always "-d", because an empty string is FALSY in GitHub expressions, so
-  # the true branch falls through to the "||". That would have disabled publishing
-  # permanently while looking correct.
-  UPLOAD_FLAG: '-d'
+  # the true branch falls through to the "||". That would disable publishing while
+  # looking correct, which is why the value is computed in a step via GITHUB_ENV.
+  UPLOAD_VOICE: '-d'
+  UPLOAD_GUILD: '-d'
+  UPLOAD_GROUP: '-d'
 
 jobs:
   package:
@@ -117,20 +143,45 @@ jobs:
       # excludes everything that is not its own addon. check_bigwigs_bundle.py asserts
       # those lists stay complete. Each build gets its own release directory so none of
       # them can disturb the bundle in .release that was verified above.
-      # Clear UPLOAD_FLAG on a tag so the per-addon builds publish; leave it as "-d"
-      # otherwise. Done in a step because an empty value has to survive, which an
-      # expression cannot do -- see the env block at the top of this file.
-      - name: Decide whether to upload
+      # Clear an addon's flag only when this is a tag AND that addon was requested.
+      # Done in a step because an empty value has to survive, which an expression cannot
+      # do -- see the env block at the top of this file.
+      #
+      # An absent input means "yes": a tag PUSH carries no inputs at all, so a normal
+      # release publishes all three. Only an explicit "false" from a dispatch skips one.
+      - name: Decide what to publish
         shell: bash
+        env:
+          WANT_VOICE: ${{ inputs.publish_voice }}
+          WANT_GUILD: ${{ inputs.publish_guild }}
+          WANT_GROUP: ${{ inputs.publish_group }}
         run: |
           set -euo pipefail
+          # Written as a full if rather than `[[ ... ]] && is_tag=true`: under
+          # `set -e` the exit status of a short-circuited AND-list is a known foot-gun,
+          # and this script cannot be run locally to find out the hard way.
+          is_tag=false
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo 'UPLOAD_FLAG=' >> "$GITHUB_ENV"
-            echo "Tag build: per-addon packages will be uploaded to CurseForge."
-          else
-            echo 'UPLOAD_FLAG=-d' >> "$GITHUB_ENV"
-            echo "Not a tag: building per-addon packages without uploading."
+            is_tag=true
           fi
+          echo "ref=$GITHUB_REF  tag=$is_tag"
+
+          decide() {
+            local var="$1" addon="$2" want="$3"
+            if [[ "$is_tag" != true ]]; then
+              echo "$var=-d" >> "$GITHUB_ENV"
+              echo "  $addon: build only, not a tag"
+            elif [[ "$want" == "false" ]]; then
+              echo "$var=-d" >> "$GITHUB_ENV"
+              echo "  $addon: build only, deselected for this run"
+            else
+              echo "$var=" >> "$GITHUB_ENV"
+              echo "  $addon: WILL PUBLISH to CurseForge"
+            fi
+          }
+          decide UPLOAD_VOICE ForeverCommsVoice "$WANT_VOICE"
+          decide UPLOAD_GUILD ForeverGuildComms "$WANT_GUILD"
+          decide UPLOAD_GROUP ForeverGroupComms "$WANT_GROUP"
 
       - name: Stage the curated changelog for the per-addon builds
         shell: bash
@@ -148,7 +199,7 @@ jobs:
           args: >-
             -m tools/pkgmeta/ForeverCommsVoice.yaml
             -r ${{ github.workspace }}/.release-ForeverCommsVoice
-            ${{ env.UPLOAD_FLAG }}
+            ${{ env.UPLOAD_VOICE }}
 
       - name: Package ForeverGuildComms
         uses: BigWigsMods/packager@v2
@@ -158,7 +209,7 @@ jobs:
           args: >-
             -m tools/pkgmeta/ForeverGuildComms.yaml
             -r ${{ github.workspace }}/.release-ForeverGuildComms
-            ${{ env.UPLOAD_FLAG }}
+            ${{ env.UPLOAD_GUILD }}
 
       - name: Package ForeverGroupComms
         uses: BigWigsMods/packager@v2
@@ -168,7 +219,7 @@ jobs:
           args: >-
             -m tools/pkgmeta/ForeverGroupComms.yaml
             -r ${{ github.workspace }}/.release-ForeverGroupComms
-            ${{ env.UPLOAD_FLAG }}
+            ${{ env.UPLOAD_GROUP }}
 
       - name: Check each per-addon archive
         shell: bash

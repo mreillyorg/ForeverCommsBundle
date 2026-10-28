@@ -185,9 +185,36 @@ Four packager invocations, deliberately separated:
   it finds the addon's own `.pkgmeta` and writes to `<addon>/.release`. These cannot
   disturb the bundle already verified by `check_bigwigs_bundle.py`.
 
-All three CurseForge steps are gated on `startsWith(github.ref, 'refs/tags/')`. That gate
-is load-bearing: **CurseForge files cannot be unpublished**, so a branch push must never
-reach an upload.
+### Publishing one, two, or all three
+
+Each addon has its own upload switch, so a release can publish any subset without
+touching the others.
+
+| Trigger | What publishes |
+| --- | --- |
+| Push a `v*` tag | All three. No inputs exist on a tag push, and an absent input means yes |
+| Push to `main` | Nothing. All three are still built and verified |
+| Dispatch against a tag | Whichever boxes are ticked |
+
+```powershell
+# republish only ForeverGuildComms for an existing tag
+gh workflow run "Package Forever Comms bundle (BigWigs)" --ref v0.7.5-beta `
+  -f publish_voice=false -f publish_guild=true -f publish_group=false
+```
+
+Two rules hold regardless of the switches:
+
+- **Uploading always requires a tag ref.** An untagged build has no release version, and
+  CurseForge files cannot be unpublished, so a branch push must never reach an upload.
+- **A deselected addon is still built and verified.** Only its upload is skipped. A
+  package nobody builds is a package nobody notices has broken.
+
+The flags are `UPLOAD_VOICE`, `UPLOAD_GUILD` and `UPLOAD_GROUP`, each holding either `-d`
+(skip uploading) or empty. They are computed by the "Decide what to publish" step and
+**must not** be turned into expressions: `${{ cond && '' || '-d' }}` is always `-d`,
+because an empty string is falsy in GitHub expressions, so the true branch falls through
+to the `||`. That would disable publishing while looking correct. The job-level defaults
+are `-d` so that the safe outcome is also the default if that step is ever removed.
 
 Each per-addon `.pkgmeta` declares `manual-changelog: CHANGELOG.md` and also ignores it, so
 uploads carry the curated root changelog rather than a generated commit dump, and no
